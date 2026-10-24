@@ -40,6 +40,7 @@ export const ACTION_TYPES = [
   'PASSING_NEXT',
   'PASSING_CHOOSE_LEGACIES',
   'BEGIN_NEXT_CYCLE',
+  'APPLY_AI_EFFECTS',
 ];
 
 export const TRIAL_FOES = {
@@ -447,6 +448,14 @@ function nextCycle(state) {
   return ok(beginNextCycle(state), { io: { autosave: 'cycle_start', commitDynasty: true } });
 }
 
+// ─── Optional narrator proposals (Master Build §19: AI may only *request* small changes) ──
+
+function applyAiEffects(state, { effects }) {
+  if (!Array.isArray(effects) || !effects.length) return ok(state);
+  const { state: next, report } = commitEffects(state, effects.slice(0, 3), { source: 'ai' });
+  return ok(next, { rejected: report.rejected });
+}
+
 // ─── Dispatch ───────────────────────────────────────────────────────────────────────────
 
 const HANDLERS = {
@@ -467,6 +476,7 @@ const HANDLERS = {
   PASSING_NEXT: passingNext,
   PASSING_CHOOSE_LEGACIES: passingChoose,
   BEGIN_NEXT_CYCLE: nextCycle,
+  APPLY_AI_EFFECTS: applyAiEffects,
 };
 
 /**
