@@ -67,7 +67,7 @@ export function createOracleBot({ mode = 'parry', strike = true, arc = true, roy
 // The newcomer who holds guard and swings whenever — useful for misread tests.
 export function createGuardSpamBot() {
   let down = false;
-  return function spam(duel) {
+  return function spam() {
     const inputs = [];
     if (!down) {
       inputs.push({ type: 'guard', down: true });

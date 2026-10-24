@@ -77,7 +77,7 @@ const regionLine = {
 
 // ─── Beats ──────────────────────────────────────────────────────────────────────
 
-function beatRoad(state, exp) {
+function beatRoad(state) {
   const rs = state.regions.southern_marches.state;
   const monuments = state.regions.southern_marches.monuments.filter((m) => m.cycle < state.cycle.number);
   const text = [regionLine.road[rs]];
@@ -118,7 +118,7 @@ function beatRoad(state, exp) {
   };
 }
 
-function beatCheckpoint(state, exp) {
+function beatCheckpoint(state) {
   const rs = state.regions.southern_marches.state;
   const policy = state.flags.refugees_policy ?? 'held';
   const cycle = state.cycle.number;

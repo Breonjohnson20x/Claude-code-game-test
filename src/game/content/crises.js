@@ -29,10 +29,6 @@ function syndicateLeader(state) {
   return state.factions[SYN].leader;
 }
 
-function syndicateLeaderShort(state) {
-  return syndicateLeader(state).split(' ').slice(-1)[0];
-}
-
 // ─── Memory of earlier reigns: the first briefing of a new cycle cites history ──────────
 
 export function historyCallbacks(state) {

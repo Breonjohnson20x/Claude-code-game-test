@@ -23,7 +23,13 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // Fast refresh is a dev nicety; modules may export small helpers next to components.
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
+  },
+  {
+    files: ['scripts/**/*.{js,mjs}', '*.config.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 ])

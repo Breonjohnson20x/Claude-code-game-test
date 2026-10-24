@@ -111,7 +111,7 @@ export function createGenerators({ getSettings, settings, client, createClient, 
   const inflight = new Map();
   const readSettings = () => readSettingsFrom(getSettings, settings);
 
-  async function useFallback(name, context, fallbackFn, error, detail) {
+  async function fallbackResult(name, context, fallbackFn, error, detail) {
     stat.recordFallback(error);
     const base = { source: 'fallback', proposals: [], rejected: [], error };
     if (detail) base.detail = detail;
@@ -185,17 +185,17 @@ export function createGenerators({ getSettings, settings, client, createClient, 
     const s = readSettings();
     stat.syncSettings(s);
 
-    if (!s.aiEnabled) return useFallback(name, context, fb, 'disabled');
-    if (!s.apiKey) return useFallback(name, context, fb, 'no_key');
+    if (!s.aiEnabled) return fallbackResult(name, context, fb, 'disabled');
+    if (!s.apiKey) return fallbackResult(name, context, fb, 'no_key');
     const blocked = stat.blockedReason(s);
-    if (blocked) return useFallback(name, context, fb, blocked, stat.get().lastError ?? undefined);
-    if (isOffline()) return useFallback(name, context, fb, 'offline');
+    if (blocked) return fallbackResult(name, context, fb, blocked, stat.get().lastError ?? undefined);
+    if (isOffline()) return fallbackResult(name, context, fb, 'offline');
 
     let compact;
     try {
       compact = buildCompactContext(name, context);
     } catch (err) {
-      return useFallback(name, context, fb, 'context', err?.message);
+      return fallbackResult(name, context, fb, 'context', err?.message);
     }
     const hash = contextHash(name, compact, { model: s.model, version: PROMPT_VERSION });
 
@@ -216,7 +216,7 @@ export function createGenerators({ getSettings, settings, client, createClient, 
     } catch (err) {
       result = { ok: false, error: 'unknown', detail: err?.message };
     }
-    if (!result.ok) return useFallback(name, context, fb, result.error, result.detail);
+    if (!result.ok) return fallbackResult(name, context, fb, result.error, result.detail);
     return finish(name, result.value, context, 'ai', result.notes);
   }
 
