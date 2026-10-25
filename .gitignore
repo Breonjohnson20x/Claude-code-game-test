@@ -25,3 +25,6 @@ dist-ssr
 
 # e2e screenshots and reports (npm run e2e)
 e2e-artifacts
+
+# LLM context bundles (npm run bundle)
+context-bundles
