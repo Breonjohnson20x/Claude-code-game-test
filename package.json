@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "node scripts/e2e.mjs",
-    "bundle": "node scripts/context-bundle.mjs"
+    "bundle": "node scripts/context-bundle.mjs",
+    "docs:content": "node scripts/gen-content-doc.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

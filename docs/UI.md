@@ -12,6 +12,21 @@ and choice comes from the game layer.
 `'settings' | 'saves' | 'chronicle' | 'dossier'` → `SettingsSheet`, `SavesSheet`, `ChronicleSheet`,
 `DossierSheet`. Each screen file exports a named component with no props.
 
+Where the screens live (helpers sit in a folder named after the screen):
+
+| Screen / overlay | File | Helpers |
+|---|---|---|
+| Title | `src/ui/screens/TitleScreen.jsx` | — |
+| War Room | `src/ui/screens/WarRoomScreen.jsx` | `screens/warroom/` (Crisis, Council, Orders, CustomDecree, Trial, shared, words) |
+| Resolution | `src/ui/screens/ResolutionScreen.jsx` | `screens/resolution/` (Report, Decisions) |
+| March | `src/ui/screens/ExpeditionScreen.jsx` | `screens/expedition/` (MarchRail, ChoiceList, DuelOutcome, words) |
+| Campfire | `src/ui/screens/CampfireScreen.jsx` | — |
+| The Passing | `src/ui/screens/PassingScreen.jsx` | `screens/passing/` (one component per step, Backdrop, StepIndicator, ActionBar, copy) |
+| Duel | `src/ui/duel/DuelScreen.jsx` | `duel/draw.js` (canvas) |
+| Chronicle | `src/ui/overlays/ChronicleSheet.jsx` | `overlays/chronicle/` |
+| Council dossier | `src/ui/overlays/DossierSheet.jsx` | `overlays/dossier/` (Council, Factions, World tabs) |
+| Settings, Saves | `src/ui/overlays/SettingsSheet.jsx`, `SavesSheet.jsx` | — |
+
 Dev: `npm run dev` then `/?scenario=<name>` loads a real state built through the controller.
 Names (see `src/game/dev/scenarios.js`): `war_room_t1, resolution_t1, march_road,
 march_checkpoint, march_wilds, march_ruin, march_champion, duel_pending, champion_defeated,
@@ -29,6 +44,8 @@ const {
   openOverlay, closeOverlay, overlay, notify(text, tone?),
   generators, aiOn,       // optional Claude narrator; aiOn = enabled && key present
   aiStatus,
+  slots, hasAnySave, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot,
+  quitToTitle, toasts,
 } = useGame();
 ```
 
@@ -71,10 +88,11 @@ Common: `{ phase, season, sovereign, cycle, turn, turnsPerCycle }`.
   `trialRewardAvailable`. In reign II+ the first briefing lines cite earlier reigns.
 - **resolution**: `report = { orderLabel, category, custom: { text, actions } | null, underfunded,
   outcome: string[], voices: [{ speaker, text }], events: [{ title, text }], resourceDeltas:
-  { key: delta }, relationshipShifts: [{ character, from, to }], factionShifts: [{ faction, from:
-  { attitude, tension }, to }], regionBefore, regionAfter, newMemories: [{ characterId,
-  description, sentiment }], newChronicle: [entry] }`, `expedition` (= `state.lastExpedition`
-  after a march: `{ kind, title, duels, fallen: string[], log, retreated? }`), `deployments:
+  { key: delta }, relationshipShifts: [{ character, from, to }]` (tier words), `factionShifts:
+  [{ faction, from: { attitude, tension }, to }]` (label words such as "Hostile", "Uneasy", never
+  numbers), `regionBefore, regionAfter, newMemories: [{ characterId, description, sentiment }],
+  newChronicle: [entry] }`, `expedition` (the march that ended **this turn**, else null:
+  `{ kind, title, duels, fallen: string[], log, retreated?, cycle, turn }`), `deployments:
   [{ kind, title, text, recommender, line, danger? }]`, `campfire` (offer or null),
   `isFinalTurn`.
 - **expedition**: `expedition = { kind, title, beats, index, picked, phase: 'main'|'after_victory'|
@@ -82,9 +100,10 @@ Common: `{ phase, season, sovereign, cycle, turn, turnsPerCycle }`.
   enemyName, misreads, playerHpRemaining, attempt, fallen } | null, pendingDuel: config | null,
   fallen }`, `beat = { id, title, subtitle, scene: { beat, timeOfDay }, speaker?: { id, line },
   text: string[], choices: [{ id, kind: 'talk'|'advance'|'duel', label, hint?, warning?,
-  result }] }`, `canRetreat`. When `pendingDuel` is set, render
-  `<DuelScreen config={pendingDuel} onComplete={(r) => act({ type: 'EXPEDITION_DUEL_COMPLETE',
-  result: r })} />`.
+  effects, result }] }`, `canRetreat`. Never show a choice's `result` or `effects` before it is
+  picked. When `pendingDuel` is set, render `<DuelScreen config={pendingDuel}
+  showHints={settings.showHints} onComplete={(r) => act({ type: 'EXPEDITION_DUEL_COMPLETE',
+  result: r })} />` instead of the beat (only one `<h1>` on screen).
 - **campfire**: `offer = { sceneId, topic, prompt }`, `scene` (enter mode: `{ topic, lines,
   question, sparky: { text }, responses: [{ id, tone, label, reply: string[] }] }`), `shortScene`
   (`{ lines, sparky, closing }`). Enter → pick a response → show its `reply` + `scene.sparky.text` →
@@ -130,7 +149,8 @@ syndicate, wargs, refugees }, regionState, dim })`, `Portrait({ id, size, mood, 
 mara vale cassian sparky mika nyra vex skaela sovereign chronicler), `FactionCrest({ id: 'iron_syndicate'
 |'frost_wargs'|'elvia', size })`, `ArchitectSymbol({ size, glow, animated })`, `CampfireScene({
 intensity })`, `Sigil`, `GoldDivider`, `PanelCorners`. Duel: `DuelScreen` from
-`src/ui/duel/DuelScreen.jsx` (`{ config, onComplete(result) }`, full-screen, owns its own music).
+`src/ui/duel/DuelScreen.jsx` (`{ config, onComplete(result), showHints? }`, full-screen, owns its
+own music). Details: [ART_AND_AUDIO.md](ART_AND_AUDIO.md), [DUEL.md](DUEL.md).
 Threat values for the backdrop: `state.threads.IRON_SYNDICATE_BORDER_CRISIS.urgency`,
 `FROST_WARG_MIGRATION.urgency`, `NORTHERN_REFUGEES.urgency`.
 

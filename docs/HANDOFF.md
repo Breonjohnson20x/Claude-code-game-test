@@ -41,12 +41,17 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 
 | Area | State |
 |---|---|
-| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**, deterministic, 130+ vitest tests incl. a full-cycle playthrough |
-| Duel engine (`src/game/duel/**`): 3 archetypes, telegraphs, misread analysis, bots | **Done**, tested |
-| Saves (3 slots + autosave, export/import, dynasty meta), optional Claude narrator | **Done**, tested |
-| App shell, kit, Title, Settings, Saves, TopBar, procedural art (scenes, portraits, crests) | **Done** |
-| Screens: War Room, Resolution, March, Campfire, Passing, Chronicle, Council; DuelScreen; War Room backdrop; campfire canvas | **In progress** (see `git log`) |
-| `npm run e2e` Playwright gate (scenario sweep + full UI playthrough) | Sweep done; playthrough lands with the screens |
+| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic, 132 vitest tests incl. a full-cycle playthrough |
+| Duel engine (`src/game/duel/**`): 3 archetypes, telegraphs, misread analysis, bots | **Done**: tested, including a fairness sweep |
+| Saves (3 slots + autosave, export/import, dynasty meta), optional Claude narrator | **Done**: tested |
+| UI: Title, War Room, Resolution, March, Campfire, the Passing, Chronicle, Council, Settings, Saves | **Done** |
+| Real-time DuelScreen (touch, mouse, keyboard, basic gamepad) | **Done** |
+| Procedural art (scenes in 3 region states, portraits, crests, war table, campfire canvas) and Web Audio | **Done** |
+| `npm run e2e` (every screen at phone + desktop, overlays, and a full UI playthrough into reign II) | **Passing** |
+| Playtesting with real first-time players | **Not yet**, and it is the next milestone |
+
+See the compliance matrix in [`docs/DESIGN_DIGEST.md`](DESIGN_DIGEST.md#compliance-matrix) for
+requirement-by-requirement status against the design documents.
 
 ## Run it
 
@@ -234,19 +239,21 @@ Commit message (`feat(content): …`).
 
 Next milestones, roughly in order:
 
-1. Finish and polish the UI screens; full e2e playthrough green on phone and desktop.
-2. Playtest the Cycle doc success test with first-time players: do they lose the first duel, say
+1. Playtest the Cycle doc success test with first-time players: do they lose the first duel, say
    why, win the rematch, and want another reign? Tune `TUNING` and telegraph timing.
-3. Content depth: more turn-arc branches after turn 5 (eras), more campfire scenes, northern
+2. Content depth: more turn-arc branches after turn 5 (eras), more campfire scenes, northern
    expedition ("Can I go north?" is a success metric), more Architect lore.
-4. Accessibility pass with a screen reader; a hint/practice mode for duels.
-5. Installable PWA (offline cache, home-screen icon) and a hosted build.
-6. The Cycle doc's long-term target: port the same rules to Unreal. The game layer is engine
+3. Accessibility pass with a screen reader; a hint/practice mode for duels.
+4. Installable PWA (offline cache, home-screen icon) and a hosted build.
+5. The Cycle doc's long-term target: port the same rules to Unreal. The game layer is engine
    agnostic by design. See the porting notes in [`docs/DUEL.md`](DUEL.md) and [`docs/API.md`](API.md).
 
 Known limitations: one region (the Southern Marches) and one arc of five turns per reign; reigns
-after the second reuse the same arc with memory callbacks; the narrator requires the player's
-own Anthropic API key (fine for personal use; a public deployment should proxy it via a server).
+after the second reuse the same arc with memory callbacks; the march has two duels plus a
+rematch (the Cycle doc suggests 3–5); Queen Skaela never speaks yet; gamepad works in duels but
+not for menu navigation; no input remapping or caption toggle; the narrator requires the
+player's own Anthropic API key (fine for personal use; a public deployment should proxy it via a
+server).
 
 ## Glossary
 

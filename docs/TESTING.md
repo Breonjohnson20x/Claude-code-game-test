@@ -30,11 +30,11 @@ Code, the project skill `verify-elvia` (`.claude/skills/verify-elvia/SKILL.md`) 
 ## Unit and integration tests (vitest)
 
 Tests sit next to the code (`*.test.js`). They are pure Node: no DOM, no network. AI tests use a
-fake `fetch`, and save tests use an in-memory storage. 131 tests across 7 files:
+fake `fetch`, and save tests use an in-memory storage. 132 tests across 7 files:
 
 | File | Tests | What it proves |
 |---|---:|---|
-| `src/game/playthrough.test.js` | 5 | A full reign through the real controller: lose the first champion duel with a weak bot, get named misreads, win the rematch, run a Trial of Blades, approve Chronicle entries, issue a custom decree, take the turn-4 skirmish, go through all four Passing steps, choose Legacies, start reign II, and check its first briefing cites Mika, Nyra and the elapsed years. Also: same inputs give the same world; a lost last stand ends the reign as a fall (cairn monument), never a game over; abdication is remembered differently; skipping a campfire never punishes. |
+| `src/game/playthrough.test.js` | 6 | A full reign through the real controller: lose the first champion duel with a weak bot, get named misreads, win the rematch, run a Trial of Blades, approve Chronicle entries, issue a custom decree, take the turn-4 skirmish, go through all four Passing steps, choose Legacies, start reign II, and check its first briefing cites Mika, Nyra and the elapsed years. Also: same inputs give the same world; a lost last stand ends the reign as a fall (cairn monument), never a game over; abdication is remembered differently; skipping a campfire never punishes; a march summary shows only on its own turn, even after a reload. |
 | `src/game/duel/engine.test.js` | 49 | Duel engine determinism and purity (same seed + inputs → identical state; `stepDuel` never mutates; variable `dt` is sub-stepped). The oracle bot beats every archetype and legacy variant within 120 s; a dodge-only oracle also wins; an idle player loses. Misread detection (`parried_heavy`, `panic_parry`, `wrong_dodge`, `greedy_strike`, `late_guard`, …). Telegraph shape. Royal Command once only, Arc Pulse only when charged, retreat only when allowed. Legacy effects in combat. **Fairness:** every (move, direction) pattern of every archetype has a zero-damage answer. |
 | `src/game/save/saveSystem.test.js` | 13 | Slots round-trip exactly; 3 manual slots + autosave are independent; corrupt slots are reported, not thrown; quota errors free the disposable AI cache; migrations backfill older saves and reject newer ones; bare GameState import; **dynasty meta**: loading an older reign-1 save does not roll back civilization memory or the Chronicle; commit is idempotent per cycle; only the same dynasty merges; export/import carries the dynasty. |
 | `src/game/ai/generators.test.js` | 31 | The narrator never blocks the game: authored fallbacks when AI is off, there is no key, the budget is spent, the reply is a refusal, or the SDK throws. Repair before retry, exactly one retry, `max_tokens` salvage, auth errors stop calls. Cache and in-flight dedupe, session budget, LRU cap. **AI proposals never bypass the simulation:** out-of-bounds proposals are rejected or clamped; cached proposals are re-validated. Custom-order interpretation falls back to the rule parser. Every generator returns validated output. |
@@ -88,7 +88,10 @@ motion is on, so screenshots are stable.
 1. **Sweep.** For every dev scenario on both viewports: load it, wait for the game screen,
    take a full-page screenshot, then audit it. It fails on any console error or page error
    (unreachable Google Fonts are ignored), anything other than exactly one `<h1>`, horizontal
-   scroll, a visible control with no accessible name, or a phone button smaller than 44×44 px.
+   scroll, text pushed past the right edge (hidden by an overflow clip), a visible control with no
+   accessible name, or a phone button smaller than 44×44 px. On three rich states it also opens
+   the Chronicle, Council (every tab), Saves and Settings overlays, audits them, and checks that
+   Escape closes them.
 2. **Playthrough.** A whole reign through the UI from the title screen. It clicks buttons by
    their accessible names and plays duels with real keyboard input. Then it saves, quits to the
    title, reloads the page and continues, checking the world remembered everything; then it goes

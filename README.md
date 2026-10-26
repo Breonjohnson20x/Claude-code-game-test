@@ -1,8 +1,8 @@
-# OmniStrategy: Empire of Elvia
+# OmniStrat — OmniStrategy: Empire of Elvia
 
-A mobile-first browser vertical slice of **OmniStrategy: Empire of Elvia** — the strategy/RPG
-described in the Master Build Prompt, the Narrative & Living-World Bible and the Cycle System
-Design Doc. This is the browser prototype the Cycle doc calls for ("Now: systems + text in the
+*OmniStrat* is the working title. This is a mobile-first browser vertical slice of
+**OmniStrategy: Empire of Elvia**, the strategy/RPG described in the Master Build Prompt, the
+Narrative & Living-World Bible and the Cycle System Design Doc. This is the browser prototype the Cycle doc calls for ("Now: systems + text in the
 browser demo… Later: same rules port to Unreal").
 
 You are the God-King of Elvia. Each **reign** is five seasons in the War Room. You can walk the
@@ -66,17 +66,35 @@ loading an older save never makes the world forget.
 ## Development
 
 ```bash
-npm test          # vitest: simulation, duel engine, saves, AI seam, full-cycle playthrough
-npm run build     # production build
+npm test               # vitest: simulation, duel engine, saves, AI seam, full-cycle playthrough
+npm run build          # production build
 npm run lint
+npm run e2e            # Playwright: every screen at phone + desktop size, and a full UI playthrough
+npm run docs:content   # regenerate docs/CONTENT.md from the code
+npm run bundle -- docs # pack docs (or game / ui / duel / all) into one file for another AI assistant
 ```
 
-- `docs/ARCHITECTURE.md`: rules (the simulation owns the truth, determinism, works with zero
-  AI) and module contracts.
-- `docs/UI.md`: screen contracts, `useGame()`, actions and view shapes.
-- In dev, `/?scenario=<name>` opens any phase through the real game controller (for example
-  `/?scenario=march_champion` or `/?scenario=passing_legacies`). The names are listed in
-  `src/game/dev/scenarios.js`.
+In dev, `/?scenario=<name>` opens any phase through the real game controller (for example
+`/?scenario=march_champion` or `/?scenario=passing_legacies`); the names are in
+`src/game/dev/scenarios.js`. `/?seed=<n>` makes a new reign reproducible.
+
+## Documentation
+
+Start with **[docs/HANDOFF.md](docs/HANDOFF.md)**: what the game is, its status, and how to keep
+working on it with another AI assistant. Coding assistants should read **[AGENTS.md](AGENTS.md)**.
+
+| Doc | Covers |
+|---|---|
+| [docs/DESIGN_DIGEST.md](docs/DESIGN_DIGEST.md) | The three design documents condensed, and what is implemented |
+| [docs/GAME_GUIDE.md](docs/GAME_GUIDE.md) | How every system behaves, and where each balance knob lives |
+| [docs/CONTENT.md](docs/CONTENT.md) | Every crisis, order, march beat, campfire scene and Legacy (generated) |
+| [docs/API.md](docs/API.md) | GameState, effects, actions, views, module exports |
+| [docs/DUEL.md](docs/DUEL.md) | The duel engine, tuning, foes and controls |
+| [docs/SAVES_AND_AI.md](docs/SAVES_AND_AI.md) | Saves, the dynasty record, the optional Claude narrator |
+| [docs/UI.md](docs/UI.md) | Screens, `useGame()`, the kit, presentation rules |
+| [docs/ART_AND_AUDIO.md](docs/ART_AND_AUDIO.md) | Procedural art, theme tokens, the Web Audio engine |
+| [docs/TESTING.md](docs/TESTING.md) | Tests, dev scenarios, the e2e gate |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | The non-negotiable rules and module contracts |
 
 ```
 src/game/      pure, deterministic game logic (no React, no DOM)

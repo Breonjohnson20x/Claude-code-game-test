@@ -20,27 +20,37 @@ Cycle System Design Doc). This is the **browser prototype** the Cycle doc calls 
 6. **Visual target** (§7, §35): *regal magitech* — stone, brass, deep navy, warm gold light,
    arcane geometry, ember. **Avoid generic cyberpunk neon.** No scanlines, no cyan glow.
 
-## Directory layout and ownership
+## Directory layout
 
 ```
 src/
-  game/
-    core/        state.js · rng.js · effects.js · relationships.js        (foundation — lead)
-    sim/         resolver.js · orderParser.js · intensity.js · threads.js  (lead)
-    content/     crises.js · expedition.js · campfire.js · legacies.js     (lead)
-    cycle/       passing.js                                                 (lead)
-    actions.js   reducer-style game controller                              (lead)
-    duel/        engine.js · archetypes.js · analysis.js                    (DUEL worker)
-    save/        saveSystem.js · storage.js · migrate.js                    (PERSIST worker)
-    ai/          client.js · generators.js · cache.js                      (PERSIST worker)
+  game/                 pure, deterministic game logic (no React, no DOM)
+    core/               state.js · rng.js · effects.js · relationships.js
+    sim/                resolver.js · orderParser.js · intensity.js · threads.js
+    content/            crises.js · expedition.js · campfire.js · legacies.js · names.js · effectHelpers.js
+    cycle/              passing.js (the Passing and the Return)
+    duel/               engine.js · archetypes.js · analysis.js · lines.js · bots.js
+    save/               saveSystem.js · storage.js · migrate.js · dynasty.js
+    ai/                 client.js · generators.js · prompts.js · schemas.js · cache.js · status.js
+    dev/                scenarios.js (dev-only states built through the controller)
+    actions.js          the controller: dispatch(state, action), getView(state)
+    *.test.js           vitest, next to the code
   ui/
-    duel/        DuelScreen.jsx (+ helpers)                                 (DUEL worker)
-    art/         RegionScene.jsx · Portrait.jsx · ArchitectSymbol.jsx …     (ART worker)
-    audio/       audio.js                                                   (ART worker)
-    screens/     WarRoom.jsx · Expedition.jsx · Campfire.jsx · Passing.jsx … (lead)
-  styles/theme.css                                                          (ART worker)
-tests/ (vitest, *.test.js colocated under src/ is also fine)
+    game/               GameProvider (useGame) · TopBar · settings.js
+    kit/                kit.jsx (buttons, panels, sheets, meters, HUD) · icons.jsx
+    screens/            Title · WarRoom · Resolution · Expedition · Campfire · Passing (+ helper folders)
+    overlays/           Settings · Saves · Chronicle · Dossier (+ helper folders)
+    duel/               DuelScreen.jsx · draw.js
+    art/                RegionScene · WarRoomBackdrop · CampfireScene · Portrait · FactionCrest · ArchitectSymbol · Ornaments · scene/
+    audio/              audio.js (Web Audio engine + haptics)
+  styles/theme.css      Tailwind v4 tokens and component classes
+scripts/                e2e.mjs · e2e-play.mjs · context-bundle.mjs · gen-content-doc.mjs
+docs/                   HANDOFF · DESIGN_DIGEST · GAME_GUIDE · CONTENT · API · DUEL · SAVES_AND_AI · UI · ART_AND_AUDIO · TESTING
 ```
+
+Full references: [API.md](API.md) (game layer), [UI.md](UI.md) (screens), [DUEL.md](DUEL.md),
+[SAVES_AND_AI.md](SAVES_AND_AI.md), [ART_AND_AUDIO.md](ART_AND_AUDIO.md), [TESTING.md](TESTING.md).
+The contracts below are the short versions.
 
 ## GameState (see `src/game/core/state.js` for the factory)
 
@@ -62,7 +72,9 @@ with tight magnitude caps.
 
 ---
 
-## Contract: Duel (DUEL worker)
+## Contract: Duel
+
+Full reference: [DUEL.md](DUEL.md).
 
 Real-time, direct-control, Infinity-Blade-inspired single combat (Cycle doc §6, §10).
 **No menus in combat.** Touch: swipe = strike (4 directions), tap left/right edge = dodge,
@@ -101,14 +113,14 @@ misreads: [{kind, count, advice}] }` — `misreads` lets a first-time player **n
 
 ```jsx
 // src/ui/duel/DuelScreen.jsx
-<DuelScreen config={config} onComplete={(result) => …} />
+<DuelScreen config={config} onComplete={(result) => …} showHints={settings.showHints} />
 ```
 
 Fairness rule: every enemy attack is answerable by movement or timing, telegraphed by
 direction-readable wind-ups (shoulder drop, blade glow, paw scrape). Heavy = must dodge (red-gold
 glow). Light = parry or dodge. Feint = punishes panic parry.
 
-## Contract: Save + AI seam (PERSIST worker)
+## Contract: Save + AI seam
 
 ```js
 // src/game/save/saveSystem.js
@@ -129,15 +141,15 @@ chronicle, civilization memory per faction, completed-cycle summaries and legaci
 **Loading an older save does not roll back earned civilization memory or dynasty chronicle.**
 
 ```js
-// src/game/ai/generators.js — every generator: async (context) => { ok, output, source:'ai'|'cache'|'fallback', proposals? }
-createGenerators({ settings, fallbacks }) → { narrative, campfire, dialogue, diplomacy, character, event, orderInterpreter }
+// src/game/ai/generators.js — every generator: async (context, fallback?) => { ok, output, source:'ai'|'cache'|'fallback', proposals, rejected }
+createGenerators({ getSettings }) → { narrative, campfire, dialogue, diplomacy, character, event, chronicle, orderInterpreter }
 ```
 Pipeline per call: compact structured context → Claude (optional) → JSON validate → repair →
 retry once → deterministic fallback. Proposed effects go through
 `validateEffects(..., {source:'ai'})`. Cost control (§29): calls only at meaningful moments
 (custom orders, campfires, Passing chronicle read-back), cached by context hash, session budget.
 
-## Contract: Art + Audio (ART worker)
+## Contract: Art + Audio
 
 ```jsx
 <RegionScene beat="road|checkpoint|wilds|ruin|champion|camp" regionState="STABLE|FORTIFIED|AFTERMATH"
