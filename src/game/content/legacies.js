@@ -26,7 +26,7 @@ export const LEGACIES = {
     id: 'warg_truce',
     name: 'Warg Truce',
     earn: 'Choose mercy with the Frost Wargs at least twice.',
-    effect: 'Frost Wargs start Cordial instead of Wary. Warg Alpha duels open with a hesitation window.',
+    effect: 'The Frost Wargs begin the next reign Warm toward Elvia, with less tension. Warg Alpha duels open with a hesitation window.',
     cost: 'The north will expect mercy. Breaking the truce will be remembered for a century.',
     check: (s) => ({ earned: s.counters.wargMercy >= 2, progress: `${s.counters.wargMercy} of 2 acts of mercy` }),
   },
