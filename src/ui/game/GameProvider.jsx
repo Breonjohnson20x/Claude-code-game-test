@@ -257,6 +257,8 @@ export function GameProvider({ children, storage }) {
     });
   }, []);
 
+  const closeOverlay = useCallback(() => setOverlay(null), []);
+
   const view = useMemo(() => (state ? getView(state) : null), [state]);
 
   const value = useMemo(
@@ -279,14 +281,14 @@ export function GameProvider({ children, storage }) {
       quitToTitle,
       overlay,
       openOverlay: setOverlay,
-      closeOverlay: () => setOverlay(null),
+      closeOverlay,
       toasts,
       notify,
       generators,
       aiStatus,
       aiOn: settings.aiEnabled && Boolean(settings.apiKey),
     }),
-    [state, view, act, lastResult, settings, updateSettings, slots, refreshSlots, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot, quitToTitle, overlay, toasts, notify, generators, aiStatus],
+    [state, view, act, lastResult, settings, updateSettings, slots, refreshSlots, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot, quitToTitle, overlay, closeOverlay, toasts, notify, generators, aiStatus],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

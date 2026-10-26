@@ -115,8 +115,12 @@ export function ResourceHud({ resources, deltas = {}, compact = false, className
           <div key={key} className="relative min-w-0 rounded-lg border border-gold-700/40 bg-navy-950/70 px-1.5 py-1.5 text-center" title={`${meta.label}: ${meta.hint}`}>
             <dt className="flex items-center justify-center gap-1 text-[0.68rem] uppercase tracking-wider text-gold-400/85">
               <Icon name={meta.icon} size={14} />
-              <span className={compact ? 'sr-only' : 'hidden sm:inline'}>{meta.label}</span>
-              <span className={compact ? 'sr-only' : 'sm:hidden'}>{meta.label.slice(0, 4)}</span>
+              <span className={compact ? 'sr-only lg:not-sr-only' : 'sr-only sm:not-sr-only'}>{meta.label}</span>
+              {compact ? null : (
+                <span aria-hidden="true" className="sm:hidden">
+                  {meta.label.slice(0, 4)}
+                </span>
+              )}
             </dt>
             <dd className="mt-0.5 truncate font-display text-[0.98rem] font-semibold text-parchment-50 tabular-nums">{meta.format(resources[key])}</dd>
             {d ? (
@@ -140,6 +144,11 @@ export function Sheet({ open, onClose, title, eyebrow, children, footer, wide = 
   const ref = useRef(null);
   const fallbackId = useId();
   const titleId = labelledBy ?? `${fallbackId}-title`;
+  // Latest onClose without re-running the focus trap (and stealing focus) when the parent re-renders.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   useEffect(() => {
     if (!open) return undefined;
     const prev = document.activeElement;
@@ -152,7 +161,7 @@ export function Sheet({ open, onClose, title, eyebrow, children, footer, wide = 
       if (SHEET_STACK[SHEET_STACK.length - 1] !== token) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
       }
       if (e.key === 'Tab') {
         const f = focusables();
@@ -175,7 +184,7 @@ export function Sheet({ open, onClose, title, eyebrow, children, footer, wide = 
       if (i >= 0) SHEET_STACK.splice(i, 1);
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="presentation">

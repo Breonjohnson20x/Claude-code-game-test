@@ -29,7 +29,7 @@ function Segmented({ options, value, onChange, label }) {
           aria-checked={value === o.id}
           onClick={() => onChange(o.id)}
           className={cx(
-            'min-h-11 rounded-lg px-3 text-[0.9rem] font-semibold transition',
+            'min-h-11 min-w-11 rounded-lg px-3 text-[0.9rem] font-semibold transition',
             value === o.id ? 'bg-gold-500 text-navy-950' : 'text-gold-300 hover:bg-gold-500/15',
           )}
         >
@@ -49,9 +49,9 @@ function Toggle({ checked, onChange, label, id }) {
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={cx('relative h-9 w-16 rounded-full border transition', checked ? 'border-gold-400 bg-gold-500' : 'border-gold-700/60 bg-navy-950')}
+      className={cx('relative h-11 w-[4.75rem] shrink-0 rounded-full border transition', checked ? 'border-gold-400 bg-gold-500' : 'border-gold-700/60 bg-navy-950')}
     >
-      <span className={cx('absolute top-1 size-7 rounded-full bg-parchment-50 shadow transition-all', checked ? 'left-8' : 'left-1')} />
+      <span className={cx('absolute top-[3px] size-9 rounded-full bg-parchment-50 shadow transition-all', checked ? 'left-[35px]' : 'left-[3px]')} />
     </button>
   );
 }
