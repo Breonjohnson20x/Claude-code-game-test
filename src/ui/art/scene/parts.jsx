@@ -757,7 +757,7 @@ export function Walker({ uid, x, y, s = 1, L, motion, damaged = false }) {
   );
 }
 
-export function Depot({ uid, x, y, s = 1, L, motion, damaged = false }) {
+export function Depot({ x, y, s = 1, L, motion, damaged = false }) {
   const crate = (cx, cy, w) => (
     <g key={`${cx}-${cy}`}>
       <rect x={cx} y={cy - w} width={w} height={w} fill={L.wood} />
