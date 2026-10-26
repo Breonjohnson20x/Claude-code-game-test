@@ -233,4 +233,18 @@ describe('full cycle playthrough', () => {
     for (const id of Object.keys(before.characters)) expect(s.characters[id].rel).toEqual(before.characters[id].rel);
     expect(s.intensity).toBeLessThan(before.intensity);
   });
+
+  it('shows a march summary only on the turn the march happened, even after a reload', () => {
+    let s = run(newGame({ seed: 5 }), { type: 'ISSUE_ORDER', orderId: 'E' });
+    s = run(s, { type: 'BEGIN_DEPLOYMENT', kind: 'march' });
+    s = run(s, { type: 'EXPEDITION_RETREAT' });
+    expect(s.phase).toBe(PHASES.RESOLUTION);
+    expect(getView(s).expedition?.retreated).toBe(true);
+    // A save/load round trip is plain JSON; the summary still belongs to this turn.
+    expect(getView(JSON.parse(JSON.stringify(s))).expedition?.retreated).toBe(true);
+    s = run(s, { type: 'CONTINUE' });
+    s = run(s, { type: 'ISSUE_ORDER', orderId: 'A' });
+    expect(s.lastExpedition).toBeTruthy();
+    expect(getView(s).expedition).toBeNull();
+  });
 });

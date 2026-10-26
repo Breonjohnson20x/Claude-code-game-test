@@ -230,6 +230,9 @@ export function resolveArchetype(config) {
 
   let hpMult = stakes.hp;
   let poiseMult = 1;
+  // A named foe (Nyra at the ford, a trial sparring partner) keeps their name in the result.
+  if (mods.champion?.name) def.name = String(mods.champion.name);
+  if (mods.champion?.epithet) def.epithet = String(mods.champion.epithet);
 
   if (id === 'fallen_champion') {
     const mirror = pickChampionMirror(legacies, config.seed, mods.champion?.mirror || null);
@@ -245,8 +248,6 @@ export function resolveArchetype(config) {
       poiseMult *= 1.25;
     }
     if (style === 'shadow') def.idleMs = [600, 1150];
-    if (mods.champion?.name) def.name = String(mods.champion.name);
-    if (mods.champion?.epithet) def.epithet = String(mods.champion.epithet);
     // Cycle-scaled mirror enemy.
     hpMult *= Math.min(1.8, 1 + 0.1 * (cycle - 1));
     def.dmgMult *= Math.min(1.5, 1 + 0.06 * (cycle - 1));

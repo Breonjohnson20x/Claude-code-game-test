@@ -133,7 +133,7 @@ function turn1(state) {
         heat(4, 'diplomacy'),
       ],
       outcome: [
-        `Your envoy is received by ${leader} personally — calm, courteous, entirely unmoved. "Routine readiness," he repeats. Then, quieter: "Your Aegis experiments frighten my people more than my walkers frighten yours. Consider that."`,
+        `Your envoy is received by ${leader} personally — calm, courteous, entirely unmoved. "Routine readiness," comes the reply, twice. Then, quieter: "Your Aegis experiments frighten my people more than my walkers frighten yours. Consider that."`,
         'The walkers stop advancing. They do not leave.',
       ],
       voices: [
@@ -200,7 +200,7 @@ function turn1(state) {
       },
       outcome: [
         "Cassian's agents count forty-one walkers, three fuel trains, and one signature on every manifest — not the Chancellor's. General Corvin Drae's.",
-        '"The Chancellor may not know how far his general intends to go," Cassian says. "Which makes the General the most interesting man in the Syndicate."',
+        '"The Chancellor may not know how far that general intends to go," Cassian says. "Which makes the General the most interesting man in the Syndicate."',
       ],
       voices: [{ speaker: 'An Elvian customs officer', text: '"Three wine merchants crossed the border this week and none of them knew anything about wine."' }],
     },
@@ -864,7 +864,7 @@ function turn5(state) {
         chron('The Treaty of Greywater', f.accord_broken ? 'Kessrin signed — once. Their broadsheets called it "the Oathbreaker\'s signature."' : 'Two crowns signed a permanent border on the ford. The walkers went home by midsummer.', 'era'),
         heat(6, 'treaty'),
       ],
-      outcome: [f.accord_broken ? 'Vex signs. He does not shake your hand.' : 'The walkers go home by midsummer. The ferryman at Greywater raises his prices.'],
+      outcome: [f.accord_broken ? `${syndicateLeader(state)} signs, and does not shake your hand.` : 'The walkers go home by midsummer. The ferryman at Greywater raises his prices.'],
       voices: [],
     },
     {

@@ -104,7 +104,8 @@ export function getView(state) {
       return {
         ...base,
         report: state.lastResolution,
-        expedition: state.lastExpedition,
+        // Only the march that ended this turn; older summaries stay in state for the record.
+        expedition: state.lastExpedition?.turn === state.turn && state.lastExpedition?.cycle === state.cycle.number ? state.lastExpedition : null,
         deployments: deploymentOffers(state),
         campfire: availableCampfire(state),
         isFinalTurn: state.turn >= TURNS_PER_CYCLE,
@@ -313,7 +314,7 @@ function finishExpedition(state) {
     );
   }
   let s = commit(state, effects);
-  const summary = { kind: exp.kind, title: exp.title, duels: exp.duels, fallen: exp.fallen, picked: exp.picked, log: exp.log };
+  const summary = { kind: exp.kind, title: exp.title, duels: exp.duels, fallen: exp.fallen, picked: exp.picked, log: exp.log, cycle: c, turn: state.turn };
   s = { ...s, expedition: null, lastExpedition: summary };
   if (s.flags.sovereign_fell) return beginPassing({ ...s, phase: PHASES.RESOLUTION }, 'fall');
   const offer = campfireOffer(s, { majorResolved: true, immediateDanger: false });
@@ -393,7 +394,7 @@ function expeditionRetreat(state) {
   const exp = state.expedition;
   if (!canRetreat(exp)) return fail(state, 'There is no turning back from here.');
   let s = commit(state, retreatEffects(state, exp));
-  s = { ...s, expedition: null, lastExpedition: { kind: exp.kind, title: exp.title, duels: exp.duels, fallen: exp.fallen, picked: exp.picked, log: exp.log, retreated: true }, phase: PHASES.RESOLUTION };
+  s = { ...s, expedition: null, lastExpedition: { kind: exp.kind, title: exp.title, duels: exp.duels, fallen: exp.fallen, picked: exp.picked, log: exp.log, retreated: true, cycle: state.cycle.number, turn: state.turn }, phase: PHASES.RESOLUTION };
   return ok(s, { io: { autosave: 'expedition' } });
 }
 
