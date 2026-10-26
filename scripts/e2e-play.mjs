@@ -123,7 +123,7 @@ export async function playthrough(ctx) {
     if ((await phaseOf(page)) === 'campfire') await sitAtCampfire(ctx, view, turn === 3 ? 'skip' : 'short');
     const offered = (await view())?.campfire;
     if (offered && (await phaseOf(page)) === 'resolution') {
-      await press(page, /campfire|fire|sit with/i);
+      await press(page, /^sit by the fire/i);
       await waitPhase(page, 'campfire');
       await sitAtCampfire(ctx, view, 'enter');
     }
@@ -164,26 +164,24 @@ export async function playthrough(ctx) {
   }
   if ((await phaseOf(page)) === 'campfire') await sitAtCampfire(ctx, view, 'skip');
   await shot(page, 'resolution-t5');
-  await press(page, /close the era|end the reign|the passing/i);
-  const confirm = page.getByRole('dialog').getByRole('button', { name: /close the era|begin the passing|confirm|yes/i });
-  if (await confirm.count()) await confirm.first().click();
+  await press(page, /^close the era/i);
+  await page.getByRole('dialog').getByRole('button', { name: /begin the passing/i }).click();
   await waitPhase(page, 'passing');
 
   // I. The Last Fire
   await shot(page, 'passing-1-last-fire');
-  await press(page, /continue|the chronicle|next/i);
+  await press(page, /^continue to the chronicle/i);
   await page.waitForFunction(() => globalThis.__elvia?.state?.passing?.step === 'chronicle');
   // II. The Chronicle
   await shot(page, 'passing-2-chronicle');
-  await press(page, /continue|what survives|next/i);
+  await press(page, /^continue to what survives you/i);
   await page.waitForFunction(() => globalThis.__elvia?.state?.passing?.step === 'legacies');
   // III. Legacies: pick up to two earned ones
   await shot(page, 'passing-3-legacies');
   const legacies = (await view()).legacies.filter((l) => l.earned).slice(0, 2);
   for (const l of legacies) await page.getByRole('button', { name: nameRe(l.name) }).first().click();
-  await press(page, /carry|keep|choose|confirm|seal/i);
-  const confirmLegacy = page.getByRole('dialog').getByRole('button', { name: /carry|keep|confirm|seal|choose/i });
-  if (await confirmLegacy.count()) await confirmLegacy.first().click();
+  await press(page, /^carry/i);
+  await page.getByRole('dialog').getByRole('button', { name: /seal the choice/i }).click();
   await page.waitForFunction(() => globalThis.__elvia?.state?.passing?.step === 'mantle');
   // IV. The Mantle
   await shot(page, 'passing-4-mantle');

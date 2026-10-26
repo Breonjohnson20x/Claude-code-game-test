@@ -76,8 +76,23 @@ function watchConsole(page, where) {
 async function audit(page, where, { phone }) {
   const result = await page.evaluate(
     ({ phone }) => {
-      const out = { h1: document.querySelectorAll('h1').length, overflowX: 0, unnamed: [], small: [] };
+      const out = { h1: document.querySelectorAll('h1').length, overflowX: 0, unnamed: [], small: [], clipped: [] };
       out.overflowX = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+      // Text pushed past the right edge (hidden by an overflow clip, so overflowX can't see it).
+      const vw = document.documentElement.clientWidth;
+      const inScroller = (el) => {
+        for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+          const ox = getComputedStyle(n).overflowX;
+          if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth) return true;
+        }
+        return false;
+      };
+      for (const el of document.querySelectorAll('h1, h2, h3, p, li, button, label')) {
+        const r = el.getBoundingClientRect();
+        if (!r.width || r.right <= vw + 1 || el.closest('[aria-hidden="true"]') || inScroller(el)) continue;
+        out.clipped.push(`${el.tagName.toLowerCase()} "${(el.textContent || '').trim().slice(0, 40)}" ends at ${Math.round(r.right)}px > ${vw}px`);
+        if (out.clipped.length >= 5) break;
+      }
       const visible = (el) => {
         const r = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
@@ -99,9 +114,51 @@ async function audit(page, where, { phone }) {
   );
   if (result.h1 !== 1) fail(where, `expected exactly one <h1>, found ${result.h1}`);
   if (result.overflowX > 1) fail(where, `horizontal overflow of ${result.overflowX}px`);
+  for (const c of result.clipped) fail(where, `content clipped past the right edge: ${c}`);
   for (const u of result.unnamed) fail(where, `control without an accessible name: ${u}`);
   for (const s of result.small) fail(where, `tap target under 44px: ${s}`);
   return result;
+}
+
+// The TopBar overlays, opened on a few rich states: each must open as a dialog, pass the audit,
+// and close with Escape (returning focus to the page).
+const OVERLAY_SCENARIOS = new Set(['war_room_t3', 'cycle2_war_room', 'passing_chronicle']);
+const OVERLAYS = [
+  ['chronicle', 'The Chronicle'],
+  ['dossier', 'Council and factions'],
+  ['saves', 'Save and load'],
+  ['settings', 'Settings'],
+];
+
+async function overlays(page, where, vpName, scenario) {
+  for (const [id, label] of OVERLAYS) {
+    const w = `${where}/${id}`;
+    await page.getByRole('button', { name: label, exact: true }).first().click();
+    const dialog = page.getByRole('dialog');
+    try {
+      await dialog.first().waitFor({ timeout: 5000 });
+    } catch {
+      fail(w, `the ${label} overlay did not open`);
+      continue;
+    }
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: join(OUT, 'sweep', `${vpName}-${scenario}-overlay-${id}.png`) });
+    await audit(page, w, { phone: vpName === 'phone' });
+    if (id === 'dossier') {
+      // Every tab renders.
+      for (const tab of ['Factions', 'The World']) {
+        await page.getByRole('tab', { name: tab }).click();
+        await page.waitForTimeout(150);
+        await page.screenshot({ path: join(OUT, 'sweep', `${vpName}-${scenario}-overlay-${id}-${tab.replace(/\W/g, '')}.png`) });
+      }
+    }
+    await page.keyboard.press('Escape');
+    try {
+      await dialog.first().waitFor({ state: 'detached', timeout: 3000 });
+    } catch {
+      fail(w, 'Escape did not close the overlay');
+    }
+  }
 }
 
 async function sweep(browser, baseUrl) {
@@ -122,6 +179,7 @@ async function sweep(browser, baseUrl) {
       await page.waitForTimeout(400);
       await page.screenshot({ path: join(OUT, 'sweep', `${vpName}-${name}.png`), fullPage: true });
       const a = await audit(page, where, { phone: vpName === 'phone' });
+      if (OVERLAY_SCENARIOS.has(name)) await overlays(page, `${where}`, vpName, name);
       report.sweep.push({ where, ...a, consoleErrors: done() });
       await page.close();
     }
