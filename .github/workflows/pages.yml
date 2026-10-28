@@ -3,11 +3,16 @@
 # One-time setup (repository owner): Settings → Pages → Build and deployment → Source:
 # "GitHub Actions". The game is then served at https://<owner>.github.io/<repository>/ and can be
 # installed to a phone's home screen from there (it keeps working offline).
+#
+# The github-pages environment only accepts deploys from the repository's default branch, which
+# is still claude/build-strategy-game-OnF1b, so that branch deploys too. Once main is the default
+# branch (Settings → General), or is allowed under Settings → Environments → github-pages, drop
+# the second branch here.
 name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/build-strategy-game-OnF1b]
   workflow_dispatch:
 
 permissions:
