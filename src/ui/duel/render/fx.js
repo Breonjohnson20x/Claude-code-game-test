@@ -25,6 +25,31 @@ export function spawnFx(list, ev, now, L, rand) {
     }
     add({ kind: 'sparks', dur, x, y, color, parts });
   };
+  // steel chips: little bright flakes that tumble and fall
+  const chips = (x, y, n, color = WHITE) => {
+    const parts = [];
+    for (let i = 0; i < n; i += 1) {
+      const a = -Math.PI / 2 + (rand() - 0.5) * 2.6;
+      const v = (120 + rand() * 220) * s;
+      parts.push({ vx: Math.cos(a) * v, vy: Math.sin(a) * v, rot: rand() * TAU, spin: (rand() - 0.5) * 30, size: (2 + rand() * 3) * s });
+    }
+    add({ kind: 'chips', dur: 640, x, y, color, parts });
+  };
+  // dust kicked up from the ground as you throw yourself aside (screen space, under your feet)
+  const dust = (side, n) => {
+    const parts = [];
+    const dirX = side === 'left' ? 1 : -1; // you go left, the world (and the dust) streams right
+    for (let i = 0; i < n; i += 1) {
+      parts.push({ x: L.w * (side === 'left' ? 0.1 + rand() * 0.5 : 0.4 + rand() * 0.5), y: h * (0.8 + rand() * 0.2), vx: dirX * (60 + rand() * 140) * s, vy: -(10 + rand() * 50) * s, r: (18 + rand() * 30) * s });
+    }
+    return { kind: 'dust', dur: 620, parts };
+  };
+  // an impact frame: a hard star of light and radial speed lines, gone in a blink
+  const impact = (x, y, color, size, dur = 150) => {
+    const rays = [];
+    for (let i = 0; i < 14; i += 1) rays.push({ a: (i / 14) * TAU + rand() * 0.3, l: 0.5 + rand() * 0.5 });
+    add({ kind: 'impact', dur, x, y, color, size, rays });
+  };
   const out = { hitstopMs: 0, hit: null, zoom: 0 };
   switch (ev.name) {
     case 'strike_hit': {
@@ -33,6 +58,9 @@ export function spawnFx(list, ev, now, L, rand) {
       const y = torso.y + (rand() - 0.5) * 60 * s;
       add({ kind: 'slash', dur: 260, x, y, dir: ev.dir, len: 150 * s });
       sparks(x, y, ev.open ? GOLD : WHITE, ev.open ? 22 : 14, ev.open ? 1.2 : 1);
+      impact(x, y, ev.open ? GOLD : WHITE, (ev.open ? 150 : 110) * s, ev.open ? 170 : 120);
+      chips(x, y, ev.open ? 7 : 4);
+      add({ kind: 'ring', dur: 300, x, y, color: ev.open ? GOLD : WHITE, r: 120 * s, w: 3 });
       add({ kind: 'flash', dur: 90, color: WHITE, a: 0.08 });
       out.hitstopMs = ev.open ? 70 : 45;
       out.hit = { dir: dirX || (rand() < 0.5 ? -1 : 1), strength: ev.open ? 1 : 0.7 };
@@ -40,12 +68,16 @@ export function spawnFx(list, ev, now, L, rand) {
     }
     case 'strike_blocked':
       sparks(torso.x + (ev.dir === 'left' ? -1 : 1) * 40 * s, torso.y - 30 * s, WHITE, 8, 0.7, 360);
+      impact(torso.x + (ev.dir === 'left' ? -1 : 1) * 40 * s, torso.y - 30 * s, WHITE, 70 * s, 90);
+      chips(torso.x + (ev.dir === 'left' ? -1 : 1) * 40 * s, torso.y - 30 * s, 3);
       out.hit = { dir: ev.dir === 'left' ? 1 : -1, strength: 0.25 };
       break;
     case 'parry':
       add({ kind: 'flash', dur: 140, color: WHITE, a: 0.2 });
       add({ kind: 'ring', dur: 360, x: contact.x, y: contact.y, color: WHITE, r: 90 * s });
       sparks(contact.x, contact.y, WHITE, 18, 1.1);
+      impact(contact.x, contact.y, WHITE, 130 * s, 130);
+      chips(contact.x, contact.y, 5);
       out.hitstopMs = 50;
       break;
     case 'perfect_parry':
@@ -53,6 +85,8 @@ export function spawnFx(list, ev, now, L, rand) {
       add({ kind: 'ring', dur: 560, x: contact.x, y: contact.y, color: GOLD, r: 170 * s, w: 8 });
       add({ kind: 'ring', dur: 760, x: contact.x, y: contact.y, color: GOLD, r: 280 * s, w: 4 });
       sparks(contact.x, contact.y, GOLD, 34, 1.4, 700);
+      impact(contact.x, contact.y, GOLD, 220 * s, 200);
+      chips(contact.x, contact.y, 8, GOLD);
       out.hitstopMs = 110;
       out.zoom = 1;
       break;
@@ -74,6 +108,7 @@ export function spawnFx(list, ev, now, L, rand) {
       add({ kind: 'ring', dur: 760, x: torso.x, y: torso.y, color: GOLD, r: 300 * s, w: 7 });
       add({ kind: 'shake', dur: 240, amp: 7 });
       sparks(torso.x, torso.y, GOLD, 28, 1.2, 700);
+      impact(torso.x, torso.y, GOLD, 200 * s, 180);
       out.hitstopMs = ev.name === 'poise_break' ? 90 : 40;
       break;
     case 'arc_pulse':
@@ -99,9 +134,11 @@ export function spawnFx(list, ev, now, L, rand) {
       break;
     case 'dodge':
       add({ kind: 'streak', dur: 260, side: ev.side ?? 'left' });
+      add(dust(ev.side ?? 'left', 9));
       break;
     case 'dodge_clean':
       add({ kind: 'streak', dur: 420, side: ev.side ?? 'left', gold: true });
+      add(dust(ev.side ?? 'left', 13));
       break;
     case 'feint_read':
       add({ kind: 'ring', dur: 520, x: torso.x, y: torso.y, color: hex('#e9d9ff'), r: 160 * s, w: 4 });
@@ -111,6 +148,10 @@ export function spawnFx(list, ev, now, L, rand) {
       break;
     case 'victory':
       add({ kind: 'bloom', dur: 1400, color: GOLD });
+      impact(torso.x, torso.y, hex('#fff4d6'), 220 * s, 380);
+      add({ kind: 'ring', dur: 900, x: torso.x, y: torso.y, color: GOLD, r: 360 * s, w: 6 });
+      sparks(torso.x, torso.y, GOLD, 40, 1.5, 1100);
+      out.zoom = 1;
       break;
     case 'defeat':
       add({ kind: 'vignette', dur: 1600, color: hex('#05070c'), a: 0.75, hold: true });
@@ -190,14 +231,74 @@ export function drawFx(ctx, L, list, now) {
         ctx.stroke();
         break;
       }
-      case 'ring':
+      case 'ring': {
+        // a shockwave: a soft wide band of air with a hard bright leading edge
         ctx.globalCompositeOperation = 'lighter';
+        const rr = f.fixed ? f.r : f.r * easeOut(k);
+        const path = () => {
+          ctx.beginPath();
+          if (f.fixed) ctx.arc(f.x, f.y, rr, Math.PI * 1.04, Math.PI * 1.96);
+          else ctx.arc(f.x, f.y, rr, 0, TAU);
+        };
+        path();
+        ctx.strokeStyle = rgba(f.color, 0.16 * a);
+        ctx.lineWidth = (f.w ?? 5) * s * (3.5 + 3 * k);
+        ctx.stroke();
         ctx.strokeStyle = rgba(f.color, 0.9 * a);
         ctx.lineWidth = (f.w ?? 5) * s * a;
-        ctx.beginPath();
-        if (f.fixed) ctx.arc(f.x, f.y, f.r, Math.PI * 1.04, Math.PI * 1.96);
-        else ctx.arc(f.x, f.y, f.r * easeOut(k), 0, TAU);
         ctx.stroke();
+        if (!f.fixed) {
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, rr * 0.82, 0, TAU);
+          ctx.strokeStyle = rgba(WHITE, 0.35 * a * a);
+          ctx.lineWidth = Math.max(1, 1.4 * s);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'impact': {
+        // the impact frame: a four-point star of light and a burst of speed lines
+        ctx.globalCompositeOperation = 'lighter';
+        const e = easeOut(k);
+        const sz = f.size * (0.55 + 0.45 * e);
+        ctx.lineCap = 'round';
+        for (const ray of f.rays) {
+          const r0 = sz * (0.25 + 0.5 * e);
+          const r1 = sz * (0.55 + 0.75 * e) * ray.l;
+          ctx.strokeStyle = rgba(f.color, 0.7 * a);
+          ctx.lineWidth = Math.max(1, 2.4 * s * a);
+          ctx.beginPath();
+          ctx.moveTo(f.x + Math.cos(ray.a) * r0, f.y + Math.sin(ray.a) * r0);
+          ctx.lineTo(f.x + Math.cos(ray.a) * (r0 + r1), f.y + Math.sin(ray.a) * (r0 + r1));
+          ctx.stroke();
+        }
+        const fl = sz * 0.9 * a;
+        ctx.fillStyle = rgba(WHITE, 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(f.x - fl, f.y);
+        ctx.quadraticCurveTo(f.x, f.y, f.x, f.y - fl * 0.55);
+        ctx.quadraticCurveTo(f.x, f.y, f.x + fl, f.y);
+        ctx.quadraticCurveTo(f.x, f.y, f.x, f.y + fl * 0.55);
+        ctx.quadraticCurveTo(f.x, f.y, f.x - fl, f.y);
+        ctx.fill();
+        glow(ctx, f.x, f.y, sz * 0.7, f.color, 0.75 * a);
+        break;
+      }
+      case 'chips':
+        // flakes of steel: tumbling slivers that catch the light as they turn
+        for (const p of f.parts) {
+          const x = f.x + p.vx * dt;
+          const y = f.y + p.vy * dt + 700 * s * dt * dt;
+          const rot = p.rot + p.spin * dt;
+          const face = Math.abs(Math.cos(rot * 1.7));
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba(face > 0.75 ? WHITE : [120, 126, 138], Math.min(1, a * 1.6));
+          ctx.fillRect(-p.size, -p.size * 0.35, p.size * 2, p.size * 0.7);
+          ctx.restore();
+          if (face > 0.85) glow(ctx, x, y, p.size * 3, f.color, 0.5 * a);
+        }
         break;
       case 'beam': {
         ctx.globalCompositeOperation = 'lighter';
@@ -298,6 +399,20 @@ export function drawScreenFx(ctx, L, list, now) {
         ctx.fillRect(0, 0, w, h);
         break;
       }
+      case 'dust':
+        // a low cloud of grit kicked from the ground by your dodge
+        for (const p of f.parts) {
+          const age = (now - f.t0) / 1000;
+          const x = p.x + p.vx * age * (1 - k * 0.5);
+          const y = p.y + p.vy * age;
+          const r = p.r * (0.6 + k * 1.2);
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, `rgba(150,130,108,${0.26 * a})`);
+          g.addColorStop(1, 'rgba(150,130,108,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+        break;
       case 'bloom': {
         ctx.globalCompositeOperation = 'lighter';
         glow(ctx, cx, h * 0.42, Math.max(w, h) * lerp(0.2, 0.9, easeOut(k)), f.color, 0.45 * a);
@@ -336,4 +451,23 @@ export function drawSwipes(ctx, L, swipes, now) {
     }
     ctx.restore();
   }
+}
+
+/**
+ * The light live effects throw on the foe: [{ x, y, r, color, a }] in css px. Sparks glow where
+ * they burst, flashes light the whole body, the Arc beam lights its target.
+ */
+export function fxLights(list, now, L) {
+  const out = [];
+  const torso = { x: L.cx, y: L.floorY - 175 * L.s };
+  for (const f of list) {
+    const k = (now - f.t0) / f.dur;
+    if (k < 0 || k >= 1) continue;
+    const a = (1 - k) * (1 - k);
+    if (f.kind === 'sparks') out.push({ x: f.x, y: f.y, r: 170 * L.s, color: f.color, a: 0.55 * a });
+    else if (f.kind === 'impact') out.push({ x: f.x, y: f.y, r: f.size * 1.6, color: f.color, a: 0.7 * a });
+    else if (f.kind === 'flash') out.push({ x: torso.x, y: torso.y, r: 420 * L.s, color: f.color, a: Math.min(0.6, f.a * 2.2) * a });
+    else if (f.kind === 'beam') out.push({ x: f.x, y: f.y, r: 260 * L.s, color: GOLD, a: 0.6 * a });
+  }
+  return out;
 }

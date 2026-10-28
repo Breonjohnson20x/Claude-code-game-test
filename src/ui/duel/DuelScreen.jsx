@@ -257,7 +257,7 @@ export function DuelScreen({
       pollPad();
       const prev = duelRef.current;
       if (hintsRef.current && !inputs.current.length) {
-        renderer.frame(ctx, prev, ms, { guarding: false });
+        renderer.frame(ctx, prev, ms, { guarding: false, hold: true });
         return;
       }
       let d = prev;

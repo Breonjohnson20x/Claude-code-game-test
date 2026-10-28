@@ -25,17 +25,38 @@ export function Bar({ value, max, tone, label, size = 'md', chip = false }) {
   const h = size === 'lg' ? 'h-3.5' : size === 'sm' ? 'h-1.5' : 'h-2.5';
   return (
     <div
-      className={cx('relative w-full overflow-hidden rounded-full border border-gold-700/70 bg-[rgb(6_8_14/0.85)] shadow-[inset_0_1px_3px_rgb(0_0_0/0.8)]', h)}
+      className={cx(
+        'relative w-full overflow-hidden rounded-full border border-gold-700/80 bg-[linear-gradient(180deg,rgb(3_5_10/0.95),rgb(14_18_28/0.9))] shadow-[inset_0_1px_3px_rgb(0_0_0/0.85),0_1px_0_rgb(255_236_200/0.14),0_0_0_1px_rgb(3_5_10/0.6)]',
+        h,
+      )}
       role="meter"
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(pct)}
     >
-      {chip ? <span className="absolute inset-y-0 left-0 rounded-full bg-[rgb(255_236_200/0.55)] transition-[width] delay-200 duration-700 ease-out" style={{ width: `${pct}%` }} /> : null}
-      <span className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-100" style={{ width: `${pct}%`, background: FILLS[tone] }} />
-      <span className="absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-white/15" />
+      {/* the damage chip: what was just lost lingers, warm, then drains */}
+      {chip ? <span className="absolute inset-y-0 left-0 rounded-full bg-[linear-gradient(180deg,rgb(255_244_214/0.85),rgb(244_163_94/0.55))] transition-[width] delay-300 duration-700 ease-out" style={{ width: `${pct}%` }} /> : null}
+      <span className="absolute inset-y-0 left-0 overflow-hidden rounded-full shadow-[inset_0_-2px_2px_rgb(0_0_0/0.35)] transition-[width] duration-100" style={{ width: `${pct}%`, background: FILLS[tone] }}>
+        {/* a bright leading edge where the fill meets the dark */}
+        {pct > 0 && pct < 100 ? <span className="absolute inset-y-0 right-0 w-[3px] bg-[rgb(255_250_240/0.75)] shadow-[0_0_6px_rgb(255_236_200/0.9)]" /> : null}
+      </span>
+      {/* bevel: a sheen over the top half and quarter ticks engraved into the track */}
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-[linear-gradient(180deg,rgb(255_255_255/0.32),rgb(255_255_255/0.04))]" />
+      {size !== 'sm' ? (
+        <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,transparent_calc(25%-0.5px),rgb(3_5_10/0.45)_calc(25%-0.5px),rgb(3_5_10/0.45)_calc(25%+0.5px),transparent_calc(25%+0.5px),transparent_calc(50%-0.5px),rgb(3_5_10/0.45)_calc(50%-0.5px),rgb(3_5_10/0.45)_calc(50%+0.5px),transparent_calc(50%+0.5px),transparent_calc(75%-0.5px),rgb(3_5_10/0.45)_calc(75%-0.5px),rgb(3_5_10/0.45)_calc(75%+0.5px),transparent_calc(75%+0.5px))]" />
+      ) : null}
     </div>
+  );
+}
+
+/** The engraved face every round control wears: a bevelled rim and an inner engraved ring. */
+function Medal() {
+  return (
+    <>
+      <span className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_2px_1px_rgb(255_240_210/0.3),inset_0_-4px_8px_rgb(0_0_0/0.6)]" aria-hidden="true" />
+      <span className="pointer-events-none absolute inset-[5px] rounded-full border border-gold-300/25 shadow-[0_1px_0_rgb(0_0_0/0.5),inset_0_1px_0_rgb(0_0_0/0.5)]" aria-hidden="true" />
+    </>
   );
 }
 
@@ -137,7 +158,7 @@ export function HoldButton({ label, onDown, onUp, className, children }) {
   );
 }
 
-const ROUND = 'relative grid place-items-center rounded-full border-2 shadow-[0_6px_18px_rgb(0_0_0/0.55)] backdrop-blur-[2px] transition duration-100 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200';
+const ROUND = 'relative grid place-items-center rounded-full border-2 shadow-[0_0_0_1px_rgb(3_5_10/0.85),0_6px_18px_rgb(0_0_0/0.55)] backdrop-blur-[2px] transition duration-100 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200';
 const IDLE = 'border-gold-600/70 bg-[radial-gradient(circle_at_50%_35%,rgb(40_52_78/0.92),rgb(7_10_18/0.92))] text-gold-200';
 
 function ShieldIcon({ size = 34 }) {
@@ -198,7 +219,8 @@ export function Controls({ hud, push, setHeld }) {
               className={cx(ROUND, 'size-[3.25rem]', arcReady ? 'border-lattice-300 bg-gold-700/60 text-lattice-100 shadow-[0_0_26px_rgb(255_217_122/0.75)] animate-slow-glow' : 'border-gold-700/60 text-gold-600')}
             >
               <span className="absolute inset-0 rounded-full" style={{ background: arcReady ? undefined : `conic-gradient(rgb(201 162 39 / 0.5) ${hud.arc * 360}deg, rgb(7 13 24 / 0.9) 0)` }} aria-hidden="true" />
-              <ArchitectSymbol size={30} glow={arcReady} className="relative" />
+              <Medal />
+            <ArchitectSymbol size={30} glow={arcReady} className="relative" />
             </PressButton>
             <Caption>Arc</Caption>
           </div>
@@ -209,7 +231,8 @@ export function Controls({ hud, push, setHeld }) {
               onUp={() => setHeld('ward', 'btn', false)}
               className={cx(ROUND, 'size-[3.25rem]', hud.ward ? 'border-lattice-300 bg-gold-600/45 text-lattice-100 shadow-[0_0_22px_rgb(255_217_122/0.55)]' : IDLE)}
             >
-              <WardIcon />
+              <Medal />
+            <WardIcon />
             </HoldButton>
             <Caption>Ward</Caption>
           </div>
@@ -221,6 +244,7 @@ export function Controls({ hud, push, setHeld }) {
             onPress={() => push({ type: 'royal' })}
             className={cx(ROUND, 'size-[3.25rem]', hud.royalUsed ? 'border-stone-600 bg-navy-950/80 text-stone-500' : 'border-gold-400 bg-[radial-gradient(circle_at_50%_35%,rgb(168_132_27/0.75),rgb(40_30_8/0.9))] text-gold-100 shadow-[0_0_20px_rgb(227_196_99/0.5)]')}
           >
+            <Medal />
             <Icon name="crown" size={24} />
           </PressButton>
           <Caption>Royal</Caption>
@@ -231,6 +255,7 @@ export function Controls({ hud, push, setHeld }) {
       <div className="flex items-end justify-between px-1">
         <div className="pointer-events-auto">
           <PressButton label="Dodge left" onPress={() => push({ type: 'dodge', side: 'left' })} className={cx(ROUND, 'size-[4.25rem]', IDLE)}>
+            <Medal />
             <DodgeIcon dir="left" />
           </PressButton>
           <Caption>Dodge</Caption>
@@ -248,12 +273,14 @@ export function Controls({ hud, push, setHeld }) {
                 : 'border-gold-500 bg-[radial-gradient(circle_at_50%_35%,rgb(52_64_92/0.95),rgb(7_10_18/0.95))] text-gold-100',
             )}
           >
+            <Medal />
             <ShieldIcon />
           </HoldButton>
           <Caption>Hold to guard</Caption>
         </div>
         <div className="pointer-events-auto">
           <PressButton label="Dodge right" onPress={() => push({ type: 'dodge', side: 'right' })} className={cx(ROUND, 'size-[4.25rem]', IDLE)}>
+            <Medal />
             <DodgeIcon dir="right" />
           </PressButton>
           <Caption>Dodge</Caption>
