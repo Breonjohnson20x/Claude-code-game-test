@@ -3,8 +3,11 @@
 // whatever box it is given (hero banners, cards, full-bleed backdrops).
 import { memo, useEffect, useRef, useState } from 'react';
 import { LIGHT } from './palette.js';
-import { clamp, useReducedMotion, useSvgPause, useUid } from './util.js';
+import { useReducedMotion, useSvgPause, useUid } from './util.js';
+import { FOCUS, SCENE_W as W, SCENE_H as H, cropBox } from './scene/frame.js';
 import { SceneDefs } from './scene/parts.jsx';
+import { AtmosDefs } from './scene/atmos.jsx';
+import { tone } from './scene/tone.js';
 import { BEATS } from './scene/beats.jsx';
 
 const BEAT_ALIAS = {
@@ -57,33 +60,6 @@ const BEAT_LABEL = {
 };
 const STATE_LABEL = { STABLE: 'calm', FORTIFIED: 'fortified', AFTERMATH: 'in the aftermath of battle' };
 
-// Focal point per beat (viewBox units). When the container is narrower or
-// shorter than 400:220 we crop around this instead of the plain centre, so the
-// keep / gate / walker / fire stays in frame on a portrait phone.
-const FOCUS = {
-  road: [236, 132],
-  checkpoint: [244, 140],
-  wilds: [218, 142],
-  ruin: [205, 136],
-  champion: [212, 150],
-  camp: [198, 152],
-};
-const W = 400;
-const H = 220;
-
-function cropBox(ar, [fx, fy]) {
-  if (!ar || !Number.isFinite(ar)) return [0, 0, W, H];
-  let w = W;
-  let h = H;
-  if (ar < W / H) w = H * ar;
-  else h = W / ar;
-  w = Math.max(60, w);
-  h = Math.max(40, h);
-  const x0 = clamp(fx - w / 2, 0, W - w);
-  const y0 = clamp(fy - h / 2, 0, H - h);
-  return [Math.round(x0 * 10) / 10, Math.round(y0 * 10) / 10, Math.round(w * 10) / 10, Math.round(h * 10) / 10];
-}
-
 /** Track the rendered aspect ratio of an element (null until measured). */
 function useAspect(ref) {
   const [ar, setAr] = useState(null);
@@ -128,6 +104,7 @@ function RegionSceneImpl({
   const st = normalizeRegionState(regionState);
   const tod = normalizeTimeOfDay(timeOfDay);
   const L = LIGHT[tod];
+  const T = tone(L, tod);
   const Beat = BEATS[b] || BEATS.road;
   const list = Array.isArray(monuments) ? monuments.filter(Boolean) : [];
   const aria = label === true ? `View of ${BEAT_LABEL[b]}, ${STATE_LABEL[st]}, at ${tod}.` : label;
@@ -150,10 +127,13 @@ function RegionSceneImpl({
       data-region-state={st}
       data-time={tod}
     >
-      <SceneDefs uid={uid} L={L} />
+      <SceneDefs uid={uid} L={L} T={T} />
+      <AtmosDefs uid={uid} L={L} T={T} />
+      {/* ground under the painting, for frames that overscan past its bottom edge */}
+      <rect x="-10" y="200" width="420" height="80" fill={L.fgDeep} />
       {/* key: remount SMIL timelines cleanly when the scene changes */}
       <g key={`${b}-${st}-${tod}-${motion ? 1 : 0}`}>
-        <Beat uid={uid} L={L} st={st} tod={tod} motion={motion} monuments={list} />
+        <Beat uid={uid} L={L} T={T} st={st} tod={tod} motion={motion} monuments={list} />
       </g>
       {vignette && (
         <g pointerEvents="none">
