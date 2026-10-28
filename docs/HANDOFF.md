@@ -41,7 +41,7 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 
 | Area | State |
 |---|---|
-| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic, 132 vitest tests incl. a full-cycle playthrough |
+| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic, 158 vitest tests incl. a full-cycle playthrough |
 | Duel engine (`src/game/duel/**`): 3 archetypes, telegraphs, misread analysis, bots | **Done**: tested, including a fairness sweep |
 | Saves (3 slots + autosave, export/import, dynasty meta), optional Claude narrator | **Done**: tested |
 | UI: Title, War Room, Resolution, March, Campfire, the Passing, Chronicle, Council, Settings, Saves | **Done** |
