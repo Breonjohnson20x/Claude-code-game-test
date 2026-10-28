@@ -102,7 +102,7 @@ function Conversation({ scene, onRespond }) {
             <button
               type="button"
               onClick={() => onRespond(r)}
-              className="flex min-h-14 w-full flex-col items-start gap-0.5 rounded-xl border border-ember-500/35 bg-navy-950/70 px-4 py-3 text-left transition hover:border-ember-300/80 hover:bg-navy-900/80 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200"
+              className="flex min-h-14 w-full flex-col items-start gap-0.5 rounded-xl border border-ember-500/35 bg-navy-950/85 px-4 py-3 text-left transition hover:border-ember-300/80 hover:bg-navy-900/80 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200"
             >
               <span className="font-display text-[0.72rem] uppercase tracking-[0.22em] text-ember-300">{r.tone}</span>
               <span className="font-serif text-[1.15rem] leading-snug text-parchment-50">{r.label}</span>
@@ -184,10 +184,19 @@ export function CampfireScreen() {
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-navy-950" aria-labelledby="cf-title">
+      {/* The camp is the hero: full-bleed behind everything, with a scrim only where text sits. Once
+          the talk begins and words run down over the fire, the whole scene settles back under them. */}
       <div className="pointer-events-none fixed inset-0" aria-hidden="true">
-        <CampfireScene intensity={0.7} />
-        <div className="absolute inset-0 bg-[radial-gradient(130%_85%_at_50%_100%,transparent_35%,rgb(5_7_12/0.7)_80%)]" />
-        <div className="absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-navy-950/85 via-navy-950/45 to-transparent" />
+        <CampfireScene intensity={0.7} fireY={[0.85, 0.8]} />
+        <div className="absolute inset-0 bg-[radial-gradient(140%_90%_at_50%_95%,transparent_40%,rgb(5_7_12/0.6)_85%)]" />
+        <div className="absolute inset-x-0 top-0 h-[64%] bg-[linear-gradient(180deg,rgb(7_13_24/0.8)_0%,rgb(7_13_24/0.58)_45%,rgb(7_13_24/0.2)_80%,transparent_100%)] sm:bg-[linear-gradient(180deg,rgb(7_13_24/0.55)_0%,rgb(7_13_24/0.3)_55%,transparent_100%)]" />
+        <div className="absolute inset-y-0 left-1/2 hidden w-[56rem] -translate-x-1/2 bg-[radial-gradient(50%_55%_at_50%_28%,rgb(7_13_24/0.62),transparent_100%)] sm:block" />
+        <div
+          className={cx(
+            'absolute inset-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.5)_0%,rgb(7_13_24/0.72)_55%,rgb(7_13_24/0.62)_100%)] sm:bg-[linear-gradient(180deg,rgb(7_13_24/0.3)_0%,rgb(7_13_24/0.45)_55%,rgb(7_13_24/0.4)_100%)] transition-opacity duration-700 motion-reduce:transition-none',
+            mode === null ? 'opacity-0' : 'opacity-100',
+          )}
+        />
       </div>
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 sm:px-6" style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))', paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         <TopBar subtitle="The camp, after dark" />

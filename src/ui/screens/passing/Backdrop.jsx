@@ -14,8 +14,11 @@ export function PassingBackdrop({ step, accent = 'gold', reduced = false }) {
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-navy-950">
       {step === 'campfire' ? (
         <>
-          <CampfireScene intensity={0.55} className="absolute inset-0 h-full w-full" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.55)_0%,rgb(7_13_24/0.35)_35%,rgb(7_13_24/0.82)_75%,#070d18_100%)]" />
+          {/* The last fire burns low in the middle distance; text and cards sit over a scrim that
+              keeps the sky and the fire's glow alive between them. */}
+          <CampfireScene intensity={0.55} fireY={[0.7, 0.72]} className="absolute inset-0 h-full w-full" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.6)_0%,rgb(7_13_24/0.42)_30%,rgb(7_13_24/0.55)_55%,rgb(7_13_24/0.8)_82%,#070d18_100%)]" />
+          <div className="absolute inset-y-0 left-1/2 hidden w-[56rem] -translate-x-1/2 bg-[radial-gradient(50%_50%_at_50%_35%,rgb(7_13_24/0.4),transparent_100%)] sm:block" />
         </>
       ) : null}
 
