@@ -67,11 +67,13 @@ seed (20261024, sovereign "Aurelian"). Each one is a real state in a known spot:
 | `war_room_t1` | war_room | First briefing of reign I |
 | `resolution_t1` | resolution | After order E on turn 1; march offered |
 | `march_road`, `march_checkpoint`, `march_wilds`, `march_ruin`, `march_champion` | expedition | Each march beat |
+| `march_checkpoint_scout` | expedition | After catching the man in the grey coat at the checkpoint |
 | `duel_pending` | expedition | Champion duel about to start (Blade-Adept config pending) |
 | `champion_defeated` | expedition | Lost to the champion; rematch offered |
 | `campfire` | campfire | A campfire scene opened |
 | `war_room_t3` | war_room | Turn 3, "The Line Is Crossed" |
 | `resolution_t4_skirmish` | resolution | Turn 4; skirmish deployment offered |
+| `resolution_t5_skaela` | resolution | Turn 5 after the Northern Compact, with mercy shown: the Warg Queen speaks |
 | `passing_campfire`, `passing_chronicle`, `passing_legacies` | passing | The Passing steps I–III |
 | `cycle2_war_room` | war_room | Reign II's first briefing (cites reign I) |
 

@@ -118,7 +118,20 @@ function beatRoad(state) {
   };
 }
 
-function beatCheckpoint(state) {
+// The pathfinder at the checkpoint: a Syndicate scout hidden among the refugees. Fighting him
+// teaches the Blade-Adept's feints before Greywater Ford tests them ("teach, test, or tell").
+const SCOUT = { name: 'The Man in the Grey Coat', epithet: 'A Syndicate pathfinder among the refugees' };
+
+/** How the checkpoint's scout was dealt with this march: 'caught' | 'taken' | 'escaped' | null. */
+export function checkpointScout(exp) {
+  if (!exp) return null;
+  if (exp.picked.includes('signal_watchers')) return 'taken';
+  const fight = exp.duels.filter((d) => d.beat === 'checkpoint').at(-1);
+  if (!fight) return null;
+  return fight.outcome === 'victory' ? 'caught' : 'escaped';
+}
+
+function beatCheckpoint(state, exp) {
   const rs = state.regions.southern_marches.state;
   const policy = state.flags.refugees_policy ?? 'held';
   const cycle = state.cycle.number;
@@ -139,10 +152,26 @@ function beatCheckpoint(state) {
         ? 'The gate is shut on your own decree. Families sit in the mud on the far side.'
         : 'The gate is closed by default; families wait in the mud for a decree that has not come.',
   );
+  const scout = checkpointScout(exp);
+  const afterFight = exp && exp.phase !== 'main' && scout && scout !== 'taken';
+  if (afterFight) {
+    text.unshift(
+      scout === 'caught'
+        ? 'The man in the grey coat is face-down in the mud with Mara\'s knee in his back. Under the refugee\'s coat: a Syndicate pathfinder\'s harness and a short blade still warm from your guard.'
+        : exp.phase === 'after_retreat'
+          ? 'You lower your blade. The man in the grey coat backs into the crowd, and the crowd closes around him, and he is gone.'
+          : 'When you get your breath back, the man in the grey coat is gone into the reeds. He left the coat behind. Sparky is chewing it.',
+    );
+  }
   text.push(
     'A girl of about nine sits on a cart wheel with her hood up, watching your banner. Her mother is arguing with the duty sergeant. Her little brother is asleep in a crate of turnips.',
     '"Are you the God-King?" the girl asks. Then, before you answer: "Mama says you decide who\'s allowed to live where."',
   );
+  if (!scout) {
+    text.push(
+      'Sparky has not looked at the girl once. He is staring at a man in a grey refugee\'s coat at the back of the line, and the crest along his spine is standing straight up. Mara follows his gaze and goes very still.',
+    );
+  }
 
   const settle = (id, label, effects, result) => ({ id, kind: 'advance', label, effects: [character('mika', { status: 'met' }), ...effects], result });
   const helped = [
@@ -155,7 +184,54 @@ function beatCheckpoint(state) {
     chron("The Sovereign's Seal at Greywater", `At the Greywater checkpoint the Sovereign personally passed a northern family named ${family} through the gate — and a girl called ${child}.`, 'personal', ['mika']),
   ];
 
+  const scoutChoices = [];
+  if (!scout) {
+    scoutChoices.push({
+      id: 'call_out_scout',
+      kind: 'duel',
+      label: 'Call out the man in the grey coat',
+      hint: 'A hidden blade · he fights with feints',
+      duel: (s, e) => duelConfig(s, e, 'checkpoint', 'blade_adept', SCOUT, 'march', true),
+    });
+    if (state.resources.intel >= 35) {
+      scoutChoices.push({
+        id: 'signal_watchers',
+        kind: 'talk',
+        label: "Signal Cassian's watchers to take him quietly",
+        hint: 'Your intelligence network is here',
+        effects: [
+          flag('checkpoint_scout', 'taken'),
+          res('intel', 4),
+          rel('cassian', { trust: 3, respect: 2 }),
+          mem('cassian', 'THE_SOVEREIGN_LET_MY_PEOPLE_WORK', 'At Greywater the Sovereign let my watchers take a Syndicate scout without a scene.', 4, 0.6),
+        ],
+        result: [
+          'You touch two fingers to your collar. A tinker, a sergeant and a woman selling hot chestnuts all stop what they are doing. The man in the grey coat does not reach the reeds.',
+          'Nobody in the line sees anything. That is the point. Somewhere in the Citadel, Cassian will allow himself one small smile.',
+        ],
+      });
+    }
+  }
+  if (scout === 'caught' && !exp.picked.includes('search_scout')) {
+    scoutChoices.push({
+      id: 'search_scout',
+      kind: 'talk',
+      label: "Search the pathfinder's harness",
+      effects: [
+        flag('checkpoint_scout', 'caught'),
+        res('intel', 6),
+        thread(T_SYN, { visibility: 'known' }),
+        mem('mika', 'THE_SOVEREIGN_FOUGHT_IN_THE_MUD', 'The God-King fought a Syndicate spy in the mud at the checkpoint, right in front of me.', 4, 0.5),
+      ],
+      result: [
+        'Folded flat in the harness: a map of Greywater Ford, the crossing marked in red ink, and tonight\'s date. Mara reads it twice and hands it to you without a word.',
+        'On the cart wheel, the girl has not moved. She watched the whole fight. She is still watching you.',
+      ],
+    });
+  }
+
   const choices = [
+    ...scoutChoices,
     {
       id: 'ask_mika',
       kind: 'talk',
@@ -259,6 +335,9 @@ function beatWilds(state, exp) {
     'North of the road the frontier turns to pine and snow. At dusk the pack is waiting on the path: a dozen Frost Wargs and an alpha the size of a cart horse, frost in its ruff, eyes like lamps.',
   ];
   if (truce) text.push('The alpha lifts its head when it sees you. It knows your scent — or something older than your scent. It hesitates.');
+  if (state.cycle.number >= 2 && state.history.some((h) => h.keys?.skaela_spoke)) {
+    text.push('On the ridge above the pack lies the Queen herself, older now, grey as old ice. She lowers her head to you a fraction of an inch. She knows exactly who you are.');
+  }
   else if (friendly) text.push('The pack does not snarl. It watches. It is hungry, and it is deciding.');
   else text.push('The pack spreads across the path. Behind you the supply wagons stop. Mara\'s hand is on her sword; she waits for yours.');
 
@@ -280,7 +359,10 @@ function beatWilds(state, exp) {
             rel('sparky', { affection: 4 }),
             chron('Mercy in the Frontier Wilds', 'The Sovereign bested the alpha Rimefang in single combat and let it walk away.', 'duel', ['wargs']),
           ],
-          result: ['The alpha rises, slowly. It limps to the treeline and stops once to look back at you — not the way an animal looks at a predator. The way a soldier looks at an officer from the other army.'],
+          result: [
+            'The alpha rises, slowly. It limps to the treeline and stops once to look back at you — not the way an animal looks at a predator. The way a soldier looks at an officer from the other army.',
+            'On the ridge above the pines, something far larger than the alpha is watching: grey as old ice, scarred from muzzle to shoulder. When you look straight at it, there is only snow.',
+          ],
         },
         {
           id: 'finish_alpha',
@@ -592,6 +674,10 @@ function beatChampion(state, exp) {
   } else {
     text.push('A Syndicate officer climbs down from the walker: Captain Ilse Ostrava, a Blade-Adept of the Iron Academies, who has clearly read about you. "The Chronicle says you come yourself," she says. "Let\'s see if the Chronicle lies."');
   }
+  const scout = checkpointScout(exp);
+  if (scout === 'caught') text.push('The map from the grey coat was exact: the lance is camped exactly where the red ink said. They were not expecting you tonight.');
+  else if (scout === 'taken') text.push("A runner from Cassian's watchers caught up with you on the road: the lance at the ford has had no word from its pathfinder since noon. They are nervous. Nervous soldiers are slow.");
+  else if (scout === 'escaped') text.push(`"Our pathfinder said you'd come by moonrise," ${name} calls across the water. "He said you were good. He didn't say how good."`);
   if (state.flags[`march_retreated_${state.cycle.number}`] || state.counters.retreats > 0) {
     text.push(`"I heard you turned back once," ${name} calls across the water. "I hope you didn't come all this way to do it again."`);
   }

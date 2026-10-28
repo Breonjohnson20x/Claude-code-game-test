@@ -45,7 +45,7 @@ export async function playthrough(ctx) {
 
   const plan = [
     { beat: 'road', choose: ['ask_mara', 'ride_on'] },
-    { beat: 'checkpoint', choose: ['walk_through'] },
+    { beat: 'checkpoint', choose: ['call_out_scout', 'search_scout', 'walk_through'] },
     { beat: 'wilds', choose: ['face_alpha'] },
     { beat: 'wilds', choose: ['spare_alpha'] },
     { beat: 'ruin', choose: ['study', 'leave_ruin'] },

@@ -47,6 +47,11 @@ export function historyCallbacks(state) {
         : `${gap} years have passed since ${prev}'s reign closed with the thaw of ${last.endYear} E.R.`,
   );
 
+  // The Queen's words outrank everything else the world remembers.
+  if (k.skaela_spoke) {
+    lines.push(`Queen Skaela has not spoken Elvian since the day she spoke it to ${prev}. Schoolchildren learn her one sentence before they learn her name: ${SKAELA_LINE}`);
+  }
+
   if (k.refugees_policy === 'granted') {
     lines.push(`${prev} opened the northern road. The refugees' children are Elvian now; two of them sit on your Council.`);
   } else if (k.refugees_policy === 'removed') {
@@ -83,7 +88,7 @@ export function historyCallbacks(state) {
   const synLabel = civilizationLabel(state.factions[SYN].memory);
   const wargLabel = civilizationLabel(state.factions[WARGS].memory);
   if (synLabel.key) lines.push(`The Iron Syndicate remembers Elvia as ${synLabel.label} — ${synLabel.gloss}.`);
-  if (wargLabel.key) lines.push(`The Frost Wargs remember Elvia as ${wargLabel.label}.`);
+  if (wargLabel.key && !k.skaela_spoke) lines.push(`The Frost Wargs remember Elvia as ${wargLabel.label}.`);
 
   if (k.architect_studied) {
     lines.push('You do not remember the broken circle. You recognize it anyway, the way you recognize your own handwriting.');
@@ -98,6 +103,31 @@ function returnParagraph(state) {
   const s = state.cycle.sovereign;
   return `You wake in a body you have never seen and remember a war room you have never stood in. The Lattice has woven you again: ${s.name} ${s.ordinal}, God-King of Elvia.`;
 }
+
+// The Frost Warg Queen's first words in Elvian (World Bible: "a major reveal"). Earned by mercy:
+// she comes to the signing of the Northern Compact only if the Sovereign spared the wargs before.
+const SKAELA_LINE = '"You called us beasts because beasts were easier to kill."';
+export const SKAELA_SPEAKS = {
+  outcome: [
+    'The Frost Wargs come to the signing. Not a delegation: the Queen herself, Skaela, grey as old ice and scarred from muzzle to shoulder, too large for the Hall of Banners. She lies down across its doors and waits.',
+    `When the ink is dry, she speaks. In Elvian. Clear as a bell in a winter field: ${SKAELA_LINE}`,
+    'Nobody in the hall breathes. Vale drops his pen. Mara keeps her hand on her sword and does not draw it.',
+    '"There is a heart under the ice," the Queen says. "It is older than your crown and older than my teeth. Your engines are waking it. We have been standing on it so that you would not." Then she rises, and the doors are open, and she is gone.',
+  ],
+  effects: [
+    flag('skaela_spoke', true),
+    fac(WARGS, { memory: { peacemaker: 4 } }),
+    thread(T_MYSTERY, { visibility: 'known', urgency: 15 }),
+    chron(
+      'The Warg Queen Speaks',
+      'At the signing of the Northern Compact, Queen Skaela of the Frost Wargs spoke fluent Elvian before the Hall of Banners: "You called us beasts because beasts were easier to kill." She spoke of a heart beneath the ice.',
+      'discovery',
+      ['wargs', 'mystery'],
+    ),
+    heat(12, 'revelation'),
+  ],
+  voices: [{ speaker: 'Queen Skaela of the Frost Wargs, in Elvian', text: SKAELA_LINE }],
+};
 
 // ─── Turn 1 · The Southern Marches ───────────────────────────────────────────────
 
@@ -943,13 +973,16 @@ function turn5(state) {
         thread(T_REFUGEES, { status: 'resolved' }),
         flag('era_policy', 'compact'),
         ...(state.counters.wargMercy >= 1
-          ? [counter('wargMercy'), fac(WARGS, { attitude: 15, tension: -20, memory: { peacemaker: 10 } }), thread(T_WARGS, { status: 'dormant' })]
+          ? [counter('wargMercy'), fac(WARGS, { attitude: 15, tension: -20, memory: { peacemaker: 10 } }), thread(T_WARGS, { status: 'dormant' }), ...SKAELA_SPEAKS.effects]
           : []),
         chron('The Northern Compact', state.counters.wargMercy >= 1 ? 'Refugees became citizens; the forests north of Holloway were ceded to the Frost Wargs.' : 'The northern refugees became citizens of Elvia.', 'era'),
         heat(3, 'compact'),
       ],
-      outcome: ['The northern road becomes a northern town. It needs a name. The refugees vote. They choose "Second Chance," and then, embarrassed, "Halden."'],
-      voices: [],
+      outcome: [
+        ...(state.counters.wargMercy >= 1 ? SKAELA_SPEAKS.outcome : []),
+        'The northern road becomes a northern town. It needs a name. The refugees vote. They choose "Second Chance," and then, embarrassed, "Halden."',
+      ],
+      voices: state.counters.wargMercy >= 1 ? SKAELA_SPEAKS.voices : [],
     },
   ];
   return {

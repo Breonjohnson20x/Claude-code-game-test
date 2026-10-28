@@ -75,8 +75,9 @@ tests, lint and the build on pull requests.
 
 In dev builds: `/?scenario=<name>` opens any phase built from real actions (names in
 `src/game/dev/scenarios.js`: `war_room_t1, resolution_t1, march_road, march_checkpoint,
-march_wilds, march_ruin, march_champion, duel_pending, champion_defeated, campfire, war_room_t3,
-resolution_t4_skirmish, passing_campfire, passing_chronicle, passing_legacies, cycle2_war_room`).
+march_checkpoint_scout, march_wilds, march_ruin, march_champion, duel_pending, champion_defeated,
+campfire, war_room_t3, resolution_t4_skirmish, resolution_t5_skaela, passing_campfire,
+passing_chronicle, passing_legacies, cycle2_war_room`).
 `/?seed=<n>` makes "Begin a new reign" reproducible; `window.__elvia.state` is the live state.
 
 Quality gates: `npm test`, `npm run build`, `npm run lint`, `npm run e2e`. See
@@ -123,8 +124,9 @@ reigns; hidden NarrativeIntensity that opens campfires; region states (STABLE, F
 AFTERMATH) that change the march art; a write-only **Chronicle** whose entries you may approve
 (three approvals earn *The Chronicler's Pen*).
 
-**The march** (`src/game/content/expedition.js`): road → checkpoint (Mika's family) → wilds (the
-warg alpha) → the broken-circle ruin → Greywater Ford (Nyra, the champion duel) → camp. Talk
+**The march** (`src/game/content/expedition.js`): road → checkpoint (Mika's family, and a
+Syndicate pathfinder in a grey coat) → wilds (the warg alpha) → the broken-circle ruin (an echo in
+a crown) → Greywater Ford (Nyra, the champion duel) → camp. Up to four duels, three optional. Talk
 choices, advance choices, duel choices; you may retreat (recorded). Losing the champion duel
 offers a rematch: the Cycle doc's success test is *lose the first duel, name why, win the
 rematch*.
@@ -259,8 +261,7 @@ Next milestones, roughly in order:
    agnostic by design. See the porting notes in [`docs/DUEL.md`](DUEL.md) and [`docs/API.md`](API.md).
 
 Known limitations: one region (the Southern Marches) and one arc of five turns per reign; reigns
-after the second reuse the same arc with memory callbacks; the march has two duels plus a
-rematch (the Cycle doc suggests 3–5); Queen Skaela never speaks yet; gamepad works in duels but
+after the second reuse the same arc with memory callbacks; Warg culture beyond Skaela's reveal is not shown yet; gamepad works in duels but
 not for menu navigation; no input remapping or caption toggle; the narrator requires the
 player's own Anthropic API key (fine for personal use; a public deployment should proxy it via a
 server).

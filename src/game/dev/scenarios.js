@@ -73,6 +73,13 @@ export const SCENARIOS = {
   resolution_t1: { label: 'Resolution · turn 1 (march offered)', build: afterTurn1 },
   march_road: { label: 'March · the road', build: () => marchTo('road') },
   march_checkpoint: { label: 'March · checkpoint (Mika)', build: () => marchTo('checkpoint') },
+  march_checkpoint_scout: {
+    label: 'March · checkpoint, after catching the man in the grey coat',
+    build: () => {
+      const s = choose(marchTo('checkpoint'), 'call_out_scout');
+      return run(s, { type: 'EXPEDITION_DUEL_COMPLETE', result: duel(s, true) });
+    },
+  },
   march_wilds: { label: 'March · wilds (warg alpha)', build: () => marchTo('wilds') },
   march_ruin: { label: 'March · the broken circle', build: () => marchTo('ruin') },
   march_champion: { label: 'March · Greywater Ford (Nyra)', build: () => marchTo('champion') },
@@ -112,6 +119,22 @@ export const SCENARIOS = {
       }
       s = run(s, { type: 'CONTINUE' });
       return run(s, { type: 'ISSUE_ORDER', orderId: 'B' });
+    },
+  },
+  resolution_t5_skaela: {
+    label: 'Resolution · turn 5, the Northern Compact: the Warg Queen speaks',
+    build: () => {
+      let s = run(afterTurn1(), { type: 'BEGIN_DEPLOYMENT', kind: 'march' });
+      s = choose(s, 'ride_on', 'walk_through', 'face_alpha');
+      s = run(s, { type: 'EXPEDITION_DUEL_COMPLETE', result: duel(s) });
+      s = choose(s, 'spare_alpha', 'leave_ruin', 'challenge');
+      s = run(s, { type: 'EXPEDITION_DUEL_COMPLETE', result: duel(s) });
+      s = settleCampfire(choose(s, 'release', 'rest'));
+      for (const order of ['A', 'A', 'A', 'E']) {
+        s = run(s, { type: 'CONTINUE' });
+        s = settleCampfire(run(s, { type: 'ISSUE_ORDER', orderId: order }));
+      }
+      return s;
     },
   },
   passing_campfire: { label: 'Passing · final campfire', build: () => run(fullCycle1(), { type: 'CONTINUE' }) },

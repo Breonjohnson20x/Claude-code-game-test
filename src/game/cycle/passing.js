@@ -165,7 +165,12 @@ export function chronicleReadback(state, { limit = 12 } = {}) {
       faction: f.id,
       name: f.name,
       label: label.label,
-      text: label.key ? `${f.name} will remember this reign as ${label.label} — ${label.gloss}.` : `${f.name} has not yet decided what this reign was.`,
+      text:
+        f.id === WARGS && state.flags.skaela_spoke
+          ? `${f.name} will remember this reign as ${label.label}. Their Queen said so herself, in Elvian, at the Hall of Banners.`
+          : label.key
+            ? `${f.name} will remember this reign as ${label.label} — ${label.gloss}.`
+            : `${f.name} has not yet decided what this reign was.`,
     };
   });
   return { sovereign: sovereignTitle(state), years: `${state.cycle.startYear}–${state.year} E.R.`, lines, verdicts };
@@ -196,6 +201,7 @@ function historyKeys(state) {
     era_policy: f.era_policy ?? null,
     border_outcome: borderOutcome(state),
     warg_mercy: state.counters.wargMercy,
+    skaela_spoke: Boolean(f.skaela_spoke),
     duels_won: state.counters.duelsWon,
     duels_lost: state.counters.duelsLost,
   };

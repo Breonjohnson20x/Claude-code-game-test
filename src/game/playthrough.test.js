@@ -248,3 +248,56 @@ describe('full cycle playthrough', () => {
     expect(getView(s).expedition).toBeNull();
   });
 });
+
+describe('the Warg Queen speaks', () => {
+  // Turns 1–5 with the given orders (no deployments), ending in the turn-5 resolution.
+  function reign(orders, { march = null } = {}) {
+    let s = newGame({ seed: 42 });
+    for (const [i, order] of orders.entries()) {
+      if (i > 0) s = run(s, { type: 'CONTINUE' });
+      s = run(s, { type: 'ISSUE_ORDER', orderId: order });
+      if (i === 0 && march) {
+        s = run(s, { type: 'BEGIN_DEPLOYMENT', kind: 'march' });
+        s = walkExpedition(s, march);
+      }
+      s = finishResolution(s, {});
+    }
+    return s;
+  }
+  const mercyMarch = ['ride_on', 'walk_through', 'face_alpha', 'spare_alpha', 'leave_ruin', 'challenge', 'release', 'rest'];
+
+  it('a Sovereign who spared the wargs hears her at the Northern Compact; reign II remembers', () => {
+    let s = reign(['E', 'A', 'A', 'A', 'E'], { march: mercyMarch });
+    expect(s.counters.wargMercy).toBeGreaterThanOrEqual(1);
+    expect(s.flags.skaela_spoke).toBe(true);
+    expect(s.lastResolution.outcome.join(' ')).toMatch(/You called us beasts because beasts were easier to kill/);
+    expect(s.chronicle.some((e) => e.title === 'The Warg Queen Speaks')).toBe(true);
+    expect(s.voices[0].speaker).toMatch(/Skaela/);
+    expect(s.threads.FIRST_ARCHITECTS_MYSTERY.visibility).toBe('known');
+
+    s = run(s, { type: 'CONTINUE' });
+    s = run(s, { type: 'PASSING_NEXT' });
+    const wargs = getView(s).readback.verdicts.find((v) => v.faction === 'frost_wargs');
+    expect(wargs.text).toMatch(/Their Queen said so herself/);
+    s = run(s, { type: 'PASSING_NEXT' });
+    s = run(s, { type: 'PASSING_CHOOSE_LEGACIES', ids: [] });
+    expect(s.history.at(-1).keys.skaela_spoke).toBe(true);
+    s = run(s, { type: 'BEGIN_NEXT_CYCLE' });
+    expect(getCrisis(s).briefing.join(' ')).toMatch(/Queen Skaela has not spoken Elvian since/);
+
+    // On the next march she watches from the ridge.
+    s = run(s, { type: 'ISSUE_ORDER', orderId: 'E' });
+    s = run(s, { type: 'BEGIN_DEPLOYMENT', kind: 'march' });
+    for (const choiceId of ['ride_on', 'walk_past']) s = run(s, { type: 'EXPEDITION_CHOICE', choiceId });
+    expect(getBeat(s).id).toBe('wilds');
+    expect(getBeat(s).text.join(' ')).toMatch(/the Queen herself/);
+  });
+
+  it('without mercy she stays silent, and the Compact is only a law', () => {
+    const s = reign(['A', 'A', 'A', 'A', 'E']);
+    expect(s.counters.wargMercy).toBe(0);
+    expect(s.flags.skaela_spoke).toBeUndefined();
+    expect(s.lastResolution.outcome.join(' ')).not.toMatch(/beasts/);
+    expect(s.chronicle.some((e) => e.title === 'The Warg Queen Speaks')).toBe(false);
+  });
+});

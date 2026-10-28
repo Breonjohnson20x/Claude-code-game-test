@@ -252,8 +252,10 @@ misread detection, telegraph shape, specials, and the full fairness sweep.
 ## Campaign wiring
 
 - **March and deployments**: `duelConfig(state, exp, beat, archetypeId, champion, stakes,
-  allowRetreat)` in `src/game/content/expedition.js` builds configs for the wilds (warg alpha),
-  Greywater Ford (Nyra, champion stakes), the skirmish and the last stand (no retreat).
+  allowRetreat)` in `src/game/content/expedition.js` builds configs for the checkpoint (the man
+  in the grey coat, a Blade-Adept), the wilds (warg alpha), the ruin (an echo in a crown, the
+  Fallen Champion), Greywater Ford (Nyra, champion stakes), the skirmish and the last stand (no
+  retreat).
   `EXPEDITION_DUEL_COMPLETE` applies `duelOutcomeEffects`: a win gives readiness +2 (+4 for a
   champion), Mara respect, and a memory (flawless: a little more); a loss costs stability −1
   (−2 for a champion) and records it; champion and skirmish fights cost lives (`casualtiesFor`:
