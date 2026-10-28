@@ -12,4 +12,6 @@ export default defineConfig({
     tailwindcss(),
     elviaPwa(),
   ],
+  // Agent worktrees under .claude/ hold whole copies of the repo; keep their tests out of this run.
+  test: { exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'] },
 })
