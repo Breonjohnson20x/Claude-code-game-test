@@ -40,7 +40,8 @@ src/
     kit/                kit.jsx (buttons, panels, sheets, meters, HUD) · icons.jsx
     screens/            Title · WarRoom · Resolution · Expedition · Campfire · Passing (+ helper folders)
     overlays/           Settings · Saves · Chronicle · Dossier (+ helper folders)
-    duel/               DuelScreen.jsx · draw.js
+    duel/               DuelScreen.jsx · hud.jsx · render/ (stages, foes, telegraph, player, fx)
+    dev/                DuelLab.jsx (dev-only duel lab, /?lab=duel)
     art/                RegionScene · WarRoomBackdrop · CampfireScene · Portrait · FactionCrest · ArchitectSymbol · Ornaments · scene/
     audio/              audio.js (Web Audio engine + haptics)
     pwa.js              service worker registration and the install prompt (useInstallState)

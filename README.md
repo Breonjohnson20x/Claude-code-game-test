@@ -46,12 +46,12 @@ optional Claude narrator still needs a connection).
 
   | Action | Touch / mouse | Keyboard |
   |---|---|---|
-  | Strike | swipe / drag up, down, left, right | Arrow keys |
-  | Dodge | tap the left or right edge | A / D |
-  | Guard / parry | hold on the blade | hold Space or S |
+  | Strike | tap the arena, or swipe / drag up, down, left, right | Arrow keys |
+  | Dodge | the ◀ ▶ Dodge buttons at your thumbs | A / D |
+  | Guard / parry | hold the shield | hold Space or S |
   | Arc Pulse | tap the charged sigil | E |
   | Royal Command (once) | tap the crown | R |
-  | Shield Ward | hold the ward button | hold Shift |
+  | Shield Ward | hold Ward | hold Shift |
 
   Read the wind-up: a **red-gold** glow means *dodge*, steel light means *parry or dodge*, and a
   flicker is a feint: *wait*. Losing a duel never ends the game; the result screen tells you what

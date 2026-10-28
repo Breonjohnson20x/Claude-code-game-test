@@ -13,6 +13,9 @@ and choice comes from the game layer.
 `'settings' | 'saves' | 'chronicle' | 'dossier'` → `SettingsSheet`, `SavesSheet`, `ChronicleSheet`,
 `DossierSheet`. Each screen file exports a named component with no props.
 
+Between screens a `.screen-veil` (keyed by the screen) dips to night for about half a second and
+lifts as the new screen arrives; it never blocks input and is instant under reduced motion.
+
 Where the screens live (helpers sit in a folder named after the screen):
 
 | Screen / overlay | File | Helpers |
@@ -24,7 +27,7 @@ Where the screens live (helpers sit in a folder named after the screen):
 | March | `src/ui/screens/ExpeditionScreen.jsx` | `screens/expedition/` (MarchRail, ChoiceList, DuelOutcome, words) |
 | Campfire | `src/ui/screens/CampfireScreen.jsx` | — |
 | The Passing | `src/ui/screens/PassingScreen.jsx` | `screens/passing/` (one component per step, Backdrop, StepIndicator, ActionBar, copy) |
-| Duel | `src/ui/duel/DuelScreen.jsx` | `duel/draw.js` (canvas) |
+| Duel | `src/ui/duel/DuelScreen.jsx` | `duel/hud.jsx` (nameplate, bars, controls, intro), `duel/render/` (canvas renderer), `duel/colors.js` |
 | Chronicle | `src/ui/overlays/ChronicleSheet.jsx` | `overlays/chronicle/` |
 | Council dossier | `src/ui/overlays/DossierSheet.jsx` | `overlays/dossier/` (Council, Factions, World tabs) |
 | Settings, Saves | `src/ui/overlays/SettingsSheet.jsx`, `SavesSheet.jsx` | — |
@@ -140,7 +143,7 @@ heart sound mute download upload trash). `TopBar` (`src/ui/game/TopBar.jsx`) is 
 Theme classes (`src/styles/theme.css`): `.panel .panel-parchment .btn-royal .btn-ghost .order-card
 (.order-card__key/__body/__title/__desc/__meta, .order-card--danger, aria-pressed for selected)
 .chip--* .meter .gold-rule .text-gilded .text-engraved .text-glow-gold .glow-gold .vignette
-.scroll-elvia .bg-war-room`; tokens `navy-950…500, stone-*, parchment-50…500, ink-*, gold-200…800,
+.scroll-elvia .bg-war-room .chrome-bar .screen-veil`; tokens `navy-950…500, stone-*, parchment-50…500, ink-*, gold-200…800,
 ember-*, crimson-*, lattice-*, iron-*, brass-*, frost-*, acid-*, moss-*`; fonts `font-display`
 (Cinzel), `font-serif` (Cormorant Garamond), `font-body`.
 
@@ -152,7 +155,9 @@ mara vale cassian sparky mika nyra vex skaela sovereign chronicler), `FactionCre
 |'frost_wargs'|'elvia', size })`, `ArchitectSymbol({ size, glow, animated })`, `CampfireScene({
 intensity })`, `Sigil`, `GoldDivider`, `PanelCorners`. Duel: `DuelScreen` from
 `src/ui/duel/DuelScreen.jsx` (`{ config, onComplete(result), showHints? }`, full-screen, owns its
-own music). Details: [ART_AND_AUDIO.md](ART_AND_AUDIO.md), [DUEL.md](DUEL.md).
+own music). `StageBackdrop({ stage, noSymbol })` (`src/ui/duel/StageBackdrop.jsx`) puts a living
+duel stage behind a page: the title screen shows the broken-circle ruin at night, the training
+yard its morning courtyard. Details: [ART_AND_AUDIO.md](ART_AND_AUDIO.md), [DUEL.md](DUEL.md).
 Threat values for the backdrop: `state.threads.IRON_SYNDICATE_BORDER_CRISIS.urgency`,
 `FROST_WARG_MIGRATION.urgency`, `NORTHERN_REFUGEES.urgency`.
 
@@ -172,7 +177,8 @@ Only call when `aiOn`. Label AI text subtly ("Narrated by Claude").
 
 ## Presentation rules
 
-Mobile-first at 390×844, then desktop. Body ≥ 15px (`text-base` or larger, serif prose
+Mobile-first at 390×844, then desktop. The War Room, Resolution and march headers stick to the top
+as a frosted `.chrome-bar`, so the story scrolls cleanly under them. Body ≥ 15px (`text-base` or larger, serif prose
 `text-[1.18rem]`). Tap targets ≥ 48px. Every action reachable by keyboard (real `<button>`s,
 visible focus). Headline per screen (`h1`), `aria-live="polite"` on results. Respect reduced
 motion. Regal magitech: stone, brass, navy, gold light, ember — no neon/cyan. AAA-inspired
