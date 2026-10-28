@@ -181,6 +181,13 @@
   100% { background-position: 260% 0; }
 }
 
+@keyframes royal-sheen {
+  0% { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+  8% { opacity: 1; }
+  46% { transform: translateX(330%) skewX(-20deg); opacity: 1; }
+  47%, 100% { transform: translateX(330%) skewX(-20deg); opacity: 0; }
+}
+
 /* ==========================================================================
    Base: root sizing, accessibility text-size, focus, selection
    ========================================================================== */
@@ -193,6 +200,23 @@
     --elvia-focus: #fff4d6;
     /* subtle procedural stone grain (tiny tiled turbulence, no image files) */
     --elvia-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .96 0 0 0 0 .84 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* brushed lacquer: long horizontal streaks, very faint, for the navy steel panels */
+    --elvia-brush: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='120'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006 .22' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .95 0 0 0 0 .82 0 0 0 .032 0'/%3E%3C/filter%3E%3Crect width='240' height='120' filter='url(%23b)'/%3E%3C/svg%3E");
+
+    /* ---- Material language (derived from the tokens above) ----
+       brass bevel: bright top edge, dark bottom edge, like cast metal lit from above */
+    --elvia-brass-bevel: linear-gradient(180deg, #d6b47a 0%, #b08d57 18%, #7a5f36 48%, #4f3d0d 82%, #7a5f36 100%);
+    --elvia-gold-bevel: linear-gradient(180deg, #fbefc2 0%, #e3c463 30%, #a8841b 62%, #4f3d0d 100%);
+    --elvia-hairline: linear-gradient(180deg, rgb(240 220 149 / 0.62) 0%, rgb(201 162 39 / 0.3) 22%, rgb(201 162 39 / 0.16) 60%, rgb(227 196 99 / 0.38) 100%);
+    --elvia-lacquer: linear-gradient(180deg, #1d2a3f 0%, #141e30 46%, #0e1626 100%);
+    --elvia-sheen: linear-gradient(112deg, transparent 30%, rgb(255 244 214 / 0.045) 42%, rgb(255 244 214 / 0.012) 50%, transparent 60%);
+    --elvia-outer-line: #04070d;
+
+    /* gilded corner caps that sit on the inner hairline of a panel */
+    --elvia-orn-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M4.6 23.5V14.6A10 10 0 0 1 14.6 4.6H23.5' fill='none' stroke='%23e3c463' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M8.6 19V14.6A6 6 0 0 1 14.6 8.6H19' fill='none' stroke='%23a8841b' stroke-width='.7'/%3E%3Cpath d='M7.5 3.9 11.1 7.5 7.5 11.1 3.9 7.5Z' fill='%23f6e9bd' stroke='%234f3d0d' stroke-width='.7'/%3E%3Cpath d='M7.5 6.1 8.9 7.5 7.5 8.9 6.1 7.5Z' fill='%237d6114'/%3E%3Ccircle cx='4.6' cy='25.6' r='.9' fill='%23c9a227'/%3E%3Ccircle cx='25.6' cy='4.6' r='.9' fill='%23c9a227'/%3E%3C/svg%3E");
+    --elvia-orn-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg transform='matrix(-1 0 0 1 28 0)'%3E%3Cpath d='M4.6 23.5V14.6A10 10 0 0 1 14.6 4.6H23.5' fill='none' stroke='%23e3c463' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M8.6 19V14.6A6 6 0 0 1 14.6 8.6H19' fill='none' stroke='%23a8841b' stroke-width='.7'/%3E%3Cpath d='M7.5 3.9 11.1 7.5 7.5 11.1 3.9 7.5Z' fill='%23f6e9bd' stroke='%234f3d0d' stroke-width='.7'/%3E%3Cpath d='M7.5 6.1 8.9 7.5 7.5 8.9 6.1 7.5Z' fill='%237d6114'/%3E%3Ccircle cx='4.6' cy='25.6' r='.9' fill='%23c9a227'/%3E%3Ccircle cx='25.6' cy='4.6' r='.9' fill='%23c9a227'/%3E%3C/g%3E%3C/svg%3E");
+    --elvia-orn-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg transform='matrix(1 0 0 -1 0 28)'%3E%3Cpath d='M4.6 23.5V14.6A10 10 0 0 1 14.6 4.6H23.5' fill='none' stroke='%23e3c463' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M8.6 19V14.6A6 6 0 0 1 14.6 8.6H19' fill='none' stroke='%23a8841b' stroke-width='.7'/%3E%3Cpath d='M7.5 3.9 11.1 7.5 7.5 11.1 3.9 7.5Z' fill='%23f6e9bd' stroke='%234f3d0d' stroke-width='.7'/%3E%3Cpath d='M7.5 6.1 8.9 7.5 7.5 8.9 6.1 7.5Z' fill='%237d6114'/%3E%3Ccircle cx='4.6' cy='25.6' r='.9' fill='%23c9a227'/%3E%3Ccircle cx='25.6' cy='4.6' r='.9' fill='%23c9a227'/%3E%3C/g%3E%3C/svg%3E");
+    --elvia-orn-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg transform='matrix(-1 0 0 -1 28 28)'%3E%3Cpath d='M4.6 23.5V14.6A10 10 0 0 1 14.6 4.6H23.5' fill='none' stroke='%23e3c463' stroke-width='1.5' stroke-linecap='round'/%3E%3Cpath d='M8.6 19V14.6A6 6 0 0 1 14.6 8.6H19' fill='none' stroke='%23a8841b' stroke-width='.7'/%3E%3Cpath d='M7.5 3.9 11.1 7.5 7.5 11.1 3.9 7.5Z' fill='%23f6e9bd' stroke='%234f3d0d' stroke-width='.7'/%3E%3Cpath d='M7.5 6.1 8.9 7.5 7.5 8.9 6.1 7.5Z' fill='%237d6114'/%3E%3Ccircle cx='4.6' cy='25.6' r='.9' fill='%23c9a227'/%3E%3Ccircle cx='25.6' cy='4.6' r='.9' fill='%23c9a227'/%3E%3C/g%3E%3C/svg%3E");
   }
 
   /* Accessibility text size (set on <html data-text-size="…">). Every Tailwind
@@ -228,74 +252,141 @@
 }
 
 /* ==========================================================================
-   Components
+   Components — one material language:
+   lacquered navy steel, cast brass bevels, a bright inner hairline, gilded
+   corner caps, polished gold for the one thing you should press.
    ========================================================================== */
 @layer components {
-  /* ---- Stone/brass framed panel with an inner gold hairline ---- */
+  /* ---- Lacquered navy steel panel in a brass bevel ----
+     Layers, outside in: a near-black outer line, the cast brass bevel (the
+     border, lit from above), a dark inner gap, the bright brass hairline
+     (::before), gilded corner caps (::after), lacquer + brushed grain + a
+     faint diagonal reflection on the face. */
   .panel {
     position: relative;
     isolation: isolate;
     border-radius: var(--radius-panel);
-    border: 1px solid #5b4a26;
+    border: 1px solid transparent;
     background:
-      var(--elvia-grain),
-      radial-gradient(120% 80% at 85% -10%, rgb(255 244 214 / 0.07), transparent 55%),
-      linear-gradient(180deg, #1b2639 0%, #121b2b 55%, #0d1523 100%);
+      var(--elvia-grain) padding-box,
+      var(--elvia-brush) padding-box,
+      var(--elvia-sheen) padding-box,
+      radial-gradient(120% 70% at 80% -12%, rgb(255 244 214 / 0.075), transparent 55%) padding-box,
+      var(--elvia-lacquer) padding-box,
+      var(--elvia-brass-bevel) border-box;
     box-shadow:
-      inset 0 0 0 1px rgb(0 0 0 / 0.55),
-      inset 0 1px 0 rgb(255 244 214 / 0.08),
-      inset 0 -18px 30px -18px rgb(0 0 0 / 0.6),
-      var(--shadow-panel);
+      0 0 0 1px var(--elvia-outer-line),
+      inset 0 1px 0 rgb(255 244 214 / 0.1),
+      inset 0 0 0 1px rgb(0 0 0 / 0.6),
+      inset 0 -26px 40px -26px rgb(0 0 0 / 0.7),
+      0 16px 36px -16px rgb(0 0 0 / 0.8),
+      0 3px 8px rgb(0 0 0 / 0.45);
     color: var(--color-parchment-100);
   }
   .panel::before {
     content: "";
     position: absolute;
     inset: 4px;
+    padding: 1px;
     border-radius: calc(var(--radius-panel) - 4px);
-    border: 1px solid var(--elvia-gold-line);
+    background: var(--elvia-hairline);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
     pointer-events: none;
     z-index: -1;
-    mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.55) 55%, #000 100%);
   }
+  .panel::after {
+    content: "";
+    position: absolute;
+    inset: -0.5px;
+    border-radius: inherit;
+    background:
+      var(--elvia-orn-tl) top left / 28px 28px no-repeat,
+      var(--elvia-orn-tr) top right / 28px 28px no-repeat,
+      var(--elvia-orn-bl) bottom left / 28px 28px no-repeat,
+      var(--elvia-orn-br) bottom right / 28px 28px no-repeat;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.92;
+  }
+  /* tight panels (small cards, nested lists): finer hairline, no corner caps */
   .panel-tight::before { inset: 3px; border-radius: calc(var(--radius-panel) - 3px); }
+  .panel-tight::after { display: none; }
+  .panel:has(> .panel-corners)::after { display: none; }
+  /* a panel nested inside another panel stays quieter: no caps, softer bevel */
+  .panel .panel::after { display: none; }
+  .panel .panel {
+    background:
+      var(--elvia-grain) padding-box,
+      var(--elvia-sheen) padding-box,
+      linear-gradient(180deg, #172338 0%, #111a2a 60%, #0d1523 100%) padding-box,
+      linear-gradient(180deg, #7a5f36 0%, #4f3d0d 60%, #33373d 100%) border-box;
+    box-shadow:
+      0 0 0 1px rgb(4 7 13 / 0.8),
+      inset 0 1px 0 rgb(255 244 214 / 0.07),
+      inset 0 0 0 1px rgb(0 0 0 / 0.5),
+      0 6px 16px -10px rgb(0 0 0 / 0.8);
+  }
 
   /* ---- Parchment card (chronicle pages, letters, campfire) ---- */
   .panel-parchment {
     position: relative;
     isolation: isolate;
     border-radius: 0.6rem;
-    border: 1px solid #a8925f;
+    border: 1px solid transparent;
     color: var(--color-ink-900);
     background:
-      var(--elvia-grain),
-      radial-gradient(140% 90% at 50% 0%, rgb(255 253 247 / 0.55), transparent 60%),
-      linear-gradient(180deg, #f3eee1 0%, #ebe1c9 60%, #e1d3b2 100%);
+      var(--elvia-grain) padding-box,
+      radial-gradient(140% 90% at 50% 0%, rgb(255 253 247 / 0.55), transparent 60%) padding-box,
+      radial-gradient(60% 40% at 12% 92%, rgb(163 145 103 / 0.18), transparent 70%) padding-box,
+      radial-gradient(50% 35% at 90% 80%, rgb(163 145 103 / 0.14), transparent 70%) padding-box,
+      linear-gradient(180deg, #f3eee1 0%, #ebe1c9 60%, #e1d3b2 100%) padding-box,
+      linear-gradient(180deg, #c2b287, #a39167 50%, #7a5f36) border-box;
     box-shadow:
+      0 0 0 1px rgb(31 24 16 / 0.55),
       inset 0 0 0 1px rgb(255 255 255 / 0.35),
-      inset 0 0 38px rgb(122 84 30 / 0.28),
-      inset 0 0 6px rgb(122 84 30 / 0.35),
-      0 10px 30px -12px rgb(0 0 0 / 0.75);
+      inset 0 0 42px rgb(122 84 30 / 0.3),
+      inset 0 0 7px rgb(122 84 30 / 0.4),
+      0 12px 32px -12px rgb(0 0 0 / 0.8);
   }
   .panel-parchment::before {
     content: "";
     position: absolute;
     inset: 5px;
     border-radius: 0.4rem;
-    border: 1px solid rgb(125 97 20 / 0.35);
+    border: 1px solid rgb(125 97 20 / 0.38);
+    box-shadow: inset 0 0 0 2px rgb(255 253 247 / 0.18), 0 0 0 2px rgb(255 253 247 / 0.12);
     pointer-events: none;
     z-index: -1;
   }
   .panel-parchment :where(h1, h2, h3, h4) { color: var(--color-ink-900); }
   .panel-parchment a { color: #7a3b14; }
 
-  /* ---- Sticky game chrome: a frosted bar the story scrolls under ---- */
+  /* ---- Sticky game chrome: a frosted bar the story scrolls under, on a brass rail ---- */
   .chrome-bar {
-    background: linear-gradient(180deg, rgb(7 13 24 / 0.95), rgb(7 13 24 / 0.84));
+    position: relative;
+    background:
+      var(--elvia-brush),
+      linear-gradient(180deg, rgb(15 27 45 / 0.96), rgb(7 13 24 / 0.9));
     -webkit-backdrop-filter: blur(12px) saturate(1.15);
     backdrop-filter: blur(12px) saturate(1.15);
-    border-bottom: 1px solid rgb(201 162 39 / 0.2);
-    box-shadow: 0 12px 28px -16px rgb(0 0 0 / 0.85);
+    border-bottom: 1px solid #04070d;
+    box-shadow:
+      inset 0 -1px 0 rgb(201 162 39 / 0.18),
+      0 1px 0 rgb(227 196 99 / 0.28),
+      0 14px 30px -16px rgb(0 0 0 / 0.9);
+  }
+  .chrome-bar::after {
+    /* brass rail with a bright centre, fading at the ends */
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(168 132 27 / 0.55) 18%, #e3c463 50%, rgb(168 132 27 / 0.55) 82%, transparent);
+    pointer-events: none;
   }
 
   /* ---- Between screens: a brief dip to night that lifts as the new screen arrives ---- */
@@ -308,9 +399,11 @@
     animation: screen-veil 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  /* ---- Primary button: gold metal on navy ---- */
+  /* ---- Primary button: polished gold in a cast bevel, engraved inner line, slow sheen ---- */
   .btn-royal {
     position: relative;
+    isolation: isolate;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -319,41 +412,67 @@
     min-width: 3rem;
     padding: 0.7rem 1.4rem;
     border-radius: 0.65rem;
-    border: 1px solid #f3dc8c;
+    border: 1px solid transparent;
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 1rem;
     letter-spacing: 0.08em;
     line-height: 1.1;
     color: #0b1424;
-    text-shadow: 0 1px 0 rgb(255 244 214 / 0.55);
+    text-shadow: 0 1px 0 rgb(255 244 214 / 0.6);
     background:
-      linear-gradient(105deg, transparent 35%, rgb(255 250 235 / 0.42) 48%, transparent 61%) no-repeat,
-      linear-gradient(180deg, #f2db8a 0%, #e3c463 22%, #c9a227 58%, #a8841b 100%);
-    background-size: 220% 100%, 100% 100%;
-    background-position: -160% 0, 0 0;
+      radial-gradient(90% 60% at 50% 0%, rgb(255 253 247 / 0.42), transparent 70%) padding-box,
+      linear-gradient(180deg, #f6e9bd 0%, #f0dc95 14%, #e3c463 34%, #c9a227 64%, #a8841b 90%, #7d6114 100%) padding-box,
+      linear-gradient(180deg, #fffaf0 0%, #e3c463 30%, #7d6114 70%, #4f3d0d 100%) border-box;
     box-shadow:
-      inset 0 1px 0 rgb(255 252 240 / 0.75),
-      inset 0 -2px 0 rgb(79 61 13 / 0.55),
-      0 0 0 1px #4f3d0d,
-      0 6px 16px -6px rgb(0 0 0 / 0.8),
-      0 0 22px -6px rgb(227 196 99 / 0.45);
+      0 0 0 1px #2a2006,
+      inset 0 1px 0 rgb(255 252 240 / 0.85),
+      inset 0 -3px 0 rgb(125 97 20 / 0.55),
+      inset 0 -6px 10px -4px rgb(79 61 13 / 0.35),
+      0 8px 18px -8px rgb(0 0 0 / 0.85),
+      0 0 26px -8px rgb(227 196 99 / 0.5);
     cursor: pointer;
     user-select: none;
     touch-action: manipulation;
     transition: transform 0.12s ease, box-shadow 0.18s ease, filter 0.18s ease;
   }
-  .btn-royal:hover {
-    filter: brightness(1.06);
-    animation: gold-sheen 1.1s ease-out 1;
+  .btn-royal::before {
+    /* engraved inner line, like a die-struck coin rim */
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 0.45rem;
+    border: 1px solid rgb(125 97 20 / 0.42);
+    box-shadow: 0 1px 0 rgb(255 250 235 / 0.4), inset 0 1px 0 rgb(79 61 13 / 0.18);
+    pointer-events: none;
+    z-index: -1;
   }
+  .btn-royal::after {
+    /* the sheen: a narrow band of light that sweeps across on hover / focus */
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 32%;
+    background: linear-gradient(90deg, transparent, rgb(255 253 247 / 0.65) 50%, transparent);
+    transform: translateX(-120%) skewX(-20deg);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .btn-royal:hover { filter: brightness(1.05) saturate(1.05); }
+  .btn-royal:hover::after,
+  .btn-royal:focus-visible::after { animation: royal-sheen 2.8s cubic-bezier(0.45, 0, 0.3, 1) 0.1s infinite; }
   .btn-royal:active {
     transform: translateY(1px) scale(0.985);
-    filter: brightness(0.95);
+    filter: brightness(0.94);
+    background:
+      linear-gradient(180deg, #a8841b 0%, #c9a227 22%, #e3c463 70%, #f0dc95 100%) padding-box,
+      linear-gradient(180deg, #4f3d0d 0%, #7d6114 40%, #e3c463 100%) border-box;
     box-shadow:
-      inset 0 2px 6px rgb(79 61 13 / 0.55),
-      inset 0 -1px 0 rgb(255 252 240 / 0.35),
-      0 0 0 1px #4f3d0d,
+      0 0 0 1px #2a2006,
+      inset 0 2px 6px rgb(79 61 13 / 0.6),
+      inset 0 -1px 0 rgb(255 252 240 / 0.45),
       0 2px 6px -2px rgb(0 0 0 / 0.8);
   }
   .btn-royal:focus-visible {
@@ -364,12 +483,17 @@
   .btn-royal[aria-disabled="true"] {
     cursor: not-allowed;
     filter: grayscale(0.7) brightness(0.7);
-    animation: none;
   }
+  .btn-royal:disabled::after,
+  .btn-royal[aria-disabled="true"]::after { animation: none; }
 
-  /* ---- Secondary button: gold hairline, transparent ---- */
+  /* ---- Secondary button: brass-edged smoked glass ----
+     The face is translucent glass (it blurs what is behind it); the cast brass
+     edge is a masked ring in ::before so it never tints the glass. */
   .btn-ghost {
+    --ghost-edge: linear-gradient(180deg, #f0dc95 0%, #c9a227 30%, #7a5f36 70%, #4f3d0d 100%);
     position: relative;
+    isolation: isolate;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -378,28 +502,180 @@
     min-width: 3rem;
     padding: 0.65rem 1.2rem;
     border-radius: 0.65rem;
-    border: 1px solid rgb(201 162 39 / 0.55);
+    border: 1px solid transparent;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.95rem;
     letter-spacing: 0.08em;
     color: var(--color-gold-300);
-    background: linear-gradient(180deg, rgb(255 244 214 / 0.05), rgb(255 244 214 / 0));
-    box-shadow: inset 0 1px 0 rgb(255 244 214 / 0.07), 0 2px 8px -4px rgb(0 0 0 / 0.7);
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.6);
+    background:
+      linear-gradient(180deg, rgb(255 244 214 / 0.11) 0%, rgb(255 244 214 / 0.03) 46%, rgb(0 0 0 / 0) 54%, rgb(0 0 0 / 0.2) 100%),
+      linear-gradient(180deg, rgb(22 36 58 / 0.62), rgb(7 13 24 / 0.78));
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    box-shadow:
+      0 0 0 1px rgb(4 7 13 / 0.85),
+      inset 0 1px 0 rgb(255 244 214 / 0.16),
+      inset 0 -1px 0 rgb(0 0 0 / 0.4),
+      0 5px 14px -7px rgb(0 0 0 / 0.85);
     cursor: pointer;
     user-select: none;
     touch-action: manipulation;
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+    transition: color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  }
+  .btn-ghost::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--ghost-edge);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+    z-index: -1;
   }
   .btn-ghost:hover {
-    background-color: rgb(201 162 39 / 0.12);
-    border-color: rgb(227 196 99 / 0.85);
     color: var(--color-gold-200);
+    box-shadow:
+      0 0 0 1px rgb(4 7 13 / 0.85),
+      inset 0 1px 0 rgb(255 244 214 / 0.24),
+      inset 0 0 18px rgb(227 196 99 / 0.14),
+      0 5px 14px -7px rgb(0 0 0 / 0.85),
+      0 0 18px -8px rgb(227 196 99 / 0.55);
   }
-  .btn-ghost:active { transform: translateY(1px); background-color: rgb(201 162 39 / 0.2); }
+  .btn-ghost:active {
+    transform: translateY(1px);
+    box-shadow:
+      0 0 0 1px rgb(4 7 13 / 0.85),
+      inset 0 2px 7px rgb(0 0 0 / 0.6),
+      inset 0 -1px 0 rgb(255 244 214 / 0.1);
+  }
   .btn-ghost:focus-visible { outline: 2px solid var(--color-lattice-200); outline-offset: 3px; }
   .btn-ghost:disabled,
   .btn-ghost[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+  /* danger: the same glass on a blood-red enamel edge */
+  .btn-danger {
+    --ghost-edge: linear-gradient(180deg, #d9726b 0%, #c2413a 35%, #7a1f1a 75%, #521410 100%);
+    color: var(--color-crimson-300);
+    background:
+      linear-gradient(180deg, rgb(255 244 214 / 0.08) 0%, rgb(255 244 214 / 0.02) 46%, rgb(0 0 0 / 0) 54%, rgb(0 0 0 / 0.22) 100%),
+      linear-gradient(180deg, rgb(82 20 16 / 0.5), rgb(7 13 24 / 0.82));
+  }
+  .btn-danger:hover {
+    color: #f6d3cf;
+    box-shadow: 0 0 0 1px rgb(4 7 13 / 0.85), inset 0 1px 0 rgb(255 244 214 / 0.2), inset 0 0 18px rgb(194 65 58 / 0.18), 0 0 18px -8px rgb(194 65 58 / 0.7);
+  }
+
+  /* ---- Icon button: an engraved brass socket ---- */
+  .btn-icon {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.8rem;
+    border: 1px solid transparent;
+    color: var(--color-gold-300);
+    background:
+      radial-gradient(80% 70% at 50% 18%, rgb(255 244 214 / 0.12), transparent 70%) padding-box,
+      linear-gradient(180deg, #1a2740 0%, #0f1828 60%, #0a111e 100%) padding-box,
+      var(--elvia-gold-bevel) border-box;
+    box-shadow:
+      0 0 0 1px var(--elvia-outer-line),
+      inset 0 1px 0 rgb(255 244 214 / 0.16),
+      inset 0 0 0 2px rgb(0 0 0 / 0.35),
+      inset 0 -6px 10px -6px rgb(0 0 0 / 0.8),
+      0 6px 14px -8px rgb(0 0 0 / 0.9);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  }
+  .btn-icon > svg { filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.7)); }
+  .btn-icon:hover {
+    color: var(--color-gold-200);
+    filter: brightness(1.12);
+    box-shadow:
+      0 0 0 1px var(--elvia-outer-line),
+      inset 0 1px 0 rgb(255 244 214 / 0.22),
+      inset 0 0 0 2px rgb(0 0 0 / 0.3),
+      inset 0 0 14px rgb(227 196 99 / 0.14),
+      0 6px 14px -8px rgb(0 0 0 / 0.9),
+      0 0 16px -6px rgb(227 196 99 / 0.45);
+  }
+  .btn-icon:active {
+    transform: translateY(1px);
+    box-shadow: 0 0 0 1px var(--elvia-outer-line), inset 0 3px 8px rgb(0 0 0 / 0.7), inset 0 0 0 2px rgb(0 0 0 / 0.3);
+  }
+  .btn-icon:focus-visible { outline: 2px solid var(--color-lattice-200); outline-offset: 3px; }
+  .btn-icon__badge {
+    position: absolute;
+    right: -0.35rem;
+    top: -0.35rem;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-parchment-50);
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.5);
+    background: radial-gradient(circle at 35% 30%, #f4a35e 0%, #e0782b 30%, #b4532a 65%, #8a3a1c 100%);
+    box-shadow: 0 0 0 1.5px #0b1424, 0 0 0 2.5px rgb(227 196 99 / 0.7), inset 0 1px 0 rgb(255 244 214 / 0.5), 0 0 10px rgb(224 120 43 / 0.55);
+  }
+
+  /* ---- Engraved resource plaque (top bar HUD) ---- */
+  .plaque {
+    position: relative;
+    isolation: isolate;
+    border-radius: 0.55rem;
+    border: 1px solid transparent;
+    background:
+      var(--elvia-grain) padding-box,
+      radial-gradient(90% 60% at 50% 0%, rgb(255 244 214 / 0.07), transparent 70%) padding-box,
+      linear-gradient(180deg, #0a121f 0%, #0d1625 55%, #111c2e 100%) padding-box,
+      var(--elvia-brass-bevel) border-box;
+    box-shadow:
+      0 0 0 1px var(--elvia-outer-line),
+      inset 0 2px 5px rgb(0 0 0 / 0.75),
+      inset 0 -1px 0 rgb(255 244 214 / 0.07),
+      0 3px 8px -4px rgb(0 0 0 / 0.8);
+  }
+  .plaque::before {
+    /* the recess lip: a fine brass line inside the frame */
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 0.4rem;
+    border: 1px solid rgb(201 162 39 / 0.16);
+    border-top-color: rgb(0 0 0 / 0.5);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .plaque__label { color: rgb(227 196 99 / 0.85); }
+  .plaque__value {
+    color: var(--color-parchment-50);
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.85), 0 -1px 0 rgb(0 0 0 / 0.35), 0 0 10px rgb(255 233 174 / 0.12);
+  }
+  .plaque__delta {
+    position: absolute;
+    top: -0.55rem;
+    right: 0.2rem;
+    padding: 0 0.3rem;
+    border-radius: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.15rem;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 0 0 1px #04070d, inset 0 1px 0 rgb(255 244 214 / 0.45), 0 2px 5px rgb(0 0 0 / 0.6);
+  }
+  .plaque__delta--good { color: #0b1424; background: linear-gradient(180deg, #f0dc95, #c9a227 60%, #a8841b); }
+  .plaque__delta--bad { color: var(--color-parchment-50); background: linear-gradient(180deg, #c2413a, #9e2b25 55%, #7a1f1a); text-shadow: 0 1px 0 rgb(0 0 0 / 0.5); }
 
   /* ---- Strategic order card (A–E). Markup suggestion:
      <button class="order-card" aria-pressed="false">
@@ -423,14 +699,17 @@
     padding: 0.85rem 1rem 0.9rem 0.85rem;
     text-align: left;
     border-radius: 0.8rem;
-    border: 1px solid #4f4024;
+    border: 1px solid transparent;
     color: var(--color-parchment-100);
     background:
-      var(--elvia-grain),
-      radial-gradient(90% 120% at 0% 0%, rgb(227 196 99 / 0.09), transparent 55%),
-      linear-gradient(180deg, #1d293d 0%, #141e30 60%, #0f1726 100%);
+      var(--elvia-grain) padding-box,
+      var(--elvia-sheen) padding-box,
+      radial-gradient(90% 120% at 0% 0%, rgb(227 196 99 / 0.09), transparent 55%) padding-box,
+      linear-gradient(180deg, #1d293d 0%, #141e30 60%, #0f1726 100%) padding-box,
+      linear-gradient(180deg, #a8841b 0%, #7a5f36 30%, #4f3d0d 70%, #33373d 100%) border-box;
     box-shadow:
-      inset 0 1px 0 rgb(255 244 214 / 0.09),
+      0 0 0 1px var(--elvia-outer-line),
+      inset 0 1px 0 rgb(255 244 214 / 0.1),
       inset 0 0 0 1px rgb(0 0 0 / 0.5),
       inset 0 -3px 0 rgb(0 0 0 / 0.35),
       0 4px 0 #070c16,
@@ -438,14 +717,15 @@
     cursor: pointer;
     user-select: none;
     touch-action: manipulation;
-    transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.2s ease, background-color 0.2s ease;
+    transition: transform 0.12s ease, box-shadow 0.16s ease, filter 0.2s ease;
   }
   .order-card::before {
     content: "";
     position: absolute;
     inset: 3px;
     border-radius: 0.6rem;
-    border: 1px solid rgb(201 162 39 / 0.22);
+    border: 1px solid rgb(201 162 39 / 0.2);
+    border-top-color: rgb(240 220 149 / 0.32);
     pointer-events: none;
     z-index: -1;
     transition: border-color 0.2s ease;
@@ -459,16 +739,17 @@
     bottom: 14%;
     width: 3px;
     border-radius: 0 3px 3px 0;
-    background: linear-gradient(180deg, transparent, #c9a227 25%, #e3c463 50%, #c9a227 75%, transparent);
+    background: linear-gradient(180deg, transparent, #c9a227 25%, #f0dc95 50%, #c9a227 75%, transparent);
     opacity: 0.55;
     transition: opacity 0.2s ease;
   }
-  .order-card:hover { border-color: #7d6114; }
+  .order-card:hover { filter: brightness(1.06); }
   .order-card:hover::before { border-color: rgb(227 196 99 / 0.42); }
   .order-card:hover::after { opacity: 0.9; }
   .order-card:active {
     transform: translateY(3px);
     box-shadow:
+      0 0 0 1px var(--elvia-outer-line),
       inset 0 2px 10px rgb(0 0 0 / 0.55),
       inset 0 0 0 1px rgb(0 0 0 / 0.5),
       0 1px 0 #070c16,
@@ -478,23 +759,28 @@
   .order-card[aria-pressed="true"],
   .order-card[aria-checked="true"],
   .order-card.is-selected {
-    border-color: #c9a227;
     background:
-      var(--elvia-grain),
-      radial-gradient(100% 130% at 0% 0%, rgb(255 233 174 / 0.16), transparent 60%),
-      linear-gradient(180deg, #24324a 0%, #18233a 60%, #121b2d 100%);
+      var(--elvia-grain) padding-box,
+      var(--elvia-sheen) padding-box,
+      radial-gradient(100% 130% at 0% 0%, rgb(255 233 174 / 0.16), transparent 60%) padding-box,
+      linear-gradient(180deg, #24324a 0%, #18233a 60%, #121b2d 100%) padding-box,
+      var(--elvia-gold-bevel) border-box;
     box-shadow:
-      inset 0 1px 0 rgb(255 244 214 / 0.14),
+      0 0 0 1px var(--elvia-outer-line),
+      inset 0 1px 0 rgb(255 244 214 / 0.16),
       inset 0 0 0 1px rgb(0 0 0 / 0.4),
       0 4px 0 #070c16,
-      0 0 0 1px rgb(227 196 99 / 0.35),
-      0 0 26px -6px rgb(227 196 99 / 0.45);
+      0 0 0 2px rgb(227 196 99 / 0.28),
+      0 0 28px -6px rgb(227 196 99 / 0.5);
   }
+  .order-card[aria-pressed="true"]::before,
+  .order-card[aria-checked="true"]::before,
+  .order-card.is-selected::before { border-color: rgb(240 220 149 / 0.45); }
   .order-card[aria-pressed="true"]::after,
   .order-card[aria-checked="true"]::after,
   .order-card.is-selected::after { opacity: 1; width: 4px; }
   .order-card:disabled,
-  .order-card[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .order-card[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; transform: none; filter: none; }
 
   .order-card__key {
     flex: none;
@@ -508,12 +794,16 @@
     font-weight: 700;
     font-size: 1.15rem;
     color: #0b1424;
-    background: radial-gradient(circle at 35% 30%, #fbefc2 0%, #e3c463 35%, #b38c1f 75%, #7d6114 100%);
+    background:
+      radial-gradient(circle at 34% 26%, rgb(255 253 247 / 0.9) 0%, transparent 22%),
+      radial-gradient(circle at 35% 30%, #fbefc2 0%, #e3c463 35%, #b38c1f 75%, #7d6114 100%);
     box-shadow:
       inset 0 1px 1px rgb(255 252 240 / 0.8),
       inset 0 -2px 3px rgb(79 61 13 / 0.6),
+      inset 0 0 0 3px rgb(125 97 20 / 0.25),
       0 0 0 2px #0b1424,
-      0 0 0 3px rgb(201 162 39 / 0.6),
+      0 0 0 3px rgb(201 162 39 / 0.65),
+      0 0 0 4px #04070d,
       0 3px 8px rgb(0 0 0 / 0.6);
     text-shadow: 0 1px 0 rgb(255 244 214 / 0.6);
   }
@@ -525,6 +815,7 @@
     letter-spacing: 0.04em;
     line-height: 1.25;
     color: var(--color-gold-300);
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.6);
   }
   .order-card__desc { font-size: 0.95rem; line-height: 1.45; color: var(--color-parchment-200); }
   .order-card__meta {
@@ -533,19 +824,28 @@
     letter-spacing: 0.02em;
     color: var(--color-stone-300);
   }
-  .order-card--danger { border-color: #5a2420; }
+  .order-card--danger {
+    background:
+      var(--elvia-grain) padding-box,
+      var(--elvia-sheen) padding-box,
+      radial-gradient(90% 120% at 0% 0%, rgb(194 65 58 / 0.1), transparent 55%) padding-box,
+      linear-gradient(180deg, #1d293d 0%, #141e30 60%, #0f1726 100%) padding-box,
+      linear-gradient(180deg, #9e2b25 0%, #7a1f1a 40%, #521410 100%) border-box;
+  }
   .order-card--danger::after { background: linear-gradient(180deg, transparent, #9e2b25 25%, #c2413a 50%, #9e2b25 75%, transparent); }
   .order-card--danger .order-card__key {
     color: #fbefe0;
     text-shadow: 0 1px 0 rgb(0 0 0 / 0.5);
-    background: radial-gradient(circle at 35% 30%, #e07a70 0%, #c2413a 35%, #9e2b25 70%, #521410 100%);
+    background:
+      radial-gradient(circle at 34% 26%, rgb(255 244 214 / 0.55) 0%, transparent 22%),
+      radial-gradient(circle at 35% 30%, #e07a70 0%, #c2413a 35%, #9e2b25 70%, #521410 100%);
   }
 
-  /* ---- Gold divider with center diamond ---- */
+  /* ---- Gold divider: tapered brass lines, end beads and a set jewel ---- */
   .gold-rule {
     position: relative;
     display: block;
-    height: 0.85rem;
+    height: 0.9rem;
     margin-block: 0.75rem;
     border: 0;
   }
@@ -554,24 +854,31 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: 50%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgb(201 162 39 / 0.75) 18%, #e3c463 46%, transparent 46.5%, transparent 53.5%, #e3c463 54%, rgb(201 162 39 / 0.75) 82%, transparent 100%);
+    top: calc(50% - 1px);
+    height: 3px;
+    background:
+      linear-gradient(90deg, transparent 0%, rgb(201 162 39 / 0.75) 18%, #f0dc95 44%, transparent 44.5%, transparent 55.5%, #f0dc95 56%, rgb(201 162 39 / 0.75) 82%, transparent 100%) center / 100% 1px no-repeat,
+      linear-gradient(90deg, transparent 10%, rgb(0 0 0 / 0.55) 30%, transparent 44.5%, transparent 55.5%, rgb(0 0 0 / 0.55) 70%, transparent 90%) center 2px / 100% 1px no-repeat,
+      radial-gradient(circle, #e3c463 0 1.6px, transparent 2px) calc(50% - 1.6rem) center / 4px 4px no-repeat,
+      radial-gradient(circle, #e3c463 0 1.6px, transparent 2px) calc(50% + 1.6rem) center / 4px 4px no-repeat;
   }
   .gold-rule::after {
+    /* a faceted gold jewel with an ember heart, set in a dark collet */
     content: "";
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 0.5rem;
-    height: 0.5rem;
+    width: 0.62rem;
+    height: 0.62rem;
     transform: translate(-50%, -50%) rotate(45deg);
-    background: linear-gradient(135deg, #f6e9bd, #c9a227 60%, #7d6114);
-    box-shadow: 0 0 0 2px rgb(11 20 36 / 0.9), 0 0 8px rgb(227 196 99 / 0.5);
+    background:
+      radial-gradient(circle at 50% 50%, #f9c99a 0%, #e0782b 26%, transparent 34%),
+      conic-gradient(from 0deg, #fbefc2, #c9a227 25%, #7d6114 50%, #c9a227 75%, #fbefc2);
+    box-shadow: 0 0 0 1px #4f3d0d, 0 0 0 2.5px rgb(11 20 36 / 0.9), 0 0 0 3.5px rgb(201 162 39 / 0.55), 0 0 10px rgb(227 196 99 / 0.45);
   }
-  .panel-parchment .gold-rule::after { box-shadow: 0 0 0 2px rgb(243 238 225 / 0.9); }
+  .panel-parchment .gold-rule::after { box-shadow: 0 0 0 1px #4f3d0d, 0 0 0 2.5px rgb(243 238 225 / 0.9), 0 0 0 3.5px rgb(125 97 20 / 0.5); }
 
-  /* ---- Chip / tag ---- */
+  /* ---- Chip / tag: a small bevelled enamel lozenge ---- */
   .chip {
     display: inline-flex;
     align-items: center;
@@ -579,21 +886,57 @@
     min-height: 1.75rem;
     padding: 0.2rem 0.7rem;
     border-radius: 999px;
-    border: 1px solid rgb(201 162 39 / 0.45);
-    background: rgb(11 20 36 / 0.65);
+    border: 1px solid rgb(201 162 39 / 0.5);
+    background:
+      linear-gradient(180deg, rgb(255 244 214 / 0.09), rgb(255 244 214 / 0) 50%, rgb(0 0 0 / 0.18)),
+      rgb(11 20 36 / 0.72);
     color: var(--color-gold-200);
     font-size: 0.85rem;
     font-weight: 600;
     letter-spacing: 0.03em;
     line-height: 1.2;
     white-space: nowrap;
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.55);
+    box-shadow:
+      0 0 0 1px rgb(4 7 13 / 0.7),
+      inset 0 1px 0 rgb(255 244 214 / 0.14),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 2px 4px -2px rgb(0 0 0 / 0.7);
   }
-  .chip--gold { background: linear-gradient(180deg, #e3c463, #c9a227); border-color: #f0dc95; color: #0b1424; }
-  .chip--ember { border-color: rgb(224 120 43 / 0.6); color: var(--color-ember-200); background: rgb(138 58 28 / 0.35); }
-  .chip--crimson { border-color: rgb(194 65 58 / 0.7); color: #f6d3cf; background: rgb(122 31 26 / 0.45); }
-  .chip--frost { border-color: rgb(184 198 209 / 0.55); color: var(--color-frost-100); background: rgb(31 49 80 / 0.55); }
-  .chip--iron { border-color: rgb(176 141 87 / 0.6); color: var(--color-iron-200); background: rgb(27 29 33 / 0.7); }
-  .chip--parchment { border-color: rgb(125 97 20 / 0.45); color: var(--color-ink-700); background: rgb(232 223 200 / 0.8); }
+  .chip--gold {
+    background: linear-gradient(180deg, #f6e9bd 0%, #e3c463 35%, #c9a227 75%, #a8841b 100%);
+    border-color: #f0dc95;
+    color: #0b1424;
+    text-shadow: 0 1px 0 rgb(255 244 214 / 0.5);
+    box-shadow: 0 0 0 1px #4f3d0d, inset 0 1px 0 rgb(255 252 240 / 0.8), inset 0 -1px 0 rgb(79 61 13 / 0.45), 0 2px 5px -2px rgb(0 0 0 / 0.7);
+  }
+  .chip--ember {
+    border-color: rgb(224 120 43 / 0.65);
+    color: var(--color-ember-200);
+    background: linear-gradient(180deg, rgb(255 244 214 / 0.08), rgb(0 0 0 / 0.12)), rgb(138 58 28 / 0.42);
+  }
+  .chip--crimson {
+    border-color: rgb(194 65 58 / 0.75);
+    color: #f6d3cf;
+    background: linear-gradient(180deg, rgb(255 244 214 / 0.08), rgb(0 0 0 / 0.12)), rgb(122 31 26 / 0.52);
+  }
+  .chip--frost {
+    border-color: rgb(184 198 209 / 0.6);
+    color: var(--color-frost-100);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(0 0 0 / 0.12)), rgb(31 49 80 / 0.6);
+  }
+  .chip--iron {
+    border-color: rgb(176 141 87 / 0.65);
+    color: var(--color-iron-200);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(0 0 0 / 0.15)), rgb(27 29 33 / 0.78);
+  }
+  .chip--parchment {
+    border-color: rgb(125 97 20 / 0.5);
+    color: var(--color-ink-700);
+    text-shadow: 0 1px 0 rgb(255 253 247 / 0.5);
+    background: linear-gradient(180deg, rgb(255 253 247 / 0.5), rgb(232 223 200 / 0) 60%), rgb(232 223 200 / 0.85);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 0 rgb(122 84 30 / 0.2), 0 1px 2px rgb(31 24 16 / 0.25);
+  }
 
   /* ---- Small helpers ---- */
   .text-engraved { text-shadow: 0 1px 0 rgb(0 0 0 / 0.65), 0 -1px 0 rgb(255 244 214 / 0.06); }
@@ -618,21 +961,38 @@
       radial-gradient(120% 90% at 50% 120%, #04070d, transparent 60%),
       linear-gradient(180deg, #0f1b2d, #0b1424 50%, #070d18);
   }
+  /* ---- Meter: a recessed brass channel with a polished, lit fill ---- */
   .meter {
     position: relative;
-    height: 0.55rem;
+    height: 0.6rem;
     border-radius: 999px;
     overflow: hidden;
-    background: rgb(0 0 0 / 0.45);
-    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(201 162 39 / 0.25);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgb(255 244 214 / 0.07) calc(10% - 1px) 10%),
+      linear-gradient(180deg, #03060b, #0b1424);
+    box-shadow:
+      inset 0 1px 3px rgb(0 0 0 / 0.85),
+      0 0 0 1px rgb(201 162 39 / 0.32),
+      0 0 0 2px rgb(4 7 13 / 0.8),
+      0 1px 0 2px rgb(255 244 214 / 0.05);
   }
   .meter > span {
     position: absolute;
     inset: 0 auto 0 0;
     border-radius: inherit;
-    background: linear-gradient(90deg, #a8841b, #e3c463);
-    box-shadow: 0 0 8px rgb(227 196 99 / 0.45);
+    background: linear-gradient(90deg, #7d6114, #c9a227 55%, #f0dc95);
+    box-shadow: 0 0 8px rgb(227 196 99 / 0.45), inset 0 1px 0 rgb(255 252 240 / 0.55), inset 0 -1px 0 rgb(79 61 13 / 0.6);
     transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .meter > span::after {
+    /* glassy top highlight + a bright leading edge */
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(180deg, rgb(255 253 247 / 0.4), transparent 55%),
+      linear-gradient(90deg, transparent calc(100% - 3px), rgb(255 250 240 / 0.85));
   }
   .scroll-elvia { scrollbar-width: thin; scrollbar-color: rgb(201 162 39 / 0.45) transparent; }
   .scroll-elvia::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -653,6 +1013,7 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .btn-royal::after { animation: none !important; opacity: 0 !important; }
 }
 html[data-motion="reduced"] *,
 html[data-motion="reduced"] *::before,
@@ -663,3 +1024,4 @@ html[data-motion="reduced"] *::after {
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+html[data-motion="reduced"] .btn-royal::after { animation: none !important; opacity: 0 !important; }

@@ -2,6 +2,7 @@
 
 import { useGame } from './GameProvider.jsx';
 import { IconButton, cx } from '../kit/kit.jsx';
+import { Sigil } from '../art/Ornaments.jsx';
 import { sovereignTitle, seasonLabel, TURNS_PER_CYCLE } from '../../game/core/state.js';
 
 export function TopBar({ className, subtitle }) {
@@ -11,9 +12,12 @@ export function TopBar({ className, subtitle }) {
   return (
     <header className={cx('flex items-center gap-2 py-2', className)}>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-[0.95rem] text-gold-200 sm:text-base">
-          {sovereignTitle(state)}
-          <span className="sr-only text-gold-500/80 sm:not-sr-only"> · Reign {romanize(state.cycle.number)}</span>
+        <p className="flex min-w-0 items-center gap-1.5 font-display text-[0.95rem] text-gold-200 text-engraved sm:text-base">
+          <Sigil name="crown" size={14} className="shrink-0 text-gold-400 drop-shadow-[0_0_6px_rgb(227_196_99/0.45)]" />
+          <span className="truncate">
+            {sovereignTitle(state)}
+            <span className="sr-only text-gold-500/80 sm:not-sr-only"> · Reign {romanize(state.cycle.number)}</span>
+          </span>
         </p>
         <p className="truncate text-[0.85rem] text-parchment-300">
           {subtitle ?? (

@@ -73,11 +73,20 @@ function ArchitectSymbolImpl({
           <stop offset="55%" stopColor="#e3c463" stopOpacity={0.16} />
           <stop offset="100%" stopColor="#e3c463" stopOpacity={0} />
         </radialGradient>
-        {g > 0 && (
-          <filter id={`${uid}-soft`} x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="2.6" />
-          </filter>
-        )}
+        {/* light held inside the ring: brightest at the star, a warm rim just inside the stone */}
+        <radialGradient id={`${uid}-inner`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fffaf0" stopOpacity={0.34} />
+          <stop offset="26%" stopColor="#ffe9ae" stopOpacity={0.07} />
+          <stop offset="66%" stopColor="#e3c463" stopOpacity={0} />
+          <stop offset="90%" stopColor="#ffd97a" stopOpacity={0.07} />
+          <stop offset="100%" stopColor="#ffd97a" stopOpacity={0} />
+        </radialGradient>
+        {/* the cut: lit on the upper-left wall, shadowed on the lower-right */}
+        <linearGradient id={`${uid}-cut`} x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+          <stop offset="0" stopColor="#fffdf7" />
+          <stop offset="0.5" stopColor={color} />
+          <stop offset="1" stopColor={color} stopOpacity={0.78} />
+        </linearGradient>
       </defs>
 
       {g > 0 && (
@@ -87,10 +96,14 @@ function ArchitectSymbolImpl({
               <animate attributeName="opacity" values="0.55;1;0.55" dur="5.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />
             )}
           </circle>
-          <g filter={`url(#${uid}-soft)`} stroke="#ffe9ae" fill="none" opacity={0.85}>
-            <path d={ARC} strokeWidth={6} />
-            <path d={STAR} fill="#ffe9ae" stroke="none" />
+          {/* halo built from layered soft strokes: no blur filter, so it costs nothing at any size */}
+          <g stroke="#ffe9ae" fill="none" strokeLinecap="round">
+            <path d={ARC} strokeWidth={13} opacity={0.07} />
+            <path d={ARC} strokeWidth={9} opacity={0.1} />
+            <path d={ARC} strokeWidth={6} opacity={0.16} />
           </g>
+          <path d={STAR} fill="#ffe9ae" stroke="#ffe9ae" strokeWidth={5} strokeLinejoin="round" opacity={0.14} />
+          <path d={STAR} fill="#ffe9ae" stroke="#ffe9ae" strokeWidth={2.4} strokeLinejoin="round" opacity={0.22} />
         </g>
       )}
 
@@ -99,10 +112,14 @@ function ArchitectSymbolImpl({
           <animateTransform attributeName="transform" type="scale" additive="sum" values="1;1.03;1" dur="5.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />
         )}
         <g transform="translate(-50 -50)">
+          {g > 0 && <circle cx={CX} cy={CY} r={R - 2.2} fill={`url(#${uid}-inner)`} opacity={g} />}
           {ticks && <path d={TICKS} stroke={color} strokeWidth={1.4} opacity={0.38} strokeLinecap="round" />}
-          <path d={ARC} stroke={color} strokeWidth={4.2} fill="none" strokeLinecap="butt" />
+          {/* engraved channel: a dark groove under the lit ring */}
+          <path d={ARC} stroke="#04070d" strokeWidth={5.6} fill="none" opacity={0.35} />
+          <path d={ARC} stroke={`url(#${uid}-cut)`} strokeWidth={4.2} fill="none" strokeLinecap="butt" />
           <path d={ARC} stroke="#fffdf7" strokeWidth={1.1} fill="none" opacity={0.7} />
-          <path d={STAR} fill={color} />
+          <path d={STAR} fill={`url(#${uid}-cut)`} />
+          <path d="M50,40.5 C50.8,46 51.6,47.7 56,50 L50,50 Z" fill="#fffdf7" opacity={0.55} />
           <circle cx={CX} cy={CY} r={1.6} fill="#fffdf7" />
         </g>
       </g>

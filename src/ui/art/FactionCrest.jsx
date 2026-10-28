@@ -37,6 +37,50 @@ function starPoints(cx, cy, n, rOut, rIn, rot = -Math.PI / 2) {
   return `${d}Z`;
 }
 
+
+// ---------------------------------------------------------------- shared metalwork
+// A cast rim catches the key light (upper left) and falls into shadow (lower right).
+function Bevel({ id, cx, cy, r, width = 2.4, light = '#fffaf0', dark = '#1f1810', opacity = 0.85 }) {
+  return (
+    <>
+      <defs>
+        <linearGradient id={id} x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+          <stop offset="0" stopColor={light} stopOpacity="0.95" />
+          <stop offset="0.42" stopColor={light} stopOpacity="0" />
+          <stop offset="0.58" stopColor={dark} stopOpacity="0" />
+          <stop offset="1" stopColor={dark} stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={`url(#${id})`} strokeWidth={width} opacity={opacity} />
+    </>
+  );
+}
+
+// Enamel depth + glaze: an inner shadow ring and a soft crescent of reflected light, clipped to the field.
+function Glaze({ id, cx, cy, r, strength = 1 }) {
+  return (
+    <>
+      <defs>
+        <clipPath id={`${id}-clip`}>
+          <circle cx={cx} cy={cy} r={r} />
+        </clipPath>
+        <radialGradient id={`${id}-depth`} cx="50%" cy="50%" r="50%">
+          <stop offset="0.72" stopColor="#04070d" stopOpacity="0" />
+          <stop offset="1" stopColor="#04070d" stopOpacity={0.55 * strength} />
+        </radialGradient>
+        <linearGradient id={`${id}-gloss`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fffaf0" stopOpacity={0.26 * strength} />
+          <stop offset="1" stopColor="#fffaf0" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} fill={`url(#${id}-depth)`} />
+      <g clipPath={`url(#${id}-clip)`}>
+        <ellipse cx={cx - r * 0.18} cy={cy - r * 0.62} rx={r * 0.95} ry={r * 0.55} fill={`url(#${id}-gloss)`} />
+      </g>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------- Elvia
 function ElviaCrest({ uid }) {
   const rays = Array.from({ length: 16 }, (_, i) => {
@@ -59,16 +103,29 @@ function ElviaCrest({ uid }) {
           <stop offset="0" stopColor="#24395c" />
           <stop offset="1" stopColor="#0b1424" />
         </radialGradient>
+        <radialGradient id={`${uid}-halo`} cx="50%" cy="50%" r="50%">
+          <stop offset="0" stopColor="#ffe9ae" stopOpacity="0.38" />
+          <stop offset="0.5" stopColor="#e3c463" stopOpacity="0.1" />
+          <stop offset="1" stopColor="#e3c463" stopOpacity="0" />
+        </radialGradient>
         <radialGradient id={`${uid}-core`} cx="50%" cy="50%" r="50%">
           <stop offset="0" stopColor="#fffaf0" />
           <stop offset="0.6" stopColor="#ffe9ae" />
           <stop offset="1" stopColor="#e3c463" />
         </radialGradient>
       </defs>
+      <circle cx="50" cy="52" r="44.6" fill="#2a2006" />
       <circle cx="50" cy="52" r="44" fill={`url(#${uid}-g)`} />
+      <Bevel id={`${uid}-rim`} cx={50} cy={52} r={42.5} width={2.6} />
+      {/* beaded rim */}
+      {Array.from({ length: 36 }, (_, i) => {
+        const a = (i * Math.PI * 2) / 36;
+        return <circle key={i} cx={f(50 + Math.cos(a) * 42.5)} cy={f(52 + Math.sin(a) * 42.5)} r="0.62" fill="#4f3d0d" opacity="0.55" />;
+      })}
       <circle cx="50" cy="52" r="41" fill="#0b1424" />
       <circle cx="50" cy="52" r="39.5" fill={`url(#${uid}-field)`} />
-      <circle cx="50" cy="52" r="39.5" fill="none" stroke="#c9a227" strokeOpacity="0.5" strokeWidth="0.8" />
+      <circle cx="50" cy="56" r="30" fill={`url(#${uid}-halo)`} />
+      <circle cx="50" cy="52" r="39.5" fill="none" stroke="#c9a227" strokeOpacity="0.55" strokeWidth="0.8" />
       {/* arcane circle */}
       <circle cx="50" cy="56" r="27" fill="none" stroke="#e3c463" strokeWidth="1.2" strokeOpacity="0.85" />
       <circle cx="50" cy="56" r="24.5" fill="none" stroke="#e3c463" strokeWidth="0.6" strokeDasharray="1.2 2.2" strokeOpacity="0.8" />
@@ -76,7 +133,10 @@ function ElviaCrest({ uid }) {
       {/* sun */}
       <path d={rays} fill={`url(#${uid}-g)`} />
       <circle cx="50" cy="56" r="11" fill={`url(#${uid}-g)`} />
+      <circle cx="50" cy="56" r="11" fill="none" stroke="#4f3d0d" strokeWidth="0.6" />
       <circle cx="50" cy="56" r="8" fill={`url(#${uid}-core)`} />
+      <circle cx="47.6" cy="53.4" r="2.2" fill="#fffdf7" opacity="0.85" />
+      <Glaze id={`${uid}-gz`} cx={50} cy={52} r={39.5} />
       {/* crown */}
       <g transform="translate(0 -2)">
         <path
@@ -95,6 +155,11 @@ function ElviaCrest({ uid }) {
         <circle cx="38" cy="32" r="1.3" fill="#9e2b25" />
         <circle cx="62" cy="32" r="1.3" fill="#9e2b25" />
         <circle cx="50" cy="32" r="1.5" fill="#1f3150" stroke="#fbefc2" strokeWidth="0.4" />
+        {/* light catching the crown's upper edges */}
+        <path d="M33,14.5 L40.5,23.6 M45,10.6 L50,20.8 L55,10.6 M67,14.5 L59.5,23.6" fill="none" stroke="#fffaf0" strokeWidth="0.7" strokeOpacity="0.75" strokeLinecap="round" />
+        <path d="M30,30.2 H70" stroke="#fffaf0" strokeWidth="0.6" strokeOpacity="0.6" />
+        <path d="M29.6,34.6 H70.4" stroke="#4f3d0d" strokeWidth="0.8" strokeOpacity="0.8" />
+        <circle cx="49.4" cy="24" r="0.6" fill="#fffaf0" opacity="0.9" />
       </g>
     </>
   );
@@ -119,12 +184,20 @@ function SyndicateCrest({ uid }) {
           <stop offset="0.5" stopColor="#b08d57" />
           <stop offset="1" stopColor="#6a5230" />
         </linearGradient>
+        <linearGradient id={`${uid}-edge`} x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0" stopColor="#eef2f5" stopOpacity="0.85" />
+          <stop offset="0.45" stopColor="#eef2f5" stopOpacity="0" />
+          <stop offset="1" stopColor="#0e0f11" stopOpacity="0.6" />
+        </linearGradient>
         <radialGradient id={`${uid}-heat`} cx="50%" cy="58%" r="50%">
           <stop offset="0" stopColor="#e0782b" stopOpacity="0.55" />
           <stop offset="1" stopColor="#1b1d21" stopOpacity="0" />
         </radialGradient>
       </defs>
       <path d={gearPath(50, 50, 12, 47, 39, 0.46)} fill={`url(#${uid}-m)`} stroke="#15171a" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d={gearPath(50, 50, 12, 46, 39.6, 0.42)} fill="none" stroke={`url(#${uid}-edge)`} strokeWidth="0.9" strokeLinejoin="round" />
+      <circle cx="50" cy="50" r="38.2" fill={`url(#${uid}-b)`} stroke="#15171a" strokeWidth="0.8" />
+      <Bevel id={`${uid}-rim`} cx={50} cy={50} r={37.4} width={1.6} light="#f6e9bd" dark="#0e0f11" />
       <circle cx="50" cy="50" r="36.5" fill="#1b1d21" stroke="#0e0f11" strokeWidth="1" />
       <circle cx="50" cy="50" r="36.5" fill={`url(#${uid}-heat)`} />
       <circle cx="50" cy="50" r="34" fill="none" stroke="#b08d57" strokeWidth="1" strokeOpacity="0.75" />
@@ -147,7 +220,10 @@ function SyndicateCrest({ uid }) {
         <circle cx="38" cy="28" r="1.3" fill="#c3c7cc" />
         <circle cx="62" cy="28" r="1.3" fill="#c3c7cc" />
         <path d="M34,22.5 h11" stroke="#d4d8dd" strokeWidth="0.8" strokeOpacity="0.7" />
+        <path d="M55,22.5 h11" stroke="#d4d8dd" strokeWidth="0.6" strokeOpacity="0.4" />
+        <path d="M48.4,38 V62" stroke="#f6e9bd" strokeWidth="0.7" strokeOpacity="0.55" strokeLinecap="round" />
       </g>
+      <Glaze id={`${uid}-gz`} cx={50} cy={50} r={36.5} strength={0.75} />
     </>
   );
 }
@@ -178,6 +254,11 @@ function WargCrest({ uid }) {
           <stop offset="0" stopColor="#2b4268" />
           <stop offset="1" stopColor="#0b1424" />
         </radialGradient>
+        <linearGradient id={`${uid}-silver`} x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0" stopColor="#eef2f5" />
+          <stop offset="0.5" stopColor="#b8c6d1" />
+          <stop offset="1" stopColor="#7c8fa0" />
+        </linearGradient>
         <linearGradient id={`${uid}-fur`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#f6f8fa" />
           <stop offset="0.6" stopColor="#d9e2e8" />
@@ -185,7 +266,9 @@ function WargCrest({ uid }) {
         </linearGradient>
       </defs>
       <path d={icicles} fill="#d9e2e8" opacity="0.9" />
-      <circle cx="50" cy="50" r="43" fill="#b8c6d1" />
+      <circle cx="50" cy="50" r="43.6" fill="#1f3150" />
+      <circle cx="50" cy="50" r="43" fill={`url(#${uid}-silver)`} />
+      <Bevel id={`${uid}-rim`} cx={50} cy={50} r={41.8} width={2.2} light="#fffdf7" dark="#1f3150" />
       <circle cx="50" cy="50" r="40.5" fill={`url(#${uid}-night)`} />
       <circle cx="50" cy="50" r="38" fill="none" stroke="#d9e2e8" strokeOpacity="0.45" strokeWidth="0.8" />
       <path d={flake} stroke="#b8c6d1" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" fill="none" />
@@ -208,6 +291,11 @@ function WargCrest({ uid }) {
       <path d="M46.5,69 h7 l-3.5,4 Z" fill="#0b1424" />
       {/* scar */}
       <path d="M58,42 L64,57" stroke="#7a1f1a" strokeWidth="1.1" strokeLinecap="round" opacity="0.85" />
+      {/* moonlight on the brow and ear rims */}
+      <path d="M27.6,27.5 L36.6,37.2 L44,34.2 L50,35.2" fill="none" stroke="#fffdf7" strokeWidth="0.8" strokeOpacity="0.85" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="41.6" cy="51" r="0.55" fill="#fffdf7" />
+      <circle cx="58.4" cy="51" r="0.55" fill="#fffdf7" />
+      <Glaze id={`${uid}-gz`} cx={50} cy={50} r={40.5} strength={0.7} />
     </>
   );
 }

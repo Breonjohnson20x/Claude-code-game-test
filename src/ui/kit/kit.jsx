@@ -18,7 +18,7 @@ export function cx(...parts) {
 }
 
 export function Button({ variant = 'royal', icon, children, className, ...rest }) {
-  const base = variant === 'royal' ? 'btn-royal' : variant === 'danger' ? 'btn-ghost !border-crimson-400/70 !text-crimson-300' : 'btn-ghost';
+  const base = variant === 'royal' ? 'btn-royal' : variant === 'danger' ? 'btn-ghost btn-danger' : 'btn-ghost';
   return (
     <button type="button" className={cx(base, className)} {...rest}>
       {icon ? <Icon name={icon} size={20} /> : null}
@@ -33,16 +33,11 @@ export function IconButton({ icon, label, className, badge, ...rest }) {
       type="button"
       aria-label={label}
       title={label}
-      className={cx(
-        'relative inline-grid place-items-center size-12 rounded-xl border border-gold-600/40 bg-navy-900/70 text-gold-300 shadow-panel transition hover:border-gold-400 hover:text-gold-200 active:translate-y-px focus-visible:outline-2 focus-visible:outline-lattice-200',
-        className,
-      )}
+      className={cx('btn-icon size-12', className)}
       {...rest}
     >
       <Icon name={icon} size={22} />
-      {badge ? (
-        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-ember-500 px-1 text-center text-xs font-bold leading-5 text-parchment-50">{badge}</span>
-      ) : null}
+      {badge ? <span className="btn-icon__badge">{badge}</span> : null}
     </button>
   );
 }
@@ -112,8 +107,8 @@ export function ResourceHud({ resources, deltas = {}, compact = false, className
         const d = deltas[key];
         const bad = key === 'unrest' ? d > 0 : d < 0;
         return (
-          <div key={key} className="relative min-w-0 rounded-lg border border-gold-700/40 bg-navy-950/70 px-1.5 py-1.5 text-center" title={`${meta.label}: ${meta.hint}`}>
-            <dt className="flex items-center justify-center gap-1 text-[0.68rem] uppercase tracking-wider text-gold-400/85">
+          <div key={key} className="plaque relative min-w-0 px-1.5 py-1.5 text-center" title={`${meta.label}: ${meta.hint}`}>
+            <dt className="plaque__label flex items-center justify-center gap-1 text-[0.68rem] uppercase tracking-wider">
               <Icon name={meta.icon} size={14} />
               <span className={compact ? 'sr-only lg:not-sr-only' : 'sr-only sm:not-sr-only'}>{meta.label}</span>
               {compact ? null : (
@@ -122,9 +117,9 @@ export function ResourceHud({ resources, deltas = {}, compact = false, className
                 </span>
               )}
             </dt>
-            <dd className="mt-0.5 truncate font-display text-[0.98rem] font-semibold text-parchment-50 tabular-nums">{meta.format(resources[key])}</dd>
+            <dd className="plaque__value mt-0.5 truncate font-display text-[0.98rem] font-semibold tabular-nums">{meta.format(resources[key])}</dd>
             {d ? (
-              <span className={cx('absolute -top-2 right-1 rounded px-1 text-[0.7rem] font-bold tabular-nums shadow', bad ? 'bg-crimson-600 text-parchment-50' : 'bg-gold-500 text-navy-950')}>
+              <span className={cx('plaque__delta', bad ? 'plaque__delta--bad' : 'plaque__delta--good')}>
                 {d > 0 ? '+' : ''}
                 {d}
               </span>
@@ -201,7 +196,7 @@ export function Sheet({ open, onClose, title, eyebrow, children, footer, wide = 
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <header className="flex items-start gap-3 border-b border-gold-700/30 px-5 pb-3 pt-4">
+        <header className="relative flex items-start gap-3 px-5 pb-3 pt-4">
           <div className="min-w-0 flex-1">
             {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
             {title ? (
@@ -211,9 +206,10 @@ export function Sheet({ open, onClose, title, eyebrow, children, footer, wide = 
             ) : null}
           </div>
           <IconButton icon="close" label="Close" onClick={onClose} className="size-11 shrink-0" />
+          <span aria-hidden="true" className="gold-rule pointer-events-none absolute inset-x-4 -bottom-[0.45rem] !my-0" />
         </header>
-        <div className="scroll-elvia min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer ? <footer className="flex flex-wrap justify-end gap-2 border-t border-gold-700/30 px-5 py-3">{footer}</footer> : null}
+        <div className="scroll-elvia min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5">{children}</div>
+        {footer ? <footer className="flex flex-wrap justify-end gap-2 border-t border-gold-700/40 bg-navy-950/40 px-5 py-3 shadow-[inset_0_1px_0_rgb(255_244_214/0.05)]">{footer}</footer> : null}
       </div>
     </div>
   );
@@ -241,8 +237,8 @@ export function Toasts({ toasts }) {
         <div
           key={t.id}
           className={cx(
-            'pointer-events-auto max-w-md rounded-xl border px-4 py-3 text-[0.95rem] shadow-panel animate-fade-up',
-            t.tone === 'error' ? 'border-crimson-400/70 bg-crimson-700/95 text-parchment-50' : 'border-gold-500/60 bg-navy-850/95 text-parchment-100',
+            'pointer-events-auto max-w-md px-4 py-3 text-[0.95rem] animate-fade-up',
+            t.tone === 'error' ? 'rounded-xl border border-crimson-400/70 bg-crimson-700/95 text-parchment-50 shadow-panel' : 'panel panel-tight text-parchment-100',
           )}
         >
           {t.text}
@@ -255,7 +251,7 @@ export function Toasts({ toasts }) {
 /** A short labelled list item for reports: "Mara — Cordial → Fond". */
 export function Shift({ label, from, to, good }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-gold-700/25 bg-navy-950/50 px-3 py-2">
+    <li className="plaque flex items-center justify-between gap-3 px-3 py-2">
       <span className="text-parchment-100">{label}</span>
       <span className={cx('text-sm font-semibold', good === undefined ? 'text-gold-300' : good ? 'text-gold-300' : 'text-crimson-300')}>
         {from} <span aria-hidden="true">→</span>
