@@ -6,7 +6,7 @@
 // A guard, Y Arc, X Royal, RT ward.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createDuel, stepDuel, getDuelResult, guardActive } from '../../game/duel/engine.js';
+import { createDuel, stepDuel, getDuelResult, guardActive, drillProgress } from '../../game/duel/engine.js';
 import { ARCHETYPES } from '../../game/duel/archetypes.js';
 import { summarizeDuel } from '../../game/duel/analysis.js';
 import { audio, haptic } from '../audio/audio.js';
@@ -20,6 +20,7 @@ const MAX_DT = 50;
 const SWIPE_PX = 30;
 const EDGE = 0.22;
 const STAKES_LABEL = {
+  drill: 'Training yard drill',
   practice: 'Practice',
   march: 'On the march',
   champion: 'Champion duel',
@@ -92,9 +93,16 @@ function HoldButton({ label, onDown, onUp, className, children }) {
   );
 }
 
-function Hints({ touch, allowRetreat, onDismiss }) {
+function Hints({ touch, allowRetreat, onDismiss, brief }) {
   return (
     <div className="pointer-events-auto absolute inset-x-4 top-1/2 z-30 mx-auto max-w-md -translate-y-1/2 rounded-[var(--radius-panel)] border border-gold-600/50 bg-navy-950/90 p-5 text-center shadow-panel animate-fade-in">
+      {brief ? (
+        <div className="mb-4 border-b border-gold-700/40 pb-4">
+          <p className="font-display text-[0.8rem] uppercase tracking-[0.24em] text-gold-400">{brief.eyebrow}</p>
+          <p className="mt-1 font-display text-[1.2rem] text-gold-100">{brief.title}</p>
+          <p className="mt-2 text-[0.98rem] leading-snug text-parchment-100">{brief.text}</p>
+        </div>
+      ) : null}
       <p className="font-display text-[0.8rem] uppercase tracking-[0.24em] text-gold-400">Read the wind-up</p>
       <ul className="mt-3 space-y-1.5 text-left text-[0.98rem] text-parchment-100">
         <li>
@@ -121,12 +129,27 @@ function Hints({ touch, allowRetreat, onDismiss }) {
 
 // ── Result ───────────────────────────────────────────────────────────────────────────────
 
-function ResultView({ result, config, onContinue }) {
+function drillVerdict(result, goalLabel) {
+  const { value, target, met } = result.drill;
+  if (met) return { title: 'Drill complete', line: `${goalLabel}: done. Mara nods once, which is all the praise she gives.` };
+  return { title: 'Not yet', line: `${value} of ${target}. Nobody bleeds here. Again.` };
+}
+
+function ResultView({ result, config, onContinue, goalLabel, continueLabel = 'Continue' }) {
   const def = ARCHETYPES[config.archetypeId];
   const summary = summarizeDuel(result, def);
   const lastStand = config.modifiers?.stakes === 'last_stand';
+  const drill = result.drill ? drillVerdict(result, goalLabel ?? 'The drill') : null;
+  if (drill) {
+    summary.title = drill.title;
+    summary.line = drill.line;
+  }
   const won = result.outcome === 'victory';
-  const defeatLine = lastStand ? 'This is where this life ends. The Lattice will weave you again.' : 'The Sovereign withdraws: wounded, noted, remembered. This is not the end.';
+  const defeatLine = drill
+    ? drill.line
+    : lastStand
+      ? 'This is where this life ends. The Lattice will weave you again.'
+      : 'The Sovereign withdraws: wounded, noted, remembered. This is not the end.';
   const stats = [
     ['Clean hits', result.cleanHits],
     ['Perfect parries', result.perfectParries],
@@ -165,7 +188,7 @@ function ResultView({ result, config, onContinue }) {
       ) : null}
       {summary.lesson ? <p className="mt-4 text-center font-serif text-[1.1rem] italic text-parchment-300">{summary.lesson}</p> : null}
       <Button icon="forward" className="mx-auto mt-8 min-w-56" onClick={onContinue} autoFocus>
-        Continue
+        {continueLabel}
       </Button>
     </div>
   );
@@ -173,7 +196,22 @@ function ResultView({ result, config, onContinue }) {
 
 // ── The screen ───────────────────────────────────────────────────────────────────────────
 
-export function DuelScreen({ config, onComplete, showHints = true }) {
+/**
+ * `brief` ({ eyebrow, title, text }) heads the intro card (training drills); `goalLabel` names a
+ * drill's goal on the result screen and `hudLabel` counts it on the HUD; `continueLabel` labels the
+ * result screen's button;
+ * `withdrawText` is the Withdraw confirmation's body.
+ */
+export function DuelScreen({
+  config,
+  onComplete,
+  showHints = true,
+  brief = null,
+  goalLabel = null,
+  hudLabel = null,
+  continueLabel,
+  withdrawText = 'The realm will remember that you chose to live. It is recorded.',
+}) {
   const reduced = useReducedMotion();
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -236,7 +274,9 @@ export function DuelScreen({ config, onComplete, showHints = true }) {
   }, []);
 
   useEffect(() => {
+    const before = audio.getTheme();
     audio.ambient('duel');
+    return () => audio.ambient(before);
   }, []);
 
   // The loop: fixed-step engine, real dt clamped, paused when hidden or confirming retreat.
@@ -457,7 +497,7 @@ export function DuelScreen({ config, onComplete, showHints = true }) {
 
       {result ? (
         <div className="absolute inset-0 overflow-y-auto bg-navy-950/60">
-          <ResultView result={result} config={d.config} onContinue={finish} />
+          <ResultView result={result} config={d.config} onContinue={finish} goalLabel={goalLabel} continueLabel={continueLabel} />
         </div>
       ) : (
         <>
@@ -471,6 +511,14 @@ export function DuelScreen({ config, onComplete, showHints = true }) {
                   <Bar value={hud.enemyHp} max={hud.enemyMaxHp} tone="crimson" label={`${name}'s strength`} />
                   <Bar value={hud.poise} max={hud.maxPoise} tone="frost" label={`${name}'s poise`} thin />
                 </div>
+                {hud.drill ? (
+                  <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-gold-600/50 bg-navy-950/75 px-3 py-1 text-[0.95rem] text-parchment-100" role="status">
+                    {hudLabel ?? 'Goal'}
+                    <span className="font-display text-gold-200">
+                      {hud.drill.value} / {hud.drill.target}
+                    </span>
+                  </p>
+                ) : null}
               </div>
               {d.config.allowRetreat ? (
                 <button
@@ -572,7 +620,7 @@ export function DuelScreen({ config, onComplete, showHints = true }) {
             </div>
           </footer>
 
-          {hints ? <Hints touch={touch} allowRetreat={d.config.allowRetreat} onDismiss={dismissHints} /> : null}
+          {hints ? <Hints touch={touch} allowRetreat={d.config.allowRetreat} onDismiss={dismissHints} brief={brief} /> : null}
 
           {confirmRetreat ? (
             <div role="dialog" aria-modal="true" aria-labelledby="retreat-title" className="absolute inset-0 z-50 grid place-items-center bg-navy-950/80 px-6">
@@ -580,7 +628,7 @@ export function DuelScreen({ config, onComplete, showHints = true }) {
                 <h2 id="retreat-title" className="font-display text-xl text-gold-200">
                   Withdraw from the circle?
                 </h2>
-                <p className="mt-2 text-[0.98rem] text-parchment-200">The realm will remember that you chose to live. It is recorded.</p>
+                <p className="mt-2 text-[0.98rem] text-parchment-200">{withdrawText}</p>
                 <div className="mt-4 flex justify-center gap-3">
                   <Button variant="ghost" onClick={resume} autoFocus>
                     Fight on
@@ -618,6 +666,7 @@ function snapshot(d) {
     poise: e.poise,
     maxPoise: e.maxPoise,
     tele: d.telegraph ? { color: d.telegraph.telegraphColor } : null,
+    drill: drillProgress(d),
   };
 }
 

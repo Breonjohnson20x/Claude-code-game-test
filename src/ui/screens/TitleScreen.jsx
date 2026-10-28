@@ -6,7 +6,7 @@ import { audio } from '../audio/audio.js';
 import { promptInstall, useInstallState } from '../pwa.js';
 
 export function TitleScreen() {
-  const { hasAnySave, slots, loadSlot, startNewGame, openOverlay, notify } = useGame();
+  const { hasAnySave, slots, loadSlot, startNewGame, openOverlay, openTraining, notify } = useGame();
   const install = useInstallState();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('Aurelian');
@@ -61,6 +61,9 @@ export function TitleScreen() {
               Load a save
             </Button>
           ) : null}
+          <Button variant="ghost" icon="sword" onClick={openTraining}>
+            Training yard
+          </Button>
           <Button variant="ghost" onClick={() => openOverlay('settings')}>
             Settings
           </Button>

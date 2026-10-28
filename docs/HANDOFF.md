@@ -46,6 +46,7 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 | Saves (3 slots + autosave, export/import, dynasty meta), optional Claude narrator | **Done**: tested |
 | UI: Title, War Room, Resolution, March, Campfire, the Passing, Chronicle, Council, Settings, Saves | **Done** |
 | Real-time DuelScreen (touch, mouse, keyboard, basic gamepad) | **Done** |
+| Training yard: four drills (one per telegraph read) and sparring with every foe, from the title screen | **Done**: drills proven passable by the oracle bot |
 | Procedural art (scenes in 3 region states, portraits, crests, war table, campfire canvas) and Web Audio | **Done** |
 | `npm run e2e` (every screen at phone + desktop, overlays, a full UI playthrough into reign II, the installable build played offline) | **Passing** |
 | Installable PWA (manifest, procedural icons, offline service worker) and GitHub Pages deploy | **Done**: Pages needs a one-time switch in repository settings |
@@ -253,7 +254,7 @@ Next milestones, roughly in order:
    why, win the rematch, and want another reign? Tune `TUNING` and telegraph timing.
 2. Content depth: more turn-arc branches after turn 5 (eras), more campfire scenes, northern
    expedition ("Can I go north?" is a success metric), more Architect lore.
-3. Accessibility pass with a screen reader; a hint/practice mode for duels.
+3. Accessibility pass with a screen reader.
 4. The Cycle doc's long-term target: port the same rules to Unreal. The game layer is engine
    agnostic by design. See the porting notes in [`docs/DUEL.md`](DUEL.md) and [`docs/API.md`](API.md).
 

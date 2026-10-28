@@ -93,7 +93,9 @@ motion is on, so screenshots are stable.
    accessible name, or a phone button smaller than 44×44 px. On three rich states it also opens
    the Chronicle, Council (every tab), Saves and Settings overlays, audits them, and checks that
    Escape closes them.
-2. **Playthrough.** A whole reign through the UI from the title screen. It clicks buttons by
+2. **Playthrough.** First the training yard: it opens the yard from the title, audits it, plays
+   the flicker drill by keyboard and checks it passed. Then a whole reign through the UI from the
+   title screen. It clicks buttons by
    their accessible names and plays duels with real keyboard input. Then it saves, quits to the
    title, reloads the page and continues, checking the world remembered everything; then it goes
    through the Passing into reign II and checks that the first briefing cites reign I. The steps

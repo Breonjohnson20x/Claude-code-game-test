@@ -64,6 +64,7 @@ export function GameProvider({ children, storage }) {
   stateRef.current = state;
   const [slots, setSlots] = useState(() => saves.listSlots());
   const [overlay, setOverlay] = useState(null);
+  const [training, setTraining] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [lastResult, setLastResult] = useState(null);
 
@@ -102,7 +103,7 @@ export function GameProvider({ children, storage }) {
     audio.setVolume(settings.volume);
   }, [settings]);
 
-  const ambientTheme = state ? PHASE_AMBIENT[state.phase] ?? null : 'title';
+  const ambientTheme = state ? PHASE_AMBIENT[state.phase] ?? null : training ? 'war_room' : 'title';
   useEffect(() => {
     audio.ambient(ambientTheme);
   }, [ambientTheme]);
@@ -163,6 +164,7 @@ export function GameProvider({ children, storage }) {
       stateRef.current = s;
       setState(s);
       setOverlay(null);
+      setTraining(false);
       saves.autosave(s, 'cycle_start');
       refreshSlots();
       audio.sfx('confirm');
@@ -178,6 +180,7 @@ export function GameProvider({ children, storage }) {
         stateRef.current = s;
         setState(s);
         setOverlay(null);
+        setTraining(false);
         notify(slot === 'auto' ? 'Autosave restored.' : `Slot ${slot} loaded.`);
         audio.sfx('page');
         return true;
@@ -258,6 +261,12 @@ export function GameProvider({ children, storage }) {
   }, []);
 
   const closeOverlay = useCallback(() => setOverlay(null), []);
+  const openTraining = useCallback(() => {
+    audio.unlock();
+    setOverlay(null);
+    setTraining(true);
+  }, []);
+  const closeTraining = useCallback(() => setTraining(false), []);
 
   const view = useMemo(() => (state ? getView(state) : null), [state]);
 
@@ -282,13 +291,16 @@ export function GameProvider({ children, storage }) {
       overlay,
       openOverlay: setOverlay,
       closeOverlay,
+      training,
+      openTraining,
+      closeTraining,
       toasts,
       notify,
       generators,
       aiStatus,
       aiOn: settings.aiEnabled && Boolean(settings.apiKey),
     }),
-    [state, view, act, lastResult, settings, updateSettings, slots, refreshSlots, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot, quitToTitle, overlay, closeOverlay, toasts, notify, generators, aiStatus],
+    [state, view, act, lastResult, settings, updateSettings, slots, refreshSlots, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot, quitToTitle, overlay, closeOverlay, training, openTraining, closeTraining, toasts, notify, generators, aiStatus],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -55,7 +55,8 @@ optional Claude narrator still needs a connection).
 
   Read the wind-up: a **red-gold** glow means *dodge*, steel light means *parry or dodge*, and a
   flicker is a feint: *wait*. Losing a duel never ends the game; the result screen tells you what
-  you misread.
+  you misread. To practise first, open the **Training yard** from the title screen: four short
+  drills, one per read, and sparring with every foe.
 
 ### Optional Claude narrator
 

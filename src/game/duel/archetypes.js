@@ -178,6 +178,8 @@ export const ARCHETYPES = {
 };
 
 const STAKES = {
+  // Training-yard drills end on their goal, not on the foe's strength, so it runs deep.
+  drill: { dmg: 0.6, hp: 4 },
   practice: { dmg: 0.75, hp: 0.85 },
   march: { dmg: 1, hp: 1 },
   champion: { dmg: 1.05, hp: 1.05 },

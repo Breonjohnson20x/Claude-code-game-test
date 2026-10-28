@@ -6,7 +6,8 @@ and choice comes from the game layer.
 
 ## Routing (`src/App.jsx`, lead-owned)
 
-`state === null` → `TitleScreen`. Otherwise by `state.phase`:
+`state === null` → `TitleScreen`, or `TrainingScreen` while `training` is set (`openTraining()` /
+`closeTraining()` in `useGame()`). Otherwise by `state.phase`:
 `war_room → WarRoomScreen`, `resolution → ResolutionScreen`, `expedition → ExpeditionScreen`,
 `campfire → CampfireScreen`, `passing → PassingScreen`. Overlays (`overlay` in `useGame()`):
 `'settings' | 'saves' | 'chronicle' | 'dossier'` → `SettingsSheet`, `SavesSheet`, `ChronicleSheet`,
@@ -17,6 +18,7 @@ Where the screens live (helpers sit in a folder named after the screen):
 | Screen / overlay | File | Helpers |
 |---|---|---|
 | Title | `src/ui/screens/TitleScreen.jsx` | `ui/pwa.js` (`useInstallState`, `promptInstall`: the install button and the iOS hint) |
+| Training yard | `src/ui/screens/TrainingScreen.jsx` (shown when `training` is set in `useGame()` and no reign is loaded) | `screens/training/records.js` (per-device progress) |
 | War Room | `src/ui/screens/WarRoomScreen.jsx` | `screens/warroom/` (Crisis, Council, Orders, CustomDecree, Trial, shared, words) |
 | Resolution | `src/ui/screens/ResolutionScreen.jsx` | `screens/resolution/` (Report, Decisions) |
 | March | `src/ui/screens/ExpeditionScreen.jsx` | `screens/expedition/` (MarchRail, ChoiceList, DuelOutcome, words) |

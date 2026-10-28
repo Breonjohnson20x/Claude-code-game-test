@@ -9,6 +9,7 @@ import { ResolutionScreen } from './ui/screens/ResolutionScreen.jsx';
 import { ExpeditionScreen } from './ui/screens/ExpeditionScreen.jsx';
 import { CampfireScreen } from './ui/screens/CampfireScreen.jsx';
 import { PassingScreen } from './ui/screens/PassingScreen.jsx';
+import { TrainingScreen } from './ui/screens/TrainingScreen.jsx';
 import { SettingsSheet } from './ui/overlays/SettingsSheet.jsx';
 import { SavesSheet } from './ui/overlays/SavesSheet.jsx';
 import { ChronicleSheet } from './ui/overlays/ChronicleSheet.jsx';
@@ -23,9 +24,9 @@ const PHASE_SCREENS = {
 };
 
 function Shell() {
-  const { state, overlay, closeOverlay, toasts } = useGame();
-  const Screen = state ? PHASE_SCREENS[state.phase] ?? WarRoomScreen : TitleScreen;
-  const screenKey = state ? `${state.cycle.number}-${state.turn}-${state.phase}` : 'title';
+  const { state, overlay, closeOverlay, toasts, training } = useGame();
+  const Screen = state ? PHASE_SCREENS[state.phase] ?? WarRoomScreen : training ? TrainingScreen : TitleScreen;
+  const screenKey = state ? `${state.cycle.number}-${state.turn}-${state.phase}` : training ? 'training' : 'title';
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [screenKey]);

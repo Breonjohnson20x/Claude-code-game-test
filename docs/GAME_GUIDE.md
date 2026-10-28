@@ -214,6 +214,14 @@ fight each turn is "for stakes" (`trialKey`): a win gives readiness +2, Mara res
 memory, and the reign's first trial win writes a Chronicle entry; a loss costs readiness −1.
 Later fights that turn are practice only.
 
+## The training yard
+
+From the title screen, outside any reign: four short **drills**, one per read of the wind-up
+(steel light, red-gold glow, the flicker, breaking a guard), each ending the moment its goal is
+met, and **sparring** bouts against the Blade-Adept, the Warg Alpha and the Fallen Champion (pick
+which Legacy it mirrors). Mara coaches. Nothing here touches a save, the Chronicle or any reign;
+the yard remembers which drills you passed on this device. See [DUEL.md](DUEL.md#training-yard).
+
 ## NarrativeIntensity and campfires
 
 `state.intensity` (0–100, starts 25, **never shown**) rises with dramatic effects
