@@ -4,6 +4,7 @@
 import { Chip, Eyebrow, cx } from '../../kit/kit.jsx';
 import { Icon } from '../../kit/icons.jsx';
 import { GiltCorners, SectionHeading } from './shared.jsx';
+import { Filigree } from './ornate.jsx';
 import { roman, threadUrgency } from './words.js';
 
 const BORDER_CHIPS = {
@@ -54,14 +55,23 @@ export function CrisisHero({ view, state, headingId }) {
           Era milestone
         </p>
       ) : null}
-      <h1
-        id={headingId}
-        className="mt-3 max-w-3xl font-display text-[2.35rem] leading-[1.05] text-gilded text-glow-gold sm:text-5xl lg:text-[3.6rem] animate-fade-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        {crisis.title}
-      </h1>
-      <p className="mt-3 flex items-center gap-2 text-[0.95rem] text-parchment-200 animate-fade-up" style={{ animationDelay: '120ms' }}>
+      <div className="relative">
+        {/* warm bloom behind the title, as if the table lamp lit the lettering */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-8 -top-6 h-[140%] w-[min(42rem,110%)]"
+          style={{ background: 'radial-gradient(closest-side, rgb(255 214 150 / 0.16), rgb(224 120 43 / 0.05) 60%, transparent)' }}
+        />
+        <h1
+          id={headingId}
+          className="relative mt-3 max-w-3xl font-display text-[2.35rem] leading-[1.05] text-gilded text-glow-gold sm:text-5xl lg:text-[3.6rem] animate-fade-up"
+          style={{ animationDelay: '60ms', filter: 'drop-shadow(0 2px 0 rgb(0 0 0 / 0.55)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.55))' }}
+        >
+          {crisis.title}
+        </h1>
+      </div>
+      <Filigree className="mt-3 max-w-[22rem] animate-fade-up [&>span:first-child]:hidden" />
+      <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-gold-700/40 bg-navy-950/55 py-1 pl-2.5 pr-3.5 text-[0.95rem] text-parchment-100 backdrop-blur-[2px] animate-fade-up" style={{ animationDelay: '120ms' }}>
         <Icon name="map" size={16} className="text-gold-400" />
         {crisis.location}
       </p>
@@ -163,7 +173,8 @@ export function Briefing({ intro, lines }) {
               key={`${i}-${line.slice(0, 16)}`}
               className={cx(
                 'font-serif text-[1.18rem] leading-relaxed text-parchment-100 animate-fade-up',
-                i === 0 && 'first-letter:float-left first-letter:mr-2 first-letter:mt-1 first-letter:font-display first-letter:text-[3.1rem] first-letter:leading-[0.8] first-letter:text-gold-300',
+                i === 0 &&
+                  'first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:rounded-[0.3rem] first-letter:border first-letter:border-gold-600/70 first-letter:bg-[radial-gradient(circle_at_30%_25%,#2b4268,#0b1424_75%)] first-letter:px-3 first-letter:pb-1.5 first-letter:pt-2.5 first-letter:font-display first-letter:text-[2.7rem] first-letter:leading-[0.85] first-letter:text-gold-300 first-letter:shadow-[inset_0_0_0_2px_rgb(227_196_99/0.18),0_3px_8px_rgb(0_0_0/0.5)]',
               )}
               style={{ animationDelay: `${Math.min(i, 8) * 80}ms` }}
             >
@@ -178,10 +189,29 @@ export function Briefing({ intro, lines }) {
 
 export function Conflict({ text }) {
   return (
-    <section aria-label="The question before the Crown" className="relative mb-8 px-5 py-6 text-center animate-fade-up sm:px-10">
-      <GiltCorners className="!inset-0" />
-      <p className="font-display text-xs uppercase tracking-[0.26em] text-gold-400">The question before the Crown</p>
-      <p className="mx-auto mt-2 max-w-2xl font-serif text-[1.4rem] italic leading-snug text-gold-100 text-gold-200 sm:text-[1.6rem]">{text}</p>
+    <section
+      aria-label="The question before the Crown"
+      className="relative mb-9 mt-10 rounded-[0.9rem] border border-gold-600/60 px-5 pb-6 pt-9 text-center shadow-[inset_0_1px_0_rgb(255_244_214/0.1),0_18px_40px_-18px_rgb(0_0_0/0.9)] animate-fade-up sm:px-10"
+      style={{
+        background:
+          'var(--elvia-grain), radial-gradient(80% 90% at 50% 0%, rgb(255 214 150 / 0.16), transparent 65%), radial-gradient(70% 60% at 50% 110%, rgb(224 120 43 / 0.1), transparent 70%), linear-gradient(180deg, #1d2235 0%, #121625 60%, #0c0f1a 100%)',
+      }}
+    >
+      <span aria-hidden="true" className="pointer-events-none absolute inset-[5px] rounded-[0.7rem] border border-gold-500/20" />
+      <GiltCorners className="!inset-2.5" />
+      {/* the crown's question carries the crown's mark */}
+      <span
+        aria-hidden="true"
+        className="absolute left-1/2 top-0 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-gold-400/80 text-gold-200 shadow-[0_0_0_4px_rgb(7_13_24/0.95),0_0_26px_rgb(227_196_99/0.4)]"
+        style={{ background: 'radial-gradient(circle at 35% 30%, #2b4268, #0b1424 75%)' }}
+      >
+        <Icon name="crown" size={22} />
+      </span>
+      <p className="font-display text-xs uppercase tracking-[0.28em] text-gold-400">The question before the Crown</p>
+      <Filigree className="mx-auto mt-2 max-w-[14rem]" />
+      <p className="mx-auto mt-3 max-w-2xl font-serif text-[1.42rem] italic leading-snug text-gold-100 sm:text-[1.65rem]" style={{ textShadow: '0 2px 10px rgb(0 0 0 / 0.6)' }}>
+        {text}
+      </p>
     </section>
   );
 }

@@ -9,9 +9,15 @@
 // of the plane, anchored to a map point and rotated back to face the screen. The only
 // animation is opacity/transform on small layers (candle flicker, smoke), and it is
 // off under reduced motion. Fills its positioned parent (absolute inset-0).
+//
+// The room around the table (screen space, in front of the plane): a shaft of high-window
+// light from the upper right with dust motes drifting in it (a small canvas), two
+// out-of-focus standards of Elvia hanging close to the lens, and candle bokeh at the
+// near edge — depth that falls off into darkness behind the War Room title.
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { C } from './palette.js';
 import { clamp, mulberry32, r1, useReducedMotion, useUid } from './util.js';
+import { Motes } from '../screens/warroom/ornate.jsx';
 
 // ---------------------------------------------------------------- geometry
 const WW = 1800; // table world, viewBox units
@@ -878,6 +884,8 @@ function SmokeArt({ uid, seed }) {
 const STYLE = `
 @keyframes wrb-flicker { 0%{opacity:1;transform:scale(1,1)} 9%{opacity:.86;transform:scale(.96,1.05)} 17%{opacity:1;transform:scale(1.02,.96)} 31%{opacity:.9;transform:scale(.97,1.03)} 48%{opacity:1;transform:scale(1,1.06)} 63%{opacity:.82;transform:scale(1.03,.95)} 79%{opacity:.97;transform:scale(.98,1.02)} 100%{opacity:1;transform:scale(1,1)} }
 @keyframes wrb-glow { 0%{opacity:.92} 13%{opacity:.74} 27%{opacity:.95} 41%{opacity:.82} 58%{opacity:1} 73%{opacity:.78} 88%{opacity:.9} 100%{opacity:.92} }
+@keyframes wrb-sway { 0%,100%{transform:rotate(-0.7deg)} 50%{transform:rotate(0.9deg)} }
+@keyframes wrb-breathe { 0%,100%{opacity:.8} 50%{opacity:1} }
 @keyframes wrb-smoke { 0%{opacity:.0;transform:translateY(8%) scaleX(.9)} 30%{opacity:.85} 100%{opacity:0;transform:translateY(-14%) scaleX(1.15)} }
 `;
 
@@ -1003,6 +1011,119 @@ function LightPools({ crop, list, motion }) {
     });
 }
 
+// ---------------------------------------------------------------- the room around the table
+/** A hanging standard of Elvia: navy cloth, gold border, the broken circle and star. */
+function HangingBanner({ uid, flip = false }) {
+  const id = `${uid}hb${flip ? 'r' : 'l'}`;
+  return (
+    <svg viewBox="0 0 120 400" width="100%" height="100%" preserveAspectRatio="xMidYMin meet" style={{ display: 'block', transform: flip ? 'scaleX(-1)' : undefined }} focusable="false">
+      <defs>
+        <linearGradient id={`${id}-cloth`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#070d18" />
+          <stop offset="0.18" stopColor="#16243a" />
+          <stop offset="0.34" stopColor="#0b1424" />
+          <stop offset="0.55" stopColor="#1f3150" />
+          <stop offset="0.72" stopColor="#0f1b2d" />
+          <stop offset="0.9" stopColor="#2b4268" />
+          <stop offset="1" stopColor="#0f1b2d" />
+        </linearGradient>
+        <linearGradient id={`${id}-shade`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0.55" />
+          <stop offset="0.3" stopColor="#000" stopOpacity="0" />
+          <stop offset="0.8" stopColor="#000" stopOpacity="0.1" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.6" />
+        </linearGradient>
+        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f6e9bd" />
+          <stop offset="0.45" stopColor="#c9a227" />
+          <stop offset="1" stopColor="#4f3d0d" />
+        </linearGradient>
+      </defs>
+      {/* rod and finials */}
+      <rect x="2" y="14" width="116" height="7" rx="3.5" fill={`url(#${id}-gold)`} />
+      <circle cx="4" cy="17.5" r="6" fill={`url(#${id}-gold)`} />
+      <circle cx="116" cy="17.5" r="6" fill={`url(#${id}-gold)`} />
+      <path d="M30 0v16M90 0v16" stroke="#7a5f36" strokeWidth="1.6" />
+      {/* cloth with a swallowtail */}
+      <path d="M10 20H110V352L60 318 10 352Z" fill={`url(#${id}-cloth)`} />
+      <path d="M10 20H110V352L60 318 10 352Z" fill={`url(#${id}-shade)`} />
+      <path d="M17 26H103V338L60 308 17 338Z" fill="none" stroke={`url(#${id}-gold)`} strokeWidth="2.4" />
+      <path d="M22 31H98V328L60 301 22 328Z" fill="none" stroke="#c9a227" strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="1 3" />
+      {/* the broken circle and star */}
+      <g transform="translate(60 150)" fill="none" stroke={`url(#${id}-gold)`} strokeLinecap="round">
+        <path d="M-6 -27.3A28 28 0 1 0 22 -17" strokeWidth="4" />
+        <path d="M0 -14L3.5 -3.5 14 0 3.5 3.5 0 14 -3.5 3.5 -14 0 -3.5 -3.5Z" fill="#e3c463" stroke="#f6e9bd" strokeWidth="0.8" />
+      </g>
+      <path d="M36 220h48M44 228h32" stroke="#c9a227" strokeOpacity="0.6" strokeWidth="1.4" />
+      <path d="M60 248l7 7-7 7-7-7Z" fill="#c9a227" opacity="0.7" />
+      {/* tassels */}
+      <path d="M10 352v24M110 352v24" stroke="#a8841b" strokeWidth="2" />
+      <circle cx="10" cy="378" r="4" fill="#c9a227" />
+      <circle cx="110" cy="378" r="4" fill="#c9a227" />
+      {/* key-light rim along the lit edge */}
+      <path d="M110 22V350" stroke="#ffe9ae" strokeOpacity="0.28" strokeWidth="2" />
+    </svg>
+  );
+}
+
+const SHAFT = { top: 0.86, bottom: 0.28, width: 0.36 };
+
+/** Window light, out-of-focus foreground standards and candle bokeh, dust in the beam. */
+function RoomLayer({ uid, motion, wide }) {
+  return (
+    <>
+      {/* a shaft of high-window light from the upper right, falling across the table */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(112deg, transparent 0%, transparent 46%, rgb(255 233 174 / 0.05) 54%, rgb(255 244 214 / 0.11) 62%, rgb(255 233 174 / 0.06) 70%, transparent 80%)',
+          WebkitMaskImage: 'linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.8) 35%, transparent 80%)',
+          maskImage: 'linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.8) 35%, transparent 80%)',
+          mixBlendMode: 'screen',
+          animation: motion ? 'wrb-breathe 9s ease-in-out infinite' : 'none',
+        }}
+      />
+      <Motes count={wide ? 56 : 34} shaft={SHAFT} seed={23} opacity={0.9} />
+      {/* foreground standards, close to the lens: soft focus */}
+      {[false, true].map((flip) => (
+        <div
+          key={String(flip)}
+          style={{
+            position: 'absolute',
+            top: wide ? '-1%' : '7%',
+            [flip ? 'right' : 'left']: wide ? '1.5%' : '-11%',
+            width: wide ? 'min(10vw, 140px)' : '24vw',
+            height: wide ? '64%' : '52%',
+            filter: 'blur(1.4px) brightness(0.78)',
+            transformOrigin: '50% 0%',
+            animation: motion ? `wrb-sway ${11 + (flip ? 2.3 : 0)}s ease-in-out ${flip ? -4 : 0}s infinite` : 'none',
+            pointerEvents: 'none',
+          }}
+        >
+          <HangingBanner uid={uid} flip={flip} />
+        </div>
+      ))}
+      {/* candle bokeh: out-of-focus flames between the lens and the table */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: [
+            'radial-gradient(circle at 6% 90%, rgb(255 214 150 / 0.16) 0, rgb(255 214 150 / 0.1) 3vmax, transparent 3.4vmax)',
+            'radial-gradient(circle at 14% 97%, rgb(244 163 94 / 0.11) 0, rgb(244 163 94 / 0.07) 4.2vmax, transparent 4.6vmax)',
+            'radial-gradient(circle at 94% 86%, rgb(255 214 150 / 0.13) 0, rgb(255 214 150 / 0.08) 3.5vmax, transparent 3.9vmax)',
+            'radial-gradient(circle at 86% 98%, rgb(244 163 94 / 0.1) 0, rgb(244 163 94 / 0.06) 5vmax, transparent 5.4vmax)',
+          ].join(','),
+        }}
+      />
+    </>
+  );
+}
+
 function WarRoomBackdropImpl({ threats, regionState = 'STABLE', dim = true, className = '', style }) {
   const uid = useUid('wrb');
   const ref = useRef(null);
@@ -1079,6 +1200,17 @@ function WarRoomBackdropImpl({ threats, regionState = 'STABLE', dim = true, clas
             : 'linear-gradient(180deg, rgb(5 8 15 / 0.6) 0%, rgb(7 13 24 / 0.12) 24%, rgb(7 13 24 / 0.08) 60%, rgb(7 13 24 / 0.45) 100%)',
         }}
       />
+      {/* the lamp over the chart: a warm pool that makes the map the focal point */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          mixBlendMode: 'screen',
+          background: 'radial-gradient(ellipse 60% 34% at 54% 34%, rgb(255 214 150 / 0.13) 0%, rgb(224 120 43 / 0.05) 55%, transparent 80%)',
+        }}
+      />
+      <RoomLayer uid={uid} motion={motion} wide={W >= 900} />
       <div
         style={{
           position: 'absolute',

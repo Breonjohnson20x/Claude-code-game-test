@@ -16,8 +16,17 @@ function LegacyCard({ legacy, chosen, full, onToggle, index }) {
   const body = (
     <>
       <span className="flex items-start justify-between gap-3">
-        <span className="flex items-center gap-2 font-display text-[1.08rem] leading-tight text-gold-100">
-          <Sigil name={locked ? 'diamond' : 'star'} size={16} className={locked ? 'text-stone-500' : 'text-gold-400'} />
+        <span className="flex items-center gap-2.5 font-display text-[1.1rem] leading-tight text-gold-100 text-engraved">
+          <span
+            aria-hidden="true"
+            className={cx(
+              'grid size-9 shrink-0 place-items-center rounded-full border shadow-[inset_0_1px_0_rgb(255_244_214/0.15),0_2px_6px_rgb(0_0_0/0.5)]',
+              locked ? 'border-stone-600/70 text-stone-500' : chosen ? 'border-gold-300 text-gold-200 shadow-[0_0_18px_rgb(227_196_99/0.55)]' : 'border-gold-500/70 text-gold-300',
+            )}
+            style={{ background: locked ? 'radial-gradient(circle at 35% 30%, #2a2f3a, #12151b 75%)' : 'radial-gradient(circle at 35% 30%, #2b4268, #0b1424 75%)' }}
+          >
+            <Sigil name={locked ? 'diamond' : 'star'} size={17} />
+          </span>
           {legacy.name}
         </span>
         {locked ? (
@@ -43,7 +52,10 @@ function LegacyCard({ legacy, chosen, full, onToggle, index }) {
   );
   if (locked) {
     return (
-      <li className="animate-fade-up rounded-[var(--radius-panel)] border border-stone-600/40 bg-navy-950/70 p-4 opacity-75" style={{ animationDelay: `${index * 60}ms` }}>
+      <li
+        className="animate-fade-up rounded-[0.9rem] border border-stone-600/40 p-4 opacity-80"
+        style={{ animationDelay: `${index * 60}ms`, background: 'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.015) 0 6px, transparent 6px 12px), linear-gradient(180deg, #12151b, #0b1018)' }}
+      >
         {body}
       </li>
     );
@@ -56,10 +68,11 @@ function LegacyCard({ legacy, chosen, full, onToggle, index }) {
         disabled={disabled}
         onClick={() => onToggle(legacy.id)}
         className={cx(
-          'block h-full w-full rounded-[var(--radius-panel)] border p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55',
+          'relative block h-full w-full overflow-hidden rounded-[0.9rem] border p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55',
+          'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-gold-300 before:via-gold-500/50 before:to-transparent',
           chosen
-            ? 'border-gold-400 bg-[radial-gradient(120%_120%_at_0%_0%,rgb(255_233_174/0.18),transparent_60%),rgb(22_36_58/0.95)] shadow-[0_0_0_1px_rgb(227_196_99/0.35),0_0_30px_-8px_rgb(227_196_99/0.5)]'
-            : 'border-gold-700/45 bg-navy-900/85 hover:border-gold-500/80',
+            ? 'border-gold-400 bg-[radial-gradient(120%_120%_at_0%_0%,rgb(255_233_174/0.2),transparent_60%),linear-gradient(180deg,#24324a,#121b2d)] shadow-[0_0_0_1px_rgb(227_196_99/0.4),0_0_34px_-8px_rgb(227_196_99/0.6)]'
+            : 'border-gold-700/55 bg-[radial-gradient(100%_80%_at_0%_0%,rgb(227_196_99/0.08),transparent_60%),linear-gradient(180deg,#1b2639,#0f1726)] shadow-[inset_0_1px_0_rgb(255_244_214/0.08),0_14px_28px_-16px_rgb(0_0_0/0.9)] hover:border-gold-500/80 before:opacity-40',
         )}
       >
         <span className="sr-only">{legacy.name}. </span>
