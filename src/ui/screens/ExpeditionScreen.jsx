@@ -93,7 +93,7 @@ export function ExpeditionScreen() {
   return (
     <main className="relative min-h-dvh overflow-x-clip bg-navy-950" aria-labelledby="ex-title">
       <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
-        <div className="sticky top-0 z-30 -mx-4 bg-gradient-to-b from-navy-950 via-navy-950/95 to-navy-950/0 px-4 pb-1 sm:-mx-6 sm:px-6" style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))' }}>
+        <div className="sticky top-0 z-30 -mx-4 chrome-bar px-4 pb-1 sm:-mx-6 sm:px-6" style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))' }}>
           <TopBar subtitle={exp.title} />
         </div>
         <Hero beat={beat} region={region} />

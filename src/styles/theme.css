@@ -172,6 +172,10 @@
   0%, 100% { transform: skewY(0deg) scaleX(1); }
   50% { transform: skewY(-2.5deg) scaleX(0.97); }
 }
+@keyframes screen-veil {
+  0% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
 @keyframes gold-sheen {
   0% { background-position: -160% 0; }
   100% { background-position: 260% 0; }
@@ -284,6 +288,25 @@
   }
   .panel-parchment :where(h1, h2, h3, h4) { color: var(--color-ink-900); }
   .panel-parchment a { color: #7a3b14; }
+
+  /* ---- Sticky game chrome: a frosted bar the story scrolls under ---- */
+  .chrome-bar {
+    background: linear-gradient(180deg, rgb(7 13 24 / 0.95), rgb(7 13 24 / 0.84));
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    backdrop-filter: blur(12px) saturate(1.15);
+    border-bottom: 1px solid rgb(201 162 39 / 0.2);
+    box-shadow: 0 12px 28px -16px rgb(0 0 0 / 0.85);
+  }
+
+  /* ---- Between screens: a brief dip to night that lifts as the new screen arrives ---- */
+  .screen-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 40%, #0b1424 0%, #070d18 70%);
+    animation: screen-veil 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
 
   /* ---- Primary button: gold metal on navy ---- */
   .btn-royal {

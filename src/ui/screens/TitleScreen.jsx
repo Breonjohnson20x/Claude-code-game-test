@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useGame } from '../game/GameProvider.jsx';
 import { Button, Eyebrow, Rule, Sheet } from '../kit/kit.jsx';
-import { RegionScene, ArchitectSymbol } from '../art/index.js';
+import { ArchitectSymbol } from '../art/index.js';
+import { StageBackdrop } from '../duel/StageBackdrop.jsx';
 import { audio } from '../audio/audio.js';
 import { promptInstall, useInstallState } from '../pwa.js';
 
@@ -17,8 +18,9 @@ export function TitleScreen() {
   return (
     <main className="relative min-h-dvh overflow-hidden bg-navy-950" aria-labelledby="title-heading">
       <div className="absolute inset-0" aria-hidden="true">
-        <RegionScene beat="camp" regionState="STABLE" timeOfDay="night" className="h-full w-full opacity-70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-navy-950/30 via-navy-950/50 to-navy-950" />
+        <StageBackdrop stage="ruin" noSymbol className="block h-full w-full" />
+        <div className="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_42%,rgb(7_13_24/0.15)_0%,rgb(7_13_24/0.55)_55%,rgb(7_13_24/0.92)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-navy-950 via-navy-950/70 to-transparent" />
       </div>
       <div
         className="relative z-10 mx-auto flex min-h-dvh max-w-xl flex-col items-center justify-center px-6 text-center"
