@@ -154,6 +154,10 @@ Determinism is a test-wide assumption: never call `Math.random()` or `Date.now()
   `npx playwright install chromium`.
 - **e2e fails with "scenario did not render":** open `/?scenario=<name>` in `npm run dev` and
   look at the browser console; usually a screen threw on an unexpected view shape.
+- **e2e fails with "Execution context was destroyed" or a scenario that suddenly resets:** a
+  file changed while it ran and the dev server reloaded the page (Tailwind scans every file in the
+  repo, docs included). Don't edit the working tree during `npm run e2e`; to keep working, run it
+  from a copy of the repo with `node_modules` symlinked in.
 - **A tap-target failure on a decorative element:** decorative SVG should be `aria-hidden`; real
   small buttons need `min-h-11 min-w-11` (44 px).
 - **Flaky screenshot diffs:** the gate runs with reduced motion. Animations must respect
