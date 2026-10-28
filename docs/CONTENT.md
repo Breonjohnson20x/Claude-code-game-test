@@ -502,15 +502,26 @@ the march taken after order E on turn 1 (region STABLE).
 > Refugee families pass through toward the northern camps, one stamped paper at a time.
 > A girl of about nine sits on a cart wheel with her hood up, watching your banner. Her mother is arguing with the duty sergeant. Her little brother is asleep in a crate of turnips.
 > "Are you the God-King?" the girl asks. Then, before you answer: "Mama says you decide who's allowed to live where."
+> Sparky has not looked at the girl once. He is staring at a man in a grey refugee's coat at the back of the line, and the crest along his spine is standing straight up. Mara follows his gaze and goes very still.
 
 | Choice id | Kind | Label | Hint / warning |
 |---|---|---|---|
+| `call_out_scout` | duel | Call out the man in the grey coat | A hidden blade · he fights with feints |
 | `ask_mika` | talk | Ask her what she saw in the north |  |
 | `sparky_hello` | talk | Let Sparky say hello |  |
 | `walk_through` | advance | Walk the family through the gate yourself |  |
 | `rations` | advance | Give them your rations |  |
 | `let_work` | advance | Let the checkpoint do its work |  |
 | `walk_past` | advance | Ride past |  |
+
+<details><summary>Call out the man in the grey coat</summary>
+
+
+**Effects:** —
+
+**Duel:** "blade_adept"
+
+</details>
 
 <details><summary>Ask her what she saw in the north</summary>
 
@@ -634,6 +645,7 @@ the march taken after order E on turn 1 (region STABLE).
 <details><summary>Lower your blade and let it go</summary>
 
 > The alpha rises, slowly. It limps to the treeline and stops once to look back at you — not the way an animal looks at a predator. The way a soldier looks at an officer from the other army.
+> On the ridge above the pines, something far larger than the alpha is watching: grey as old ice, scarred from muzzle to shoulder. When you look straight at it, there is only snow.
 
 **Effects:** counter wargMercy +1; frost_wargs: attitude +10, tension -6, peacemaker memory +4; sparky: affection +4; chronicle "Mercy in the Frontier Wilds" (duel)
 

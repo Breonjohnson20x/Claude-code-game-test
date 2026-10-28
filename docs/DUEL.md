@@ -56,10 +56,12 @@ What `createDuel` takes (and what the controller builds with `duelConfig` / `tri
     legacies: [],                            // the Sovereign's active Legacies
     companion: 'mara' | 'sparky' | null,     // who answers Royal Command
     champion: { name, epithet, mirror? },    // a named foe keeps this name in the result
-    stakes: 'practice' | 'march' | 'champion' | 'last_stand',
+    stakes: 'drill' | 'practice' | 'march' | 'champion' | 'last_stand',
   },
   allowRetreat: true,
-  script: [{ move, dir? }],                  // optional fixed enemy pattern (tests, practice)
+  script: [{ move, dir? }],                  // optional fixed enemy pattern (tests, drills)
+  opening: { speaker, text },                // optional opening line instead of the foe's own
+  drill: { stat, target },                   // optional training goal (see "Training yard")
 }
 ```
 
@@ -163,8 +165,8 @@ hesitating 0.8, winding up 0.25, recovery 1, open after a feint 1.15, staggered 
 ## The three foes
 
 `ARCHETYPES` in `src/game/duel/archetypes.js`. All have a 3.2 s grace period before the first
-attack. Stakes scale damage / health (`STAKES`): practice 0.75 / 0.85, march 1 / 1, champion
-1.05 / 1.05, last stand 1.15 / 1.1. Reign scaling: +4% health and +3% damage per reign after the
+attack. Stakes scale damage / health (`STAKES`): drill 0.6 / 4 (a drill ends on its goal, not a
+kill), practice 0.75 / 0.85, march 1 / 1, champion 1.05 / 1.05, last stand 1.15 / 1.1. Reign scaling: +4% health and +3% damage per reign after the
 first (capped), stronger for the Fallen Champion (+10% health, +6% damage, faster wind-ups).
 
 | Foe | HP / poise | Style | Moves (wind-up ms, damage) |
@@ -214,7 +216,9 @@ Every event also carries `t` (duel time in ms).
   flawless, cleanHits, perfectParries, maxCombo, poiseBreaks, panicParries, heavyHitsTaken,
   feintsBitten, usedRoyalCommand, usedArcPulse,
   misreads: [{ kind, count, advice }],          // most frequent first
-  enemyName, enemyHpRemaining, parries, cleanDodges, damageTaken, stakes, mirroredLegacy }
+  enemyName, enemyHpRemaining, parries, cleanDodges, damageTaken, stakes, mirroredLegacy,
+  feintsRead, feintsPunished,                   // feints let pass / openings struck after them
+  drill: { stat, target, value, met } | null }
 ```
 
 Misread kinds (`MISREAD_INFO` in `src/game/duel/analysis.js`): `parried_heavy`, `panic_parry`,
@@ -248,8 +252,10 @@ misread detection, telegraph shape, specials, and the full fairness sweep.
 ## Campaign wiring
 
 - **March and deployments**: `duelConfig(state, exp, beat, archetypeId, champion, stakes,
-  allowRetreat)` in `src/game/content/expedition.js` builds configs for the wilds (warg alpha),
-  Greywater Ford (Nyra, champion stakes), the skirmish and the last stand (no retreat).
+  allowRetreat)` in `src/game/content/expedition.js` builds configs for the checkpoint (the man
+  in the grey coat, a Blade-Adept), the wilds (warg alpha), the ruin (an echo in a crown, the
+  Fallen Champion), Greywater Ford (Nyra, champion stakes), the skirmish and the last stand (no
+  retreat).
   `EXPEDITION_DUEL_COMPLETE` applies `duelOutcomeEffects`: a win gives readiness +2 (+4 for a
   champion), Mara respect, and a memory (flawless: a little more); a loss costs stability −1
   (−2 for a champion) and records it; champion and skirmish fights cost lives (`casualtiesFor`:
@@ -257,6 +263,34 @@ misread detection, telegraph shape, specials, and the full fairness sweep.
   A lost **last stand** is a fall: the reign ends and the Passing begins.
 - **Trial of Blades**: `trialConfig(state, archetypeId)` (practice stakes, retreat allowed,
   Mara as companion) and `TRIAL_COMPLETE` (rewards once per turn; see [GAME_GUIDE.md](GAME_GUIDE.md)).
+- **Training yard** (title screen, outside any reign): see below. Never touches GameState.
+
+## Training yard
+
+`src/game/duel/drills.js` holds the yard's content; `src/ui/screens/TrainingScreen.jsx` runs it.
+
+- **Drills** (`DRILLS`, `drillConfig(id, seed)`): a fixed move cycle (`script`) from one of the
+  yard's partners (`YARD_FOES`: Sword-Master Ilvane and Greymane, shared with the Trial of
+  Blades), Mara's opening line, `drill` stakes, and a goal the engine counts. When the goal is
+  met the duel ends in victory. Goals (`DRILL_STATS` in `engine.js`): `turned_aside` (parries +
+  clean dodges), `dodges`, `perfect_parries`, `feints_read`, `feints_punished` (first clean strike
+  into each feint's opening), `poise_breaks`. `drillProgress(duel)` gives `{ stat, target, value,
+  met }` for the HUD.
+
+  | Drill | Teaches | Partner and pattern | Goal |
+  |---|---|---|---|
+  | Steel light | parry or dodge | Ilvane: slash left, right, overhead, flurry | turn aside 6 |
+  | Red-gold glow | dodge, never parry | Greymane: rend left, right, pounce, maul | dodge 4 |
+  | The flicker | wait, then punish | Ilvane: feints between slashes | strike 3 feint openings |
+  | Break the guard | parry, then punish | Ilvane: slash, flurry, slash, lunge | stagger once |
+
+  `drills.test.js` proves the oracle bot passes every drill (6–23 s at full health), standing
+  idle passes none, and holding guard into everything fails the red-gold and flicker drills
+  (holding guard *is* a fair answer to steel light).
+- **Sparring** (`SPARRING`, `sparringConfig(archetypeId, seed, { mirror })`): the three real foes
+  at practice stakes; the Fallen Champion's mirrored Legacy can be picked.
+- The yard's progress (drills passed, bouts won) is a per-device convenience in localStorage
+  (`elvia.training.v1`, `src/ui/screens/training/records.js`), not game state.
 
 ## The DuelScreen
 

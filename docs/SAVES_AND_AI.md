@@ -192,6 +192,12 @@ game saves, exported, or committed. This is fine for personal use. For a **publi
 do not ship a browser key: put a small server proxy in front of the API that holds the key and
 enforces limits, and point the client at it.
 
+Hosted builds: localStorage belongs to the whole origin. On GitHub Pages every project site of
+the same owner shares `https://<owner>.github.io`, so any other page published there could read
+the key. Host the game on its own origin (a custom domain, or a dedicated Netlify/Vercel/
+Cloudflare site) if that matters to you. The service worker never caches API traffic; it only
+caches the game's own files and the Google Fonts.
+
 ## How to extend
 
 **A new generator.** Add an output spec in `src/game/ai/schemas.js` (`OUTPUT_SPECS`, so it gets a

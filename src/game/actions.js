@@ -21,6 +21,7 @@ import { campfireOffer, getCampfireScene, campfireCompletionEffects, campfireCoo
 import { fallenList } from './content/names.js';
 import { res, rel, mem, counter, flag, chron, region } from './content/effectHelpers.js';
 import { beginPassing, advancePassing, chooseLegacies, beginNextCycle, passingFarewells, chronicleReadback, passingLegacyOptions } from './cycle/passing.js';
+import { YARD_FOES } from './duel/drills.js';
 
 export const ACTION_TYPES = [
   'ISSUE_ORDER',
@@ -44,8 +45,8 @@ export const ACTION_TYPES = [
 ];
 
 export const TRIAL_FOES = {
-  blade_adept: { name: 'Sword-Master Ilvane', epithet: 'Who trained under the Iron Academies, and left' },
-  warg_alpha: { name: 'Greymane', epithet: 'An old alpha from the royal menagerie' },
+  blade_adept: YARD_FOES.ilvane,
+  warg_alpha: YARD_FOES.greymane,
   fallen_champion: { name: 'The Lattice Echo', epithet: 'A sparring shade woven from your own recorded style' },
 };
 

@@ -207,7 +207,7 @@ differently on purpose; see below).
 | Nyra Kell: killed, captured, released or recruited, with a future | Done | Champion aftermath (`nyra_fate`); reign II leader or memoirist |
 | Chancellor Vex, General Drae | Done | Crisis text across turns 1–5 |
 | Toma and Lena | Done | Voices of the realm |
-| Frost Wargs as more than monsters; the Winter Heart | Partial | Mercy choices, Warg Truce, Vale's heartbeat under the ice; Skaela does not speak yet |
+| Frost Wargs as more than monsters; the Winter Heart | Partial | Mercy choices, Warg Truce, Vale's heartbeat under the ice; Skaela speaks Elvian at the Northern Compact when mercy was shown, and names the heart under the ice. Warg culture (songs, clans, rites) is not shown yet |
 | Civilization memory | Done | Four labels per faction (Cycle doc vocabulary) |
 | Procedural character seeds | Partial | Named fallen soldiers, heirs, new checkpoint children; no promotion system |
 | Death obeys cause and consequence | Partial | Nyra can die; the Sovereign can fall; soldiers die by name |
@@ -230,7 +230,7 @@ differently on purpose; see below).
 | §6 Three archetypes | Done | Blade-Adept, Warg Alpha, Fallen Champion (mirrors a Legacy, scales by reign) |
 | §6 Defeat is never game over | Done | Except the last stand, which is a fall that leads to the Passing |
 | §7 The march: checkpoint, wilds, ruin, champion | Done | Plus the road and the camp |
-| §7 3–5 duels per march | Partial | Two duels (warg alpha, champion) plus a rematch; other beats are choices |
+| §7 3–5 duels per march | Done | Up to four: the man in the grey coat (checkpoint), the warg alpha (wilds), the echo in the ruin, the champion; plus a rematch. The first three are optional |
 | §7 Retreat allowed, recorded, commented on | Done | `EXPEDITION_RETREAT`; champion text |
 | §8 Integration map, including saves above slots | Done | Dynasty meta (`src/game/save/dynasty.js`) |
 | §8 The Passing in four steps | Done | `src/game/cycle/passing.js`, `PassingScreen` |
@@ -261,7 +261,5 @@ differently on purpose; see below).
 
 - How many reigns should a campaign have, and what changes in reign III+ beyond callbacks
   (new arcs, new regions, "Can I go north?")?
-- Should Skaela's first words in Elvian be a reign-II event (with Warg Truce) or a northern march?
-- Should the march grow to 3–5 duels as the Cycle doc suggests, and which beats should get them?
 - How strictly should "every callback traces to a Chronicle entry" be enforced in code?
 - Gamepad navigation for menus, subtitle toggles and input remapping (Master Build §37).

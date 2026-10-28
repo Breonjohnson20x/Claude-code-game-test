@@ -23,10 +23,13 @@ export async function playthrough(ctx) {
     return cond;
   };
 
-  // ── Title → new reign ────────────────────────────────────────────────────────────────────
+  // ── Title → the training yard: one drill, played by keyboard ─────────────────────────────
   await page.goto(`${baseUrl}/?seed=4242`);
   await page.getByRole('heading', { level: 1 }).waitFor();
   await shot(page, 'title');
+  await trainingYard(ctx);
+
+  // ── Title → new reign ────────────────────────────────────────────────────────────────────
   await press(page, /begin a new reign/i);
   await page.getByLabel(/regnal name/i).fill('Aurelian');
   await press(page, /take the crown/i);
@@ -42,7 +45,7 @@ export async function playthrough(ctx) {
 
   const plan = [
     { beat: 'road', choose: ['ask_mara', 'ride_on'] },
-    { beat: 'checkpoint', choose: ['walk_through'] },
+    { beat: 'checkpoint', choose: ['call_out_scout', 'search_scout', 'walk_through'] },
     { beat: 'wilds', choose: ['face_alpha'] },
     { beat: 'wilds', choose: ['spare_alpha'] },
     { beat: 'ruin', choose: ['study', 'leave_ruin'] },
@@ -266,6 +269,30 @@ async function sitAtCampfire({ page, press, waitPhase, shot }, view, mode) {
   await waitPhase(page, 'resolution');
 }
 
+// ─── The training yard ─────────────────────────────────────────────────────────────────────
+
+/** Title → Training yard → "The flicker" drill (must pass) → back to the title. */
+async function trainingYard(ctx) {
+  const { page, press, shot, fail, where, audit, vpName } = ctx;
+  await press(page, /^training yard/i);
+  await page.getByRole('heading', { level: 1, name: /the training yard/i }).waitFor({ timeout: 10000 });
+  await page.waitForTimeout(300);
+  await shot(page, 'yard');
+  await audit(page, `${where}/yard`, { phone: vpName === 'phone' });
+  await press(page, /^start: the flicker/i);
+  await playDuel(ctx, { lose: false, label: 'yard-flicker', continueName: /^back to the yard/i });
+  const banner = page.getByText(/the flicker: passed/i);
+  try {
+    await banner.waitFor({ timeout: 5000 });
+  } catch {
+    fail(where, 'yard: the flicker drill was not passed by reading the glow');
+  }
+  if ((await page.getByRole('button', { name: /^run the flicker again/i }).count()) < 1) fail(where, 'yard: the drill card does not show it as passed');
+  await shot(page, 'yard-after-drill');
+  await press(page, /^back to the title/i);
+  await page.getByRole('heading', { level: 1, name: /empire of elvia/i }).waitFor({ timeout: 10000 });
+}
+
 // ─── Duels with real keyboard input ───────────────────────────────────────────────────────
 
 const KEYS = { strike: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }, dodge: { left: 'a', right: 'd' } };
@@ -275,7 +302,7 @@ const KEYS = { strike: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', ri
  * newcomer mistake) so the result screen has misreads to explain; otherwise it reads the
  * telegraph like the engine's oracle bot and answers with keys.
  */
-async function playDuel({ page, shot, fail, where }, { lose, label }) {
+async function playDuel({ page, shot, fail, where }, { lose, label, continueName = /^continue/i }) {
   await page.waitForFunction(() => Boolean(globalThis.__elviaDuel?.current), null, { timeout: 15000 });
   await page.waitForTimeout(300);
   await shot(page, `${label}-start`);
@@ -332,7 +359,7 @@ async function playDuel({ page, shot, fail, where }, { lose, label }) {
   }
   if (guard) await page.keyboard.up(' ');
   // The result screen.
-  const cont = page.getByRole('button', { name: /^continue/i }).filter({ visible: true }).first();
+  const cont = page.getByRole('button', { name: continueName }).filter({ visible: true }).first();
   try {
     await cont.waitFor({ timeout: 15000 });
   } catch {

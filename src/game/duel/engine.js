@@ -180,7 +180,32 @@ function normalizeConfig(config = {}) {
     allowRetreat: !!config.allowRetreat,
     // Optional scripted enemy pattern (practice / tests): [{move, dir?}] or move ids, cycled.
     script: Array.isArray(config.script) && config.script.length ? config.script.map((s) => (typeof s === 'string' ? { move: s } : { ...s })) : null,
+    // Optional opening line in place of the archetype's own (training yard).
+    opening: config.opening?.text ? { speaker: config.opening.speaker || 'narrator', text: String(config.opening.text) } : null,
+    // Optional training goal: the duel ends in victory once the stat reaches the target.
+    drill:
+      config.drill && DRILL_STATS[config.drill.stat]
+        ? { stat: config.drill.stat, target: Math.max(1, Math.floor(Number(config.drill.target) || 1)) }
+        : null,
   };
+}
+
+// Training-yard goals (src/game/duel/drills.js): what counts toward each.
+export const DRILL_STATS = Object.freeze({
+  turned_aside: (s) => s.parries + s.cleanDodges,
+  dodges: (s) => s.cleanDodges,
+  perfect_parries: (s) => s.perfectParries,
+  feints_read: (s) => s.feintsRead,
+  feints_punished: (s) => s.feintsPunished,
+  poise_breaks: (s) => s.poiseBreaks,
+});
+
+/** { stat, target, value, met } for a drill duel, else null. */
+export function drillProgress(duel) {
+  const drill = duel?.config?.drill;
+  if (!drill) return null;
+  const value = Math.min(drill.target, DRILL_STATS[drill.stat](duel.stats));
+  return { stat: drill.stat, target: drill.target, value, met: value >= drill.target };
 }
 
 function emit(ctx, ev) {
@@ -312,6 +337,7 @@ export function createDuel(config) {
       heavyHitsTaken: 0,
       feintsBitten: 0,
       feintsRead: 0,
+      feintsPunished: 0,
       usedRoyalCommand: false,
       usedArcPulse: false,
       arcPulses: 0,
@@ -329,7 +355,9 @@ export function createDuel(config) {
 
   const ctx = { d, rng };
   // Opening line + hesitation.
-  if (cfg.archetypeId === 'fallen_champion') {
+  if (cfg.opening) {
+    line(ctx, cfg.opening.speaker, cfg.opening.text);
+  } else if (cfg.archetypeId === 'fallen_champion') {
     const pool = OPENING_LINES.fallen_champion[def.style] || OPENING_LINES.fallen_champion.generic;
     const ln = rng.pick(pool);
     line(ctx, ln.speaker, ln.text);
@@ -386,6 +414,7 @@ function tick(ctx) {
     misread(ctx, 'no_response', { heavy: d.pendingLate.heavy });
     d.pendingLate = null;
   }
+  if (d.config.drill && drillProgress(d).met) endDuel(ctx, 'victory');
 }
 
 // ── input ──────────────────────────────────────────────────────────────────────────────────
@@ -575,6 +604,10 @@ function doStrike(ctx, dir) {
 
   if (clean) {
     d.stats.cleanHits += 1;
+    if (cls === 'open' && e.step && !e.step.punished) {
+      e.step = { ...e.step, punished: true };
+      d.stats.feintsPunished += 1;
+    }
     p.combo += 1;
     if (p.combo > d.stats.maxCombo) d.stats.maxCombo = p.combo;
     const tier = Math.min(TUNING.COMBO_MAX_TIER, Math.floor(p.combo / TUNING.COMBO_PER_TIER));
@@ -1213,6 +1246,9 @@ export function getDuelResult(duel) {
     damageTaken: Math.round(s.damageTaken * 10) / 10,
     stakes: duel.config.modifiers.stakes,
     mirroredLegacy: duel.def.mirrorLegacy,
+    feintsRead: s.feintsRead,
+    feintsPunished: s.feintsPunished,
+    drill: drillProgress(duel),
   };
 }
 

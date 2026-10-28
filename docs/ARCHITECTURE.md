@@ -43,8 +43,11 @@ src/
     duel/               DuelScreen.jsx · draw.js
     art/                RegionScene · WarRoomBackdrop · CampfireScene · Portrait · FactionCrest · ArchitectSymbol · Ornaments · scene/
     audio/              audio.js (Web Audio engine + haptics)
+    pwa.js              service worker registration and the install prompt (useInstallState)
   styles/theme.css      Tailwind v4 tokens and component classes
 scripts/                e2e.mjs · e2e-play.mjs · context-bundle.mjs · gen-content-doc.mjs
+  pwa/                  plugin.mjs (Vite plugin: manifest, icons, sw.js) · icon.mjs · sw.js (template)
+.github/workflows/      ci.yml (test, lint, build) · pages.yml (deploy main to GitHub Pages)
 docs/                   HANDOFF · DESIGN_DIGEST · GAME_GUIDE · CONTENT · API · DUEL · SAVES_AND_AI · UI · ART_AND_AUDIO · TESTING
 ```
 

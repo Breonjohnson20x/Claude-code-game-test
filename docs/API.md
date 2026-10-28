@@ -251,6 +251,8 @@ sequenceDiagram
 | `content/legacies.js` | `LEGACIES`, `LEGACY_IDS`, `MAX_LEGACIES`, `legacyStatus`, `earnedLegacies`, `validateLegacyChoice`, `legacyName` |
 | `content/names.js` | `soldierName`, `fallenList`, `incarnationName`, `familyName`, `givenName` |
 | `cycle/passing.js` | `PASSING_STEPS`, `CYCLE_CAUSES`, `beginPassing`, `advancePassing`, `passingFarewells`, `chronicleReadback`, `passingLegacyOptions`, `chooseLegacies`, `cycleHistoryEntry`, `beginNextCycle`, `earnedLegacies` |
+| `duel/engine.js` | `createDuel`, `stepDuel`, `getDuelResult`, `getTelegraph`, `isDuelOver`, `guardActive`, `correctDodgeSides`, `telegraphColorFor`, `drillProgress`, `DRILL_STATS`, `STEP_MS`, `TUNING` (see [DUEL.md](DUEL.md)) |
+| `duel/drills.js` | `DRILLS`, `DRILL_IDS`, `drillConfig(id, seed)`, `SPARRING`, `sparringConfig(archetypeId, seed, { mirror })`, `YARD_FOES` (the training yard) |
 | `dev/scenarios.js` | `SCENARIOS`, `buildScenario(name)` |
 
 Exact export lists can always be printed with

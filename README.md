@@ -27,6 +27,16 @@ Open the URL Vite prints (usually http://localhost:5173).
 
 **Share a build:** `npm run build` writes a static site to `dist/`. Any static host works
 (Netlify, Vercel, GitHub Pages, Cloudflare Pages). `npm run preview` serves the build locally.
+To serve it from a sub-path, set `BASE_PATH` (for example `BASE_PATH=/my-game/ npm run build`).
+
+**GitHub Pages:** `.github/workflows/pages.yml` deploys every push to `main`. Turn it on once in
+the repository's **Settings → Pages → Source: GitHub Actions**; the game is then at
+`https://<owner>.github.io/<repository>/`.
+
+**Install it like an app:** the production build is a Progressive Web App. Open it in Chrome or
+Edge (Android, desktop) and press **Install on this device** on the title screen; on iPhone or
+iPad, tap Share → **Add to Home Screen**. After the first visit it plays fully offline (the
+optional Claude narrator still needs a connection).
 
 ### Controls
 
@@ -45,7 +55,8 @@ Open the URL Vite prints (usually http://localhost:5173).
 
   Read the wind-up: a **red-gold** glow means *dodge*, steel light means *parry or dodge*, and a
   flicker is a feint: *wait*. Losing a duel never ends the game; the result screen tells you what
-  you misread.
+  you misread. To practise first, open the **Training yard** from the title screen: four short
+  drills, one per read, and sparring with every foe.
 
 ### Optional Claude narrator
 
@@ -69,7 +80,8 @@ loading an older save never makes the world forget.
 npm test               # vitest: simulation, duel engine, saves, AI seam, full-cycle playthrough
 npm run build          # production build
 npm run lint
-npm run e2e            # Playwright: every screen at phone + desktop size, and a full UI playthrough
+npm run e2e            # Playwright: every screen at phone + desktop size, a full UI playthrough,
+                       #   and the installable build played offline
 npm run docs:content   # regenerate docs/CONTENT.md from the code
 npm run bundle -- docs # pack docs (or game / ui / duel / all) into one file for another AI assistant
 ```

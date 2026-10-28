@@ -186,6 +186,20 @@ speaker, and choices of three kinds: **talk** (stays on the beat; each can be ta
 Warg Truce), the broken-circle ruin (studying it sets `architect_studied`), and Nyra Kell at
 Greywater Ford (sparing, releasing or recruiting her sets `nyra_fate`).
 
+**Up to four duels per march**, as the Cycle doc asks ("each duel must teach, test, or tell"):
+
+| Beat | Duel | Optional? | Teaches / tests / tells |
+|---|---|---|---|
+| Checkpoint | The Man in the Grey Coat (Blade-Adept, march stakes) | yes: ignore him, or with intel ≥ 35 let Cassian's watchers take him quietly | teaches the Blade-Adept's feints before the ford tests them |
+| Wilds | The warg alpha Rimefang (Warg Alpha) | yes: leave the meat, or let Sparky stand | the patience check; mercy counts toward Warg Truce |
+| Ruin | An Echo in a Crown (Fallen Champion), after studying the symbol | yes | tells: the Lattice remembers sovereigns |
+| Greywater Ford | Nyra Kell or Captain Ostrava (Blade-Adept, champion stakes) | no; a defeat offers a rematch | tests the duelist check |
+
+The checkpoint scout (`checkpointScout(exp)`: `caught`, `taken`, `escaped` or none) changes the
+ford: a caught scout's map means the lance is not expecting you; Cassian's quiet arrest leaves it
+nervous; an escaped scout warned them ("Our pathfinder said you'd come by moonrise").
+Searching a caught scout gives intel +6 and Mika remembers watching the fight.
+
 **Duels on the march** produce `duelOutcomeEffects`: a victory raises readiness and Mara's
 respect and writes a memory; a defeat costs stability and records the loss; a retreat counts.
 Champion and skirmish fights can cost lives (`casualtiesFor`: fewer when the Marches are
@@ -213,6 +227,14 @@ Greymane (Warg Alpha) or the Lattice Echo (Fallen Champion). It does not end the
 fight each turn is "for stakes" (`trialKey`): a win gives readiness +2, Mara respect +2 and a
 memory, and the reign's first trial win writes a Chronicle entry; a loss costs readiness −1.
 Later fights that turn are practice only.
+
+## The training yard
+
+From the title screen, outside any reign: four short **drills**, one per read of the wind-up
+(steel light, red-gold glow, the flicker, breaking a guard), each ending the moment its goal is
+met, and **sparring** bouts against the Blade-Adept, the Warg Alpha and the Fallen Champion (pick
+which Legacy it mirrors). Mara coaches. Nothing here touches a save, the Chronicle or any reign;
+the yard remembers which drills you passed on this device. See [DUEL.md](DUEL.md#training-yard).
 
 ## NarrativeIntensity and campfires
 
@@ -286,9 +308,22 @@ heal, the Fallen Champion mirroring a held Legacy).
 - **The world resets around the memory**: fresh resources (stability −5 after a fall, −3 after an
   abdication), counters, flags and threads, except the Broken Circle, which keeps its progress;
   monuments persist; intensity starts at 20.
-- **The first briefing cites the previous reign** (`historyCallbacks`): the years since, the
-  refugee policy, the checkpoint child, Nyra's fate, monuments, civilization labels, the symbol.
-  This is the Cycle doc's memory test, and a test asserts it.
+- **The first briefing cites the previous reign** (`historyCallbacks`): the years since, Queen
+  Skaela's words (if she spoke; this outranks everything else), the refugee policy, the checkpoint
+  child, Nyra's fate, monuments, civilization labels, the symbol. This is the Cycle doc's memory
+  test, and a test asserts it.
+
+## The Warg Queen speaks
+
+The World Bible wants Skaela's first words in Elvian to be a major reveal. They are earned by
+mercy: if the Sovereign spared the wargs at least once this reign (`counters.wargMercy` from
+sparing the alpha, leaving the meat, letting Sparky stand, Winter Relief, or the turn-2 camps),
+choosing **The Northern Compact** on turn 5 brings the Queen to the signing (`SKAELA_SPEAKS` in
+`crises.js`). She says *"You called us beasts because beasts were easier to kill"* and names the
+heart under the ice. Effects: `skaela_spoke`, peacemaker memory, the Broken Circle thread becomes
+known, a Chronicle entry ("The Warg Queen Speaks"), her voice, and intensity. She is foreshadowed
+on the ridge when you spare the alpha; at the Passing the Frost Wargs' verdict cites her; in later
+reigns the briefing quotes her and she watches the next march from the ridge.
 
 ## Determinism, saves and the optional narrator
 

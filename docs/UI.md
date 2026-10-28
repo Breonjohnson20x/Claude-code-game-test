@@ -6,7 +6,8 @@ and choice comes from the game layer.
 
 ## Routing (`src/App.jsx`, lead-owned)
 
-`state === null` → `TitleScreen`. Otherwise by `state.phase`:
+`state === null` → `TitleScreen`, or `TrainingScreen` while `training` is set (`openTraining()` /
+`closeTraining()` in `useGame()`). Otherwise by `state.phase`:
 `war_room → WarRoomScreen`, `resolution → ResolutionScreen`, `expedition → ExpeditionScreen`,
 `campfire → CampfireScreen`, `passing → PassingScreen`. Overlays (`overlay` in `useGame()`):
 `'settings' | 'saves' | 'chronicle' | 'dossier'` → `SettingsSheet`, `SavesSheet`, `ChronicleSheet`,
@@ -16,7 +17,8 @@ Where the screens live (helpers sit in a folder named after the screen):
 
 | Screen / overlay | File | Helpers |
 |---|---|---|
-| Title | `src/ui/screens/TitleScreen.jsx` | — |
+| Title | `src/ui/screens/TitleScreen.jsx` | `ui/pwa.js` (`useInstallState`, `promptInstall`: the install button and the iOS hint) |
+| Training yard | `src/ui/screens/TrainingScreen.jsx` (shown when `training` is set in `useGame()` and no reign is loaded) | `screens/training/records.js` (per-device progress) |
 | War Room | `src/ui/screens/WarRoomScreen.jsx` | `screens/warroom/` (Crisis, Council, Orders, CustomDecree, Trial, shared, words) |
 | Resolution | `src/ui/screens/ResolutionScreen.jsx` | `screens/resolution/` (Report, Decisions) |
 | March | `src/ui/screens/ExpeditionScreen.jsx` | `screens/expedition/` (MarchRail, ChoiceList, DuelOutcome, words) |
@@ -29,9 +31,9 @@ Where the screens live (helpers sit in a folder named after the screen):
 
 Dev: `npm run dev` then `/?scenario=<name>` loads a real state built through the controller.
 Names (see `src/game/dev/scenarios.js`): `war_room_t1, resolution_t1, march_road,
-march_checkpoint, march_wilds, march_ruin, march_champion, duel_pending, champion_defeated,
-campfire, war_room_t3, resolution_t4_skirmish, passing_campfire, passing_chronicle,
-passing_legacies, cycle2_war_room`.
+march_checkpoint, march_checkpoint_scout, march_wilds, march_ruin, march_champion, duel_pending,
+champion_defeated, campfire, war_room_t3, resolution_t4_skirmish, resolution_t5_skaela,
+passing_campfire, passing_chronicle, passing_legacies, cycle2_war_room`.
 
 ## `useGame()` (`src/ui/game/GameProvider.jsx`)
 

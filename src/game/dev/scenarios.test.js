@@ -8,6 +8,7 @@ const EXPECT_PHASE = {
   resolution_t1: 'resolution',
   march_road: 'expedition',
   march_checkpoint: 'expedition',
+  march_checkpoint_scout: 'expedition',
   march_wilds: 'expedition',
   march_ruin: 'expedition',
   march_champion: 'expedition',
@@ -16,6 +17,7 @@ const EXPECT_PHASE = {
   campfire: 'campfire',
   war_room_t3: 'war_room',
   resolution_t4_skirmish: 'resolution',
+  resolution_t5_skaela: 'resolution',
   passing_campfire: 'passing',
   passing_chronicle: 'passing',
   passing_legacies: 'passing',
@@ -33,6 +35,8 @@ describe('dev scenarios (UI preview fixtures)', () => {
   }
   it('beats and offers are where the previews expect them', () => {
     expect(getView(buildScenario('march_checkpoint')).beat.id).toBe('checkpoint');
+    expect(buildScenario('march_checkpoint_scout').expedition.phase).toBe('after_victory');
+    expect(buildScenario('resolution_t5_skaela').flags.skaela_spoke).toBe(true);
     expect(getView(buildScenario('march_champion')).beat.id).toBe('champion');
     expect(buildScenario('duel_pending').expedition.pendingDuel.archetypeId).toBe('blade_adept');
     expect(buildScenario('champion_defeated').expedition.phase).toBe('after_defeat');
