@@ -47,7 +47,8 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 | UI: Title, War Room, Resolution, March, Campfire, the Passing, Chronicle, Council, Settings, Saves | **Done** |
 | Real-time DuelScreen (touch, mouse, keyboard, basic gamepad) | **Done** |
 | Procedural art (scenes in 3 region states, portraits, crests, war table, campfire canvas) and Web Audio | **Done** |
-| `npm run e2e` (every screen at phone + desktop, overlays, and a full UI playthrough into reign II) | **Passing** |
+| `npm run e2e` (every screen at phone + desktop, overlays, a full UI playthrough into reign II, the installable build played offline) | **Passing** |
+| Installable PWA (manifest, procedural icons, offline service worker) and GitHub Pages deploy | **Done**: Pages needs a one-time switch in repository settings |
 | Playtesting with real first-time players | **Not yet**, and it is the next milestone |
 
 See the compliance matrix in [`docs/DESIGN_DIGEST.md`](DESIGN_DIGEST.md#compliance-matrix) for
@@ -60,7 +61,16 @@ npm install
 npm run dev                    # open the printed URL (http://localhost:5173)
 npm run dev -- --host          # play on your phone over the same Wi-Fi
 npm run build && npm run preview
+BASE_PATH=/sub/path/ npm run build   # when the site is served from a sub-path
 ```
+
+**Hosted and installable.** The production build is a Progressive Web App: a web manifest,
+procedural icons and a service worker (`scripts/pwa/`, registered by `src/ui/pwa.js` in
+production only) that precaches the game so it plays offline after the first visit. The title
+screen offers **Install on this device** where the browser supports it, or explains Add to Home
+Screen on iOS. `.github/workflows/pages.yml` deploys every push to `main` to GitHub Pages once
+the owner sets **Settings → Pages → Source: GitHub Actions**; `.github/workflows/ci.yml` runs
+tests, lint and the build on pull requests.
 
 In dev builds: `/?scenario=<name>` opens any phase built from real actions (names in
 `src/game/dev/scenarios.js`: `war_room_t1, resolution_t1, march_road, march_checkpoint,
@@ -244,8 +254,7 @@ Next milestones, roughly in order:
 2. Content depth: more turn-arc branches after turn 5 (eras), more campfire scenes, northern
    expedition ("Can I go north?" is a success metric), more Architect lore.
 3. Accessibility pass with a screen reader; a hint/practice mode for duels.
-4. Installable PWA (offline cache, home-screen icon) and a hosted build.
-5. The Cycle doc's long-term target: port the same rules to Unreal. The game layer is engine
+4. The Cycle doc's long-term target: port the same rules to Unreal. The game layer is engine
    agnostic by design. See the porting notes in [`docs/DUEL.md`](DUEL.md) and [`docs/API.md`](API.md).
 
 Known limitations: one region (the Southern Marches) and one arc of five turns per reign; reigns

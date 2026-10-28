@@ -16,7 +16,7 @@ Where the screens live (helpers sit in a folder named after the screen):
 
 | Screen / overlay | File | Helpers |
 |---|---|---|
-| Title | `src/ui/screens/TitleScreen.jsx` | — |
+| Title | `src/ui/screens/TitleScreen.jsx` | `ui/pwa.js` (`useInstallState`, `promptInstall`: the install button and the iOS hint) |
 | War Room | `src/ui/screens/WarRoomScreen.jsx` | `screens/warroom/` (Crisis, Council, Orders, CustomDecree, Trial, shared, words) |
 | Resolution | `src/ui/screens/ResolutionScreen.jsx` | `screens/resolution/` (Report, Decisions) |
 | March | `src/ui/screens/ExpeditionScreen.jsx` | `screens/expedition/` (MarchRail, ChoiceList, DuelOutcome, words) |

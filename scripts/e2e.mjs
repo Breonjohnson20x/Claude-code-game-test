@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // End-to-end check of the real app in headless Chromium.
 //
-//   npm run e2e                 # scenario sweep + full UI playthrough, phone and desktop
+//   npm run e2e                 # everything below
 //   npm run e2e -- --sweep      # only the scenario sweep
 //   npm run e2e -- --play       # only the playthrough
+//   npm run e2e -- --pwa        # only the installable/offline build check
 //
 // Starts a Vite dev server, then:
 //   1. Sweep: opens every dev scenario (/?scenario=<name>) at 390x844 (touch) and 1280x800,
@@ -12,13 +13,16 @@
 //   2. Playthrough: a whole reign through the real UI from the title screen — orders, a march
 //      with duels played by keyboard, a campfire, the Passing, Legacies — into reign II, whose
 //      first briefing must cite the first reign.
+//   3. PWA: a production build under a sub-path (like GitHub Pages), served by `vite preview`:
+//      the manifest and icons load, the service worker takes control, then the server is shut
+//      down and the game must still load and start a reign offline.
 // Screenshots and report.json go to e2e-artifacts/. Exits non-zero on any failure.
 //
 // Needs Playwright with Chromium: `npm i -D playwright && npx playwright install chromium`
 // (a globally installed Playwright is used when there is no local one).
 
 import { createRequire } from 'node:module';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,8 +30,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'e2e-artifacts');
 const args = new Set(process.argv.slice(2));
-const RUN_SWEEP = !args.has('--play') || args.has('--sweep');
-const RUN_PLAY = !args.has('--sweep') || args.has('--play');
+const ONLY = ['--sweep', '--play', '--pwa'].filter((f) => args.has(f));
+const runs = (flag) => ONLY.length === 0 || ONLY.includes(flag);
 
 const VIEWPORTS = {
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
@@ -227,6 +231,88 @@ async function play(browser, baseUrl, vpName) {
   await context.close();
 }
 
+// ─── Installable, offline build ────────────────────────────────────────────────────────
+
+async function pwa(browser) {
+  console.log('\nInstallable build (PWA)');
+  const where = 'pwa';
+  const { preview } = await import('vite');
+  const base = '/elvia-pwa/';
+  const outDir = join(OUT, 'pwa-dist');
+  // A separate process: the dev server already set NODE_ENV=development in this one, which would
+  // make an in-process build a development build (no service worker).
+  const env = { ...process.env, BASE_PATH: base };
+  delete env.NODE_ENV;
+  execFileSync(process.execPath, [join(ROOT, 'node_modules/vite/bin/vite.js'), 'build', '--outDir', outDir, '--emptyOutDir', '--logLevel', 'error'], { cwd: ROOT, env, stdio: 'inherit' });
+  const server = await preview({ root: ROOT, base, logLevel: 'error', build: { outDir }, preview: { port: 5391, strictPort: false, host: '127.0.0.1' } });
+  const url = server.resolvedUrls.local[0];
+  const context = await browser.newContext({ ...VIEWPORTS.phone, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  const done = watchConsole(page, where);
+  const title = () => page.getByRole('heading', { level: 1, name: 'Empire of Elvia' }).waitFor({ timeout: 15000 });
+  let serverOpen = true;
+  try {
+    await page.goto(url);
+    await title();
+
+    const href = await page.getAttribute('link[rel="manifest"]', 'href');
+    if (!href?.startsWith(base)) fail(where, `manifest link should live under ${base}, got ${href}`);
+    const manifestUrl = new URL(href, url).href;
+    const manifest = await (await page.request.get(manifestUrl)).json();
+    if (!manifest.name || !manifest.short_name || manifest.display !== 'standalone') fail(where, 'manifest is missing name, short_name or display');
+    for (const size of ['192x192', '512x512']) {
+      if (!manifest.icons?.some((i) => i.sizes === size && i.type === 'image/png')) fail(where, `manifest has no ${size} PNG icon`);
+    }
+    const appleHref = await page.getAttribute('link[rel="apple-touch-icon"]', 'href');
+    const iconUrls = [...(manifest.icons ?? []).map((i) => new URL(i.src, manifestUrl).href), new URL(appleHref ?? '', url).href];
+    for (const iconUrl of iconUrls) {
+      const res = await page.request.get(iconUrl);
+      const body = await res.body();
+      const isPng = body.subarray(1, 4).toString('ascii') === 'PNG';
+      if (!res.ok() || !isPng) fail(where, `icon ${iconUrl} did not load as a PNG (${res.status()})`);
+    }
+
+    const sw = await page.evaluate(async () => {
+      const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 20000));
+      const reg = await Promise.race([navigator.serviceWorker.ready, timeout]);
+      return reg ? { state: reg.active?.state, scope: reg.scope, caches: await caches.keys() } : null;
+    });
+    if (!sw) throw new Error('no service worker became active within 20 s');
+    if (!sw.scope.endsWith(base)) fail(where, `service worker scope ${sw.scope} is not the base path`);
+    if (!sw.caches.some((k) => k.startsWith('elvia-'))) fail(where, `no precache found (caches: ${sw.caches.join(', ')})`);
+    await page.reload();
+    await title();
+    if (!(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)))) fail(where, 'the service worker does not control the page after a reload');
+
+    // Pull the plug: the server goes away and the game must still run.
+    await server.close();
+    serverOpen = false;
+    const direct = await page.request.get(url).then(
+      () => true,
+      () => false,
+    );
+    if (direct) fail(where, 'the preview server still answers after close; the offline check would prove nothing');
+    await page.reload();
+    await title();
+    await shot(page, 'pwa-offline-title');
+    await audit(page, `${where}/offline-title`, { phone: true });
+    await press(page, /^begin a new reign/i);
+    await press(page, /^take the crown/i);
+    await page.getByRole('heading', { level: 1 }).filter({ hasNotText: 'Empire of Elvia' }).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(400);
+    await shot(page, 'pwa-offline-war-room');
+    console.log('  ✓ manifest, icons, service worker, and an offline new reign');
+  } catch (err) {
+    fail(where, `PWA check aborted: ${err.message}`);
+    await page.screenshot({ path: join(OUT, 'play', 'pwa-FAILED.png') }).catch(() => {});
+  } finally {
+    done();
+    await context.close();
+    if (serverOpen) await server.close();
+    rmSync(outDir, { recursive: true, force: true });
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────────────────
 
 rmSync(OUT, { recursive: true, force: true });
@@ -237,13 +323,14 @@ const { chromium } = await loadPlaywright();
 const { server, url } = await startServer();
 const browser = await chromium.launch();
 try {
-  if (RUN_SWEEP) await sweep(browser, url);
-  if (RUN_PLAY) {
+  if (runs('--sweep')) await sweep(browser, url);
+  if (runs('--play')) {
     for (const vp of Object.keys(VIEWPORTS)) {
       console.log(`\nPlaythrough (${vp})`);
       await play(browser, url, vp);
     }
   }
+  if (runs('--pwa')) await pwa(browser);
 } finally {
   await browser.close();
   await server.close();

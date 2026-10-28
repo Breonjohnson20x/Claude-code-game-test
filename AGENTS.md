@@ -71,7 +71,8 @@ src/ui/              React UI
   duel/              DuelScreen (canvas, real-time input)
   art/               procedural SVG/canvas art (region scenes, portraits, crests, backdrops)
   audio/audio.js     procedural Web Audio engine + haptics
-scripts/             e2e.mjs (Playwright gate), context-bundle.mjs
+scripts/             e2e.mjs (Playwright gate), context-bundle.mjs, pwa/ (manifest, icons, service worker)
+.github/workflows/   ci.yml (test, lint, build), pages.yml (deploy main to GitHub Pages)
 docs/                HANDOFF, DESIGN_DIGEST, GAME_GUIDE, CONTENT, API, DUEL, SAVES_AND_AI,
                      ARCHITECTURE, UI, ART_AND_AUDIO, TESTING
 ```

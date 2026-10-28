@@ -57,6 +57,11 @@ meaning take a `label`.
 | `GoldDivider` | `height`, `className` | Ornamental rule |
 | `PanelCorners` | `size`, `inset`, `color`, `opacity` | Corner filigree for panels |
 
+The **app icon** (home screen, install dialogs) is the same broken circle and star, drawn in
+`scripts/pwa/icon.mjs` with signed distance fields and written as PNG at dev-serve and build time
+(192, 512, a full-bleed maskable 512, and a 180 px apple-touch-icon). No image files are
+committed; change the icon by editing that file.
+
 Also exported: `ensureFonts()` (adds the Google Fonts link once), `FONT_HREF`, `C`, `LIGHT`,
 `MOOD_TINT`, `PORTRAIT_IDS`, and `normalizeBeat` / `normalizeRegionState` / `normalizeTimeOfDay`.
 Shared helpers live in `src/ui/art/util.js` (seeded `mulberry32`, `useReducedMotion`,

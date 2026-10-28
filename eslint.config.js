@@ -32,4 +32,8 @@ export default defineConfig([
     files: ['scripts/**/*.{js,mjs}', '*.config.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
+  {
+    files: ['scripts/pwa/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
+  },
 ])

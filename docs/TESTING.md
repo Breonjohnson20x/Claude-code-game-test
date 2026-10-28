@@ -22,6 +22,7 @@ npm run lint                          # eslint: errors fail, warnings are OK
 npm run e2e                           # Playwright sweep + playthrough, phone and desktop
 npm run e2e -- --sweep                # only the scenario sweep
 npm run e2e -- --play                 # only the UI playthrough
+npm run e2e -- --pwa                  # only the installable/offline build check
 ```
 
 A change is done when all of these pass and you have looked at the e2e screenshots. In Claude
@@ -97,6 +98,11 @@ motion is on, so screenshots are stable.
    title, reloads the page and continues, checking the world remembered everything; then it goes
    through the Passing into reign II and checks that the first briefing cites reign I. The steps
    live in `scripts/e2e-play.mjs`.
+3. **Installable build.** A production build with `BASE_PATH=/elvia-pwa/` (built in a child
+   process, because the in-process dev server sets `NODE_ENV=development`), served by
+   `vite preview`. It checks the manifest and every icon load as PNGs under the base path, that
+   the service worker activates and controls the page, then **shuts the server down** and checks
+   the game still loads and starts a new reign offline. Screenshots: `play/NN-pwa-offline-*.png`.
 
 Output goes to `e2e-artifacts/` (git-ignored): `sweep/<viewport>-<scenario>.png`,
 `play/NN-<viewport>-<step>.png`, and `report.json` (the audit results and every failure). Exit

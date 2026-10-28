@@ -3,9 +3,11 @@ import { useGame } from '../game/GameProvider.jsx';
 import { Button, Eyebrow, Rule, Sheet } from '../kit/kit.jsx';
 import { RegionScene, ArchitectSymbol } from '../art/index.js';
 import { audio } from '../audio/audio.js';
+import { promptInstall, useInstallState } from '../pwa.js';
 
 export function TitleScreen() {
-  const { hasAnySave, slots, loadSlot, startNewGame, openOverlay } = useGame();
+  const { hasAnySave, slots, loadSlot, startNewGame, openOverlay, notify } = useGame();
+  const install = useInstallState();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('Aurelian');
   const latest = slots
@@ -62,10 +64,24 @@ export function TitleScreen() {
           <Button variant="ghost" onClick={() => openOverlay('settings')}>
             Settings
           </Button>
+          {install.canPrompt ? (
+            <Button
+              variant="ghost"
+              icon="download"
+              onClick={async () => {
+                if (await promptInstall()) notify('Installed. Elvia now opens from your home screen, even offline.');
+              }}
+            >
+              Install on this device
+            </Button>
+          ) : null}
         </div>
         {latest ? <p className="mt-4 text-[0.88rem] text-parchment-300">Last reign: {latest.summary.sovereign} · {latest.summary.label}</p> : null}
+        {install.iosHint ? (
+          <p className="mt-6 max-w-sm text-[0.95rem] text-parchment-300">To install: tap Share, then Add to Home Screen.</p>
+        ) : null}
         <p className="mt-8 max-w-sm text-[0.8rem] text-parchment-400">
-          Plays entirely offline. An optional Claude narrator can be turned on in Settings. Original world and art; no assets from other games.
+          Plays entirely offline once loaded. An optional Claude narrator can be turned on in Settings. Original world and art; no assets from other games.
         </p>
       </div>
       <Sheet
