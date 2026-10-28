@@ -294,12 +294,17 @@ misread detection, telegraph shape, specials, and the full fairness sweep.
 
 ## The DuelScreen
 
-`src/ui/duel/DuelScreen.jsx` (`<DuelScreen config onComplete showHints? />`) and
-`src/ui/duel/draw.js` (canvas drawing).
+`src/ui/duel/DuelScreen.jsx` (`<DuelScreen config onComplete showHints? brief? goalLabel? hudLabel?
+continueLabel? withdrawText? />`), `src/ui/duel/hud.jsx` (nameplate, bars, controls, intro card)
+and `src/ui/duel/render/` (the canvas renderer; see [ART_AND_AUDIO.md](ART_AND_AUDIO.md#duel-rendering)).
 
 - Full-viewport canvas (DPR capped at 2, resize-aware) driven by `requestAnimationFrame`:
   real frame time is clamped to 50 ms and fed to `stepDuel`; the loop pauses when the tab is
   hidden or while the withdraw confirmation is open. The HUD re-renders about 10 times a second.
+- **Hitstop**: after a clean hit (45 ms, 70 ms into a feint's opening), a parry (50 ms), a heavy
+  blow landing (60 ms), an Arc Pulse (80 ms), a poise break (90 ms) or a perfect parry (110 ms)
+  the screen holds the engine still for those few frames. Both sides freeze and inputs queue, so
+  timing stays fair. Off under reduced motion.
 - **Intro**: a "Read the wind-up" card with controls for touch or keyboard/mouse (auto-detected).
   The fight stays paused until Ready, the first input, or 6 seconds. The `showHints` setting
   turns the card off.
@@ -307,32 +312,40 @@ misread detection, telegraph shape, specials, and the full fairness sweep.
 
   | Action | Touch / mouse | Keyboard | Gamepad |
   |---|---|---|---|
-  | Strike | swipe / drag (≥ 30 px) | Arrow keys (W = up) | left stick flick |
-  | Dodge | tap the left or right 22% edge strip | A / D | LB / RB |
-  | Guard / parry | hold the blade (bottom right) or the "Hold to guard" bar | hold Space or S | hold A |
-  | Arc Pulse | tap the sigil when it glows | E | Y |
-  | Royal Command | tap the crown | R | X |
-  | Shield Ward | hold the shield button | hold Shift | hold RT |
-  | Withdraw | the Withdraw button (with confirm) | Esc (with confirm) | — |
+  | Strike | tap the arena (a straight strike) or swipe / drag (≥ 26 px) to strike that way | Arrow keys (W = up) | left stick flick |
+  | Dodge | the ◀ / ▶ Dodge buttons (bottom corners; they act on press) | A / D | LB / RB |
+  | Guard / parry | hold the shield (bottom centre) | hold Space or S | hold A |
+  | Arc Pulse | tap the sigil when it glows (above ◀) | E | Y |
+  | Royal Command | tap the crown (above ▶) | R | X |
+  | Shield Ward | hold Ward (beside Arc) | hold Shift | hold RT |
+  | Withdraw | the ‹ button by the foe's name (with confirm) | Esc (with confirm) | — |
 
-- **Feedback**: telegraph arcs and chevrons by colour with a label ("Dodge", "Parry or dodge",
-  "Feint: wait"), sparks, flashes, rings, screen shake (off under reduced motion), captions for
-  `line` events, misread callouts, haptics on hits and parries, and audio cues from `sfx` events
-  (`audio.ambient('duel')` on mount). An assertive live region announces each wind-up in words
+  Every strike gesture leaves a trail of gold light. The controls sit on a dark scrim at the
+  bottom; on wide screens they anchor bottom-left so the foe stays clear.
+
+- **Feedback**: telegraph arcs and marching chevrons by colour with a label pill ("Dodge",
+  "Parry or dodge", "Feint: wait"), the foe's weapon glowing the same colour, sparks with gravity,
+  slash marks and a white flash on the foe when you land a blow, rings and a gold flash on parries,
+  a red flare from the side a blow came from, camera shake and a slide away from your dodge (off
+  under reduced motion), captions for `line` events, misread callouts (ember) and good-read callouts
+  (gold: "Perfect parry", "Read it! Strike the opening", "Guard broken: punish!"), haptics, and audio
+  cues from `sfx` events (`audio.ambient('duel')` on mount, the previous theme restored on unmount). An assertive live region announces each wind-up in words
   ("Heavy from the left: dodge right.") for screen-reader users.
 - **Result**: Victory / Flawless Victory / Withdrawn / Retreated, four stats, "What you misread"
   (or "Sharpen next time"), the foe's lesson, and Continue → `onComplete(result)`. Defeat copy says
   it is not the end, except in a last stand.
-- **Dev hook**: in dev builds, `window.__elviaDuel.current` is the live duel (read-only). The e2e
-  playthrough uses it to play duels with real key presses.
+- **Dev hooks**: in dev builds, `window.__elviaDuel.current` is the live duel (read-only); the
+  e2e playthrough uses it to play duels with real key presses. `/?lab=duel` opens the duel lab
+  (`src/ui/dev/DuelLab.jsx`): any foe (`foe=`, `name=`) on any stage (`stage=`) frozen at any moment
+  (`t=` ms, `script=move:dir,…`, `bot=idle|oracle|spam`), or the real screen with `live=1`.
 
 ## How to add an archetype or tune difficulty
 
 1. Add the definition to `ARCHETYPES` (`id, name, epithet, check, lesson, rig, maxHp, maxPoise,
    staggerMs, poiseRegen, idleMs, graceMs, stance, wardGuard, armor, riposte, moves`). Keep every
    wind-up ≥ 420 ms and follow-ups after the player's commitments, or the fairness tests fail.
-2. Add it to `ARCHETYPE_IDS`, opening lines in `lines.js`, a silhouette in `src/ui/duel/draw.js`
-   (`drawEnemy`), and a Trial foe or a march beat that uses it.
+2. Add it to `ARCHETYPE_IDS`, opening lines in `lines.js`, a look and pose rig in `src/ui/duel/render/foes.js` (`lookFor`,
+   `drawFoe`), and a Trial foe or a march beat that uses it.
 3. Run `npx vitest run src/game/duel`: the oracle must still win, idle must lose, every pattern
    must have a zero-damage answer.
 4. Tune with `TUNING`, the move timings, and `STAKES`. Re-measure with `simulateDuel` and update

@@ -1,9 +1,11 @@
 // The duel (Cycle doc §6): real-time, direct control, no menus. The engine (src/game/duel/engine.js)
-// owns every rule; this screen feeds it input at a fixed timestep, draws what it says, and shows
-// "what you misread" afterwards. Controls (README): swipe / arrow keys strike, tap an edge / A·D
-// dodge, hold the blade / Space·S guard, E Arc Pulse, R Royal Command, hold Shift / the ward
-// button for Shield Ward, Esc withdraws (when allowed). Gamepad: stick strikes, LB/RB dodge,
-// A guard, Y Arc, X Royal, RT ward.
+// owns every rule; this screen feeds it input at a fixed timestep, hands each frame to the renderer
+// (./render), and shows "what you misread" afterwards.
+//
+// Touch: tap the arena to strike, swipe to strike that way; the arrows dodge, hold the shield to
+// guard; Arc Pulse, Shield Ward and Royal Command sit above. Keyboard: arrow keys strike, A/D dodge,
+// hold Space or S to guard, E Arc Pulse, R Royal Command, hold Shift to ward, Esc withdraws (when
+// allowed). Gamepad: stick strikes, LB/RB dodge, A guard, Y Arc, X Royal, RT ward.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createDuel, stepDuel, getDuelResult, guardActive, drillProgress } from '../../game/duel/engine.js';
@@ -14,20 +16,23 @@ import { Button, cx } from '../kit/kit.jsx';
 import { Icon } from '../kit/icons.jsx';
 import { ArchitectSymbol } from '../art/index.js';
 import { useReducedMotion } from '../art/util.js';
-import { drawArena, drawEnemy, drawFx, drawPlayer, drawTelegraph, layout, spawnFx, TELE_COLORS } from './draw.js';
+import { createDuelRenderer } from './render/index.js';
+import { TELE_COLORS } from './colors.js';
+import { Controls, FoePlate, Hints } from './hud.jsx';
 
 const MAX_DT = 50;
-const SWIPE_PX = 30;
-const EDGE = 0.22;
+const SWIPE_PX = 26;
+const TAP_MS = 280;
 const STAKES_LABEL = {
   drill: 'Training yard drill',
   practice: 'Practice',
   march: 'On the march',
   champion: 'Champion duel',
-  last_stand: 'Last stand — defeat ends this life',
+  last_stand: 'Last stand: defeat ends this life',
 };
 const DIR_WORD = { left: 'from the left', right: 'from the right', overhead: 'from above', thrust: 'straight at you' };
 const KEY_STRIKE = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', W: 'up' };
+const GOOD_FX = { perfect_parry: 'Perfect parry', feint_read: 'Read it! Strike the opening', poise_break: 'Guard broken: punish!' };
 
 function speakerLabel(speaker, duel) {
   if (speaker === 'enemy') return duel.def.name;
@@ -41,90 +46,6 @@ function teleAnnouncement(tg) {
   const side = tg.dodgeSides.length === 1 ? `dodge ${tg.dodgeSides[0]}` : 'dodge either way';
   if (tg.isHeavy) return `Heavy ${DIR_WORD[tg.dir] ?? ''}: ${side}.`;
   return `Strike ${DIR_WORD[tg.dir] ?? ''}: parry or ${side}.`;
-}
-
-// ── HUD pieces ───────────────────────────────────────────────────────────────────────────
-
-function Bar({ value, max, tone, label, thin = false }) {
-  const pct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100));
-  const fill = { crimson: 'linear-gradient(90deg,#7a1f1a,#c2413a)', gold: 'linear-gradient(90deg,#a8841b,#f0dc95)', frost: 'linear-gradient(90deg,#7c8fa0,#eef2f5)', ember: 'linear-gradient(90deg,#8a3a1c,#f4a35e)' }[tone];
-  return (
-    <div className={cx('relative w-full overflow-hidden rounded-full border border-black/60 bg-black/50', thin ? 'h-1.5' : 'h-3')} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
-      <span className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-150" style={{ width: `${pct}%`, background: fill }} />
-    </div>
-  );
-}
-
-function HoldButton({ label, onDown, onUp, className, children }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      className={className}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        e.currentTarget.setPointerCapture?.(e.pointerId);
-        onDown();
-      }}
-      onPointerUp={(e) => {
-        e.stopPropagation();
-        onUp();
-      }}
-      onPointerCancel={onUp}
-      onLostPointerCapture={onUp}
-      onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
-          e.preventDefault();
-          e.stopPropagation();
-          onDown();
-        }
-      }}
-      onKeyUp={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          onUp();
-        }
-      }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Hints({ touch, allowRetreat, onDismiss, brief }) {
-  return (
-    <div className="pointer-events-auto absolute inset-x-4 top-1/2 z-30 mx-auto max-w-md -translate-y-1/2 rounded-[var(--radius-panel)] border border-gold-600/50 bg-navy-950/90 p-5 text-center shadow-panel animate-fade-in">
-      {brief ? (
-        <div className="mb-4 border-b border-gold-700/40 pb-4">
-          <p className="font-display text-[0.8rem] uppercase tracking-[0.24em] text-gold-400">{brief.eyebrow}</p>
-          <p className="mt-1 font-display text-[1.2rem] text-gold-100">{brief.title}</p>
-          <p className="mt-2 text-[0.98rem] leading-snug text-parchment-100">{brief.text}</p>
-        </div>
-      ) : null}
-      <p className="font-display text-[0.8rem] uppercase tracking-[0.24em] text-gold-400">Read the wind-up</p>
-      <ul className="mt-3 space-y-1.5 text-left text-[0.98rem] text-parchment-100">
-        <li>
-          <span className="font-semibold text-[#ffb347]">Red-gold glow</span>: dodge.
-        </li>
-        <li>
-          <span className="font-semibold text-frost-100">Steel light</span>: parry or dodge.
-        </li>
-        <li>
-          <span className="font-semibold text-[#e9d9ff]">Flicker</span>: a feint. Wait, then punish.
-        </li>
-      </ul>
-      <p className="mt-3 text-[0.92rem] leading-snug text-parchment-300">
-        {touch
-          ? 'Swipe to strike. Tap a screen edge to dodge away from that side. Hold the blade to guard. Tap the glowing sigil for Arc Pulse, the crown for Royal Command; hold the shield to ward.'
-          : `Arrow keys strike. A / D dodge. Hold Space (or S) to guard. E Arc Pulse, R Royal Command, hold Shift to ward.${allowRetreat ? ' Esc withdraws.' : ''} Mouse: drag to strike, click an edge to dodge, hold the blade to guard.`}
-      </p>
-      <Button variant="ghost" className="mt-4" onClick={onDismiss}>
-        Ready
-      </Button>
-    </div>
-  );
 }
 
 // ── Result ───────────────────────────────────────────────────────────────────────────────
@@ -199,8 +120,7 @@ function ResultView({ result, config, onContinue, goalLabel, continueLabel = 'Co
 /**
  * `brief` ({ eyebrow, title, text }) heads the intro card (training drills); `goalLabel` names a
  * drill's goal on the result screen and `hudLabel` counts it on the HUD; `continueLabel` labels the
- * result screen's button;
- * `withdrawText` is the Withdraw confirmation's body.
+ * result screen's button; `withdrawText` is the Withdraw confirmation's body.
  */
 export function DuelScreen({
   config,
@@ -217,10 +137,11 @@ export function DuelScreen({
   const canvasRef = useRef(null);
   const duelRef = useRef(null);
   if (!duelRef.current) duelRef.current = createDuel(config);
+  const rendererRef = useRef(null);
+  if (!rendererRef.current) rendererRef.current = createDuelRenderer({ config, archetypeId: duelRef.current.archetypeId, reduced });
   const inputs = useRef([]);
-  const fxList = useRef([]);
   const held = useRef({ guard: new Set(), ward: new Set() });
-  const pointers = useRef(new Map());
+  const gestures = useRef(new Map());
   const pausedRef = useRef(false);
   const [hud, setHud] = useState(() => snapshot(duelRef.current));
   const [caption, setCaption] = useState(null);
@@ -240,6 +161,8 @@ export function DuelScreen({
     (input) => {
       inputs.current.push(input);
       dismissHints();
+      if (input.type === 'dodge') haptic(12);
+      else if (input.type === 'strike') haptic(6);
     },
     [dismissHints],
   );
@@ -279,26 +202,28 @@ export function DuelScreen({
     return () => audio.ambient(before);
   }, []);
 
-  // The loop: fixed-step engine, real dt clamped, paused when hidden or confirming retreat.
+  // The loop: fixed-step engine, real dt clamped, paused when hidden or confirming retreat. A
+  // hitstop holds the engine for a few frames after the biggest blows; both sides freeze.
   useEffect(() => {
     const cv = canvasRef.current;
     const wrap = wrapRef.current;
+    const renderer = rendererRef.current;
     if (!cv || !wrap) return undefined;
     const ctx = cv.getContext('2d');
     let raf = 0;
     let last = 0;
-    let L = layout(1, 1);
-    let shake = { x: 0, y: 0 };
     let lastHud = 0;
     let lastTele = null;
     let overAt = 0;
+    let hitstopUntil = 0;
     const size = () => {
       const r = wrap.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) return;
       const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
       cv.width = Math.round(r.width * dpr);
       cv.height = Math.round(r.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      L = layout(r.width, r.height);
+      renderer.resize(r.width, r.height, dpr);
     };
     size();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(size) : null;
@@ -330,49 +255,42 @@ export function DuelScreen({
       last = ms;
       if (pausedRef.current || document.hidden) return;
       pollPad();
+      const prev = duelRef.current;
       if (hintsRef.current && !inputs.current.length) {
-        ctx.clearRect(0, 0, L.w, L.h);
-        drawArena(ctx, L, ms / 1000, !reduced);
-        drawEnemy(ctx, L, duelRef.current, ms / 1000);
-        drawPlayer(ctx, L, duelRef.current, ms / 1000, false);
+        renderer.frame(ctx, prev, ms, { guarding: false });
         return;
       }
-      const prev = duelRef.current;
-      const batch = inputs.current;
-      inputs.current = [];
-      const d = stepDuel(prev, batch, dt);
-      duelRef.current = d;
-      for (const ev of d.events) {
-        if (ev.type === 'sfx') audio.sfx(ev.name);
-        else if (ev.type === 'fx') {
-          spawnFx(fxList.current, ev, ms, L);
-          if (ev.name === 'perfect_parry') haptic([12, 30, 12]);
-          else if (ev.name === 'parry') haptic(10);
-          else if (ev.name === 'player_hit' || ev.name === 'hurt') haptic(28);
-        } else if (ev.type === 'line') setCaption({ who: speakerLabel(ev.speaker, d), text: ev.text, at: ms });
-        else if (ev.type === 'misread') setCallout({ text: ev.label, at: ms });
+      let d = prev;
+      if (ms >= hitstopUntil) {
+        const batch = inputs.current;
+        inputs.current = [];
+        d = stepDuel(prev, batch, dt);
+        duelRef.current = d;
+        const { hitstopMs } = renderer.events(d.events, ms);
+        if (hitstopMs) hitstopUntil = ms + hitstopMs;
+        for (const ev of d.events) {
+          if (ev.type === 'sfx') audio.sfx(ev.name);
+          else if (ev.type === 'fx') {
+            if (ev.name === 'perfect_parry') haptic([12, 30, 12]);
+            else if (ev.name === 'parry') haptic(10);
+            else if (ev.name === 'player_hit' || ev.name === 'hurt') haptic(28);
+            else if (ev.name === 'strike_hit') haptic(8);
+            if (GOOD_FX[ev.name]) setCallout({ text: GOOD_FX[ev.name], at: ms, good: true });
+          } else if (ev.type === 'line') setCaption({ who: speakerLabel(ev.speaker, d), text: ev.text, at: ms });
+          else if (ev.type === 'misread') setCallout({ text: ev.label, at: ms, good: false });
+        }
       }
       const tg = d.telegraph;
       if (tg && tg.stepId !== lastTele) setAnnounce(teleAnnouncement(tg));
       lastTele = tg?.stepId ?? null;
-      // draw
-      const t = ms / 1000;
-      ctx.save();
-      ctx.clearRect(0, 0, L.w, L.h);
-      ctx.translate(shake.x, shake.y);
-      drawArena(ctx, L, t, !reduced);
-      drawEnemy(ctx, L, d, t);
-      drawTelegraph(ctx, L, d, t);
-      drawPlayer(ctx, L, d, t, guardActive(d.player));
-      shake = drawFx(ctx, L, fxList.current, ms, !reduced);
-      ctx.restore();
+      renderer.frame(ctx, d, ms, { guarding: guardActive(d.player) });
       if (ms - lastHud > 100) {
         lastHud = ms;
         setHud(snapshot(d));
       }
       if (d.phase === 'over') {
         if (!overAt) overAt = ms;
-        if (ms - overAt > (reduced ? 200 : 1100)) {
+        if (ms - overAt > (reduced ? 200 : 1300)) {
           cancelAnimationFrame(raf);
           setHud(snapshot(d));
           setResult(getDuelResult(d));
@@ -432,35 +350,43 @@ export function DuelScreen({
     };
   }, [push, setHeld, result, confirmRetreat]);
 
-  // Pointer: edge tap = dodge, swipe = strike, hold the blade = guard (multi-touch aware).
-  const onPointerDown = (e) => {
+  // Gestures on the arena: a tap strikes straight, a swipe strikes the way it travels, and the
+  // finger leaves a trail of light either way.
+  const local = (e) => {
     const r = wrapRef.current.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width;
-    const y = (e.clientY - r.top) / r.height;
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  const onPointerDown = (e) => {
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    if (x < EDGE || x > 1 - EDGE) {
-      push({ type: 'dodge', side: x < EDGE ? 'left' : 'right' });
-      pointers.current.set(e.pointerId, { done: true });
-      return;
-    }
-    const onBlade = y > 0.7 && x > 0.4;
-    if (onBlade) setHeld('guard', `ptr:${e.pointerId}`, true);
-    pointers.current.set(e.pointerId, { x0: e.clientX, y0: e.clientY, guard: onBlade, done: false });
+    const p = local(e);
+    gestures.current.set(e.pointerId, { x0: p[0], y0: p[1], t0: performance.now(), fired: false, trail: null, pts: [p] });
   };
   const onPointerMove = (e) => {
-    const p = pointers.current.get(e.pointerId);
-    if (!p || p.done) return;
-    const dx = e.clientX - p.x0;
-    const dy = e.clientY - p.y0;
+    const g = gestures.current.get(e.pointerId);
+    if (!g) return;
+    const p = local(e);
+    g.pts.push(p);
+    if (g.trail) {
+      g.trail.pts.push(p);
+      g.trail.t0 = performance.now();
+    }
+    if (g.fired) return;
+    const dx = p[0] - g.x0;
+    const dy = p[1] - g.y0;
     if (Math.hypot(dx, dy) < SWIPE_PX) return;
-    if (p.guard) setHeld('guard', `ptr:${e.pointerId}`, false);
+    g.fired = true;
     push({ type: 'strike', dir: Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down' });
-    p.done = true;
+    g.trail = rendererRef.current.swipe(g.pts, performance.now());
   };
   const onPointerEnd = (e) => {
-    const p = pointers.current.get(e.pointerId);
-    if (p?.guard) setHeld('guard', `ptr:${e.pointerId}`, false);
-    pointers.current.delete(e.pointerId);
+    const g = gestures.current.get(e.pointerId);
+    gestures.current.delete(e.pointerId);
+    if (!g || g.fired || e.type === 'pointercancel') return;
+    if (performance.now() - g.t0 <= TAP_MS) {
+      push({ type: 'strike', dir: 'up' });
+      const [x, y] = local(e);
+      rendererRef.current.swipe([[x, y + 18], [x, y - 18]], performance.now());
+    }
   };
 
   const finish = () => onComplete(result);
@@ -480,6 +406,7 @@ export function DuelScreen({
   const epithet = d.config.subtitle || d.def.epithet;
   // rAF timestamps and performance.now() share a timebase.
   const capOn = caption && hud.now - caption.at < 3500;
+  const tele = hud.tele ? TELE_COLORS[hud.tele.color] : null;
 
   return (
     <div className="fixed inset-0 z-[60] overflow-hidden bg-navy-950 text-parchment-50 select-none" style={{ touchAction: 'none' }}>
@@ -492,132 +419,71 @@ export function DuelScreen({
         onPointerCancel={onPointerEnd}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <canvas ref={canvasRef} className={cx('block h-full w-full', result && 'opacity-30 blur-[2px]')} aria-hidden="true" />
+        <canvas ref={canvasRef} className={cx('block h-full w-full transition duration-500', result && 'opacity-35 blur-[3px]')} aria-hidden="true" />
       </div>
 
       {result ? (
-        <div className="absolute inset-0 overflow-y-auto bg-navy-950/60">
+        <div className="absolute inset-0 overflow-y-auto bg-navy-950/55">
           <ResultView result={result} config={d.config} onContinue={finish} goalLabel={goalLabel} continueLabel={continueLabel} />
         </div>
       ) : (
         <>
           <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
-            <div className="mx-auto flex max-w-3xl items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-[0.72rem] uppercase tracking-[0.22em] text-gold-400">{STAKES_LABEL[stakes] ?? 'Single combat'}</p>
-                <h1 className="truncate font-display text-[1.35rem] leading-tight text-gold-100 text-engraved">{name}</h1>
-                <p className="truncate text-[0.9rem] text-parchment-300">{epithet}</p>
-                <div className="mt-2 space-y-1">
-                  <Bar value={hud.enemyHp} max={hud.enemyMaxHp} tone="crimson" label={`${name}'s strength`} />
-                  <Bar value={hud.poise} max={hud.maxPoise} tone="frost" label={`${name}'s poise`} thin />
-                </div>
-                {hud.drill ? (
-                  <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-gold-600/50 bg-navy-950/75 px-3 py-1 text-[0.95rem] text-parchment-100" role="status">
-                    {hudLabel ?? 'Goal'}
-                    <span className="font-display text-gold-200">
-                      {hud.drill.value} / {hud.drill.target}
-                    </span>
-                  </p>
-                ) : null}
-              </div>
+            <div className="relative mx-auto max-w-3xl px-12">
+              <FoePlate stakesLabel={STAKES_LABEL[stakes] ?? 'Single combat'} name={name} epithet={epithet} hud={hud} hudLabel={hudLabel} />
               {d.config.allowRetreat ? (
                 <button
                   type="button"
-                  className="pointer-events-auto inline-flex min-h-11 min-w-11 items-center gap-1 rounded-lg border border-gold-700/50 bg-navy-950/70 px-3 text-[0.85rem] text-parchment-200"
+                  aria-label="Withdraw from the duel"
+                  title="Withdraw"
+                  className="pointer-events-auto absolute left-0 top-0 grid size-11 place-items-center rounded-full border border-gold-700/60 bg-navy-950/75 text-parchment-200 shadow-panel"
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => {
                     pausedRef.current = true;
                     setConfirmRetreat(true);
                   }}
                 >
-                  <Icon name="back" size={16} /> Withdraw
+                  <Icon name="back" size={20} />
                 </button>
               ) : null}
             </div>
           </header>
 
           {capOn ? (
-            <p key={caption.at} className="pointer-events-none absolute inset-x-6 top-[28%] z-20 mx-auto max-w-md text-center font-serif text-[1.15rem] italic leading-snug text-parchment-50 drop-shadow-[0_2px_6px_rgb(0_0_0/0.9)] animate-fade-in">
+            <p key={caption.at} className="pointer-events-none absolute inset-x-6 top-[24%] z-20 mx-auto max-w-md text-center font-serif text-[1.15rem] italic leading-snug text-parchment-50 drop-shadow-[0_2px_6px_rgb(0_0_0/0.95)] animate-fade-in">
               {caption.who ? <span className="mr-1 font-display not-italic text-gold-300">{caption.who}:</span> : null}
               {caption.text}
             </p>
           ) : null}
           {callout && hud.now - callout.at < 1500 ? (
-            <p key={callout.at} className="pointer-events-none absolute inset-x-0 top-[45%] z-20 text-center font-display text-[1.25rem] uppercase tracking-[0.08em] text-ember-200 text-glow-ember animate-fade-in">
+            <p
+              key={callout.at}
+              className={cx(
+                'pointer-events-none absolute inset-x-0 top-[44%] z-20 text-center font-display text-[1.3rem] uppercase tracking-[0.08em] drop-shadow-[0_2px_8px_rgb(0_0_0/0.95)] animate-fade-in',
+                callout.good ? 'text-gold-200 text-glow-gold' : 'text-ember-200 text-glow-ember',
+              )}
+            >
               {callout.text}
             </p>
           ) : null}
-          {hud.tele ? (
-            <p className="pointer-events-none absolute inset-x-0 top-[37%] z-10 text-center font-display text-[0.95rem] uppercase tracking-[0.2em]" style={{ color: TELE_COLORS[hud.tele.color]?.core }} aria-hidden="true">
-              {TELE_COLORS[hud.tele.color]?.label}
+          {tele ? (
+            <p
+              className="pointer-events-none absolute left-1/2 top-[34%] z-10 -translate-x-1/2 rounded-full border bg-navy-950/70 px-4 py-1 font-display text-[0.92rem] uppercase tracking-[0.2em] shadow-panel"
+              style={{ color: tele.core, borderColor: `${tele.glow}0.6)` }}
+              aria-hidden="true"
+            >
+              {tele.label}
             </p>
           ) : null}
           <p className="sr-only" aria-live="assertive">
             {announce}
           </p>
 
-          {/* dodge edges */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-[22%] left-0 z-10 flex w-[22%] items-center justify-start pl-2 text-gold-300/35">
-            <Icon name="back" size={28} />
-          </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-[22%] right-0 z-10 flex w-[22%] items-center justify-end pr-2 text-gold-300/35">
-            <Icon name="forward" size={28} />
-          </div>
-
-          <footer className="absolute inset-x-0 bottom-0 z-20 px-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-            <div className="mx-auto flex max-w-3xl items-end gap-3">
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  type="button"
-                  aria-label={hud.arc >= 1 ? 'Arc Pulse (charged)' : `Arc Pulse (${Math.round(hud.arc * 100)}% charged)`}
-                  disabled={hud.arc < 1}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => push({ type: 'arc' })}
-                  className={cx(
-                    'relative grid size-16 place-items-center rounded-full border-2 transition',
-                    hud.arc >= 1 ? 'border-lattice-300 bg-gold-700/50 text-lattice-100 shadow-[0_0_24px_rgb(255_217_122/0.7)]' : 'border-gold-700/60 bg-navy-950/80 text-gold-600',
-                  )}
-                  style={{ background: hud.arc < 1 ? `conic-gradient(rgb(201 162 39 / 0.45) ${hud.arc * 360}deg, rgb(7 13 24 / 0.85) 0)` : undefined }}
-                >
-                  <ArchitectSymbol size={34} glow={hud.arc >= 1} />
-                </button>
-                <HoldButton
-                  label="Shield Ward (hold)"
-                  onDown={() => setHeld('ward', 'btn', true)}
-                  onUp={() => setHeld('ward', 'btn', false)}
-                  className={cx('grid size-14 place-items-center rounded-full border-2', hud.ward ? 'border-lattice-300 bg-gold-600/40 text-lattice-100' : 'border-gold-700/60 bg-navy-950/80 text-gold-300')}
-                >
-                  <Icon name="readiness" size={24} />
-                </HoldButton>
-              </div>
-              <div className="min-w-0 flex-1 pb-1">
-                <div className="mb-1 flex items-baseline justify-between text-[0.85rem]">
-                  <span className="font-display text-gold-200">The Sovereign</span>
-                  {hud.combo >= 2 ? <span className="font-display text-gold-300">Combo ×{hud.combo}</span> : null}
-                </div>
-                <Bar value={hud.hp} max={hud.maxHp} tone="gold" label="Your strength" />
-                <div className="mt-1">
-                  <Bar value={hud.stamina} max={hud.maxStamina} tone="ember" label="Stamina" thin />
-                </div>
-                <HoldButton
-                  label="Guard (hold)"
-                  onDown={() => setHeld('guard', 'btn', true)}
-                  onUp={() => setHeld('guard', 'btn', false)}
-                  className={cx('mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border text-[0.9rem] font-display uppercase tracking-[0.14em]', hud.guard ? 'border-gold-300 bg-gold-600/35 text-gold-100' : 'border-gold-700/50 bg-navy-950/70 text-gold-300')}
-                >
-                  <Icon name="sword" size={18} /> Hold to guard
-                </HoldButton>
-              </div>
-              <button
-                type="button"
-                aria-label={hud.royalUsed ? 'Royal Command (used)' : 'Royal Command'}
-                disabled={hud.royalUsed}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => push({ type: 'royal' })}
-                className={cx('grid size-16 place-items-center rounded-full border-2', hud.royalUsed ? 'border-stone-600 bg-navy-950/70 text-stone-500' : 'border-gold-400 bg-gold-700/40 text-gold-100 shadow-[0_0_18px_rgb(227_196_99/0.45)]')}
-              >
-                <Icon name="crown" size={28} />
-              </button>
-            </div>
+          <footer
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-[linear-gradient(0deg,rgb(4_7_13/0.92)_0%,rgb(4_7_13/0.6)_55%,rgb(4_7_13/0)_100%)] px-4 pt-10"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          >
+            <Controls hud={hud} push={push} setHeld={setHeld} />
           </footer>
 
           {hints ? <Hints touch={touch} allowRetreat={d.config.allowRetreat} onDismiss={dismissHints} brief={brief} /> : null}

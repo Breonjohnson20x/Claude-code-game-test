@@ -6,9 +6,10 @@ import { useState } from 'react';
 import { useGame } from '../game/GameProvider.jsx';
 import { Button, Eyebrow, IconButton, cx } from '../kit/kit.jsx';
 import { Icon } from '../kit/icons.jsx';
-import { Portrait, RegionScene } from '../art/index.js';
+import { Portrait } from '../art/index.js';
+import { StageBackdrop } from '../duel/StageBackdrop.jsx';
 import { DuelScreen } from '../duel/DuelScreen.jsx';
-import { TELE_COLORS } from '../duel/draw.js';
+import { TELE_COLORS } from '../duel/colors.js';
 import { DRILLS, drillConfig, SPARRING, sparringConfig } from '../../game/duel/drills.js';
 import { LEGACY_NAMES } from '../../game/duel/archetypes.js';
 import { Segmented } from '../overlays/chronicle/Segmented.jsx';
@@ -183,8 +184,8 @@ export function TrainingScreen() {
   return (
     <main className="relative min-h-dvh overflow-x-clip bg-navy-950" aria-labelledby="yard-heading">
       <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
-        <RegionScene beat="champion" regionState="FORTIFIED" timeOfDay="dusk" className="h-full w-full opacity-45" />
-        <div className="absolute inset-0 bg-gradient-to-b from-navy-950/40 via-navy-950/80 to-navy-950" />
+        <StageBackdrop stage="yard" className="block h-full w-full opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy-950/30 via-navy-950/80 to-navy-950" />
       </div>
       <div
         className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6"

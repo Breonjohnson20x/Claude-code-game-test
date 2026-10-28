@@ -110,13 +110,52 @@ for all: lit from the upper right, a gold ring frame, readable from 40 to 96 px.
 
 ## Duel rendering
 
-`src/ui/duel/draw.js` draws the duel on a canvas each frame: the stone circle (pillars, two
-torches, an etched floor with the broken-circle sigil), a backlight so the foe always reads, the
-foe (an armoured humanoid rig for the Blade-Adept, a translucent gold crowned rig for the Fallen
-Champion, a frost-wolf rig for the Warg Alpha) posed from the engine's state, the telegraph
-overlay (arcs and chevrons by direction, colour by kind, a flicker for feints, a warm pulse for
-heavies), the Sovereign's blade (guard, swing, dodge offset), the ward dome, and effects (sparks,
-flashes, rings, the Arc beam, the Royal wave, screen shake). See [DUEL.md](DUEL.md).
+`src/ui/duel/render/` draws the duel on a canvas. `createDuelRenderer({ config, archetypeId,
+reduced })` returns `resize`, `events` (engine fx → visuals, and a hitstop hint), `frame` and
+`swipe`.
+
+- **Stages** (`stages.js`): every fight has a place, chosen from the march beat by `stageFor`:
+
+  | Stage | Where | Light and air |
+  |---|---|---|
+  | `circle` | The torch-lit circle (War Room trials) | Citadel wall, arches, banners, braziers; embers and motes |
+  | `yard` | The training yard | Morning light shafts, weapon racks, sand; dust |
+  | `checkpoint` | Greywater checkpoint | Dusk sky, gate towers, palisade, the road's puddles; smoke and dust |
+  | `wilds` | The frontier wilds | Moon, snow peaks, three depths of snowy pines; falling snow |
+  | `ruin` | The broken circle | Standing stones, the great stone's symbol glowing gold; lattice threads, rising motes, mist |
+  | `ford` | Greywater Ford | The river and its reflections, a walker with a sweeping searchlight, the burning depot, Aegis pylons; mist and embers |
+  | `ford_winter` | The winter skirmish | The ford at dusk with ice floes; snow |
+  | `siege` | The last stand | Burning walls and breaches, debris; heavy embers and ash |
+
+  Each stage paints its static scenery once per resize into an offscreen canvas (with a little
+  parallax), animates its lights every frame, and sets the light that falls on the foe (key
+  colour and side, rim, shadow tint, backlight).
+- **Foes** (`foes.js`): `lookFor(config, archetypeId)` picks who you are fighting, not just how
+  they fight: the Syndicate duelist (visored helm, sabre and parrying dagger), Nyra Kell (walker
+  pilot, goggles, a shock-blade with an amber edge), the Ostrava officers (peaked cap, cape), the
+  man in the grey coat (hood, glinting eyes), Sword-Master Ilvane (silver hair, rapier), General
+  Drae (great helm, plume, greatsword, cape), the crowned echo (spectral gold), and the Frost Wargs
+  (Rimefang, Greymane, Old Rime; shaggy hackles, glowing eyes, breath in the cold). Bodies are
+  limbs with two-bone IK and a lighting model that grades each part from shadow to key to a rim of
+  edge light. Poses come from the engine: guard side, anticipation, the strike and its
+  follow-through, recovery, the feint's exposed opening, stagger, defeat. A hit flashes the foe's
+  silhouette and knocks it back.
+- **Telegraph** (`telegraph.js`): a crescent on the side the blow comes from (an arc overhead,
+  rings closing for a thrust), marching chevrons for its path, dashed and flickering for a feint, a
+  warm pulse at the frame's edge for a heavy.
+- **The Sovereign** (`player.js`): a gauntleted hand and a bevelled blade with a gem in the guard;
+  it rises across the body to guard, swings along your strike with a crescent trail, and the Shield
+  Ward rises as a dome of lattice light.
+- **Effects** (`fx.js`): sparks with gravity, slash marks, rings, the Arc beam, the Royal wave,
+  flashes, vignettes, dodge streaks, the hurt flare, and your swipe trails.
+
+The same stages double as page backdrops through `StageBackdrop` (the title screen's ruin, the
+training yard). Every canvas guards against a zero-size layout: painters step their loops by the
+layout scale, so `layout()` never returns a scale of zero and resize handlers skip collapsed
+elements.
+
+Reduced motion keeps every frame readable but still: no particles drifting, no shake, no
+hitstop, no camera slide. See [DUEL.md](DUEL.md).
 
 ## Audio
 

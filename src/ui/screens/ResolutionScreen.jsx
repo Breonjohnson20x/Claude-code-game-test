@@ -45,7 +45,7 @@ export function ResolutionScreen() {
         </>
       }
     >
-      <div className="sticky top-0 z-30 -mx-4 bg-gradient-to-b from-navy-950 via-navy-950/95 to-navy-950/0 px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="sticky top-0 z-30 -mx-4 chrome-bar px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <TopBar />
         <ResourceHud resources={state.resources} deltas={report.resourceDeltas} compact />
       </div>
