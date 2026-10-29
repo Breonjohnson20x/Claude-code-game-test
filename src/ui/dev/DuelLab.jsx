@@ -48,7 +48,9 @@ export default function DuelLab() {
     const ctx = cv.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const introParam = params.get('intro');
-    const renderer = createDuelRenderer({ config, archetypeId: config.archetypeId, reduced: false, intro: introParam != null });
+    // quality=<0..2> pins the renderer's quality tier (otherwise it adapts to the frame time)
+    const quality = params.get('quality') != null ? Number(params.get('quality')) : null;
+    const renderer = createDuelRenderer({ config, archetypeId: config.archetypeId, reduced: false, intro: introParam != null, quality });
     renderer.resize(w, h, dpr);
     const botName = params.get('bot') ?? 'idle';
     const bot = botName === 'oracle' ? createOracleBot({ mode: 'parry' }) : botName === 'spam' ? createGuardSpamBot() : null;
@@ -79,7 +81,10 @@ export default function DuelLab() {
     return () => cancelAnimationFrame(raf);
   }, [live]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (live) return <DuelScreen config={config} showHints={params.get('hints') === '1'} onComplete={() => globalThis.location.reload()} />;
+  if (live) {
+    const quality = params.get('quality') != null ? Number(params.get('quality')) : null;
+    return <DuelScreen config={config} showHints={params.get('hints') === '1'} quality={quality} onComplete={() => globalThis.location.reload()} />;
+  }
   return (
     <main className="fixed inset-0 bg-navy-950">
       <h1 className="sr-only">Duel lab</h1>

@@ -31,7 +31,7 @@ export function StageBackdrop({ stage = 'ruin', className, noSymbol = false }) {
       scenery.height = cv.height;
       const sctx = scenery.getContext('2d');
       sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      paintStage(sctx, L, stage);
+      paintStage(sctx, L, stage, { noSymbol });
       atmos = createAtmosphere(stage, L);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       draw(performance.now());

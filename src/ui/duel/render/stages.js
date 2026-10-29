@@ -19,8 +19,9 @@ export function layout(cssW, cssH) {
     phone,
     horizon: h * (phone ? 0.43 : 0.47),
     floorY: h * (phone ? 0.65 : 0.72),
-    // on phones the controls cover the bottom fifth: the blade rides just above them
-    bladeY: h * (phone ? 0.71 : 0.9),
+    // on phones the controls cover the bottom quarter: the crossguard rests just under the
+    // Sovereign's bar and the blade rises into the open beside the foe
+    bladeY: h * (phone ? 0.75 : 0.9),
   };
 }
 
@@ -57,17 +58,24 @@ function stars(ctx, L, r, count, maxY, color = [255, 246, 226]) {
 }
 
 function moon(ctx, x, y, rad, color = [246, 239, 223]) {
-  glow(ctx, x, y, rad * 7, color, 0.16, false);
-  glow(ctx, x, y, rad * 2.6, color, 0.22, false);
+  glow(ctx, x, y, rad * 6, color, 0.1, false);
+  glow(ctx, x, y, rad * 2.2, color, 0.14, false);
+  // the disc sits at ~85% luminance so its seas and craters still read under the grade
   const g = ctx.createRadialGradient(x - rad * 0.3, y - rad * 0.3, rad * 0.1, x, y, rad);
-  g.addColorStop(0, rgba([255, 252, 240]));
-  g.addColorStop(1, rgba(mix(color, [190, 196, 210], 0.4)));
+  g.addColorStop(0, rgba([232, 228, 216]));
+  g.addColorStop(1, rgba(mix(color, [150, 156, 172], 0.5)));
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(x, y, rad, 0, TAU);
   ctx.fill();
-  ctx.fillStyle = rgba([150, 160, 178], 0.18);
-  for (const [dx, dy, rr] of [[-0.3, -0.1, 0.22], [0.25, 0.3, 0.16], [0.1, -0.4, 0.12]]) {
+  ctx.fillStyle = rgba([128, 134, 152], 0.42);
+  for (const [dx, dy, rr] of [[-0.3, -0.1, 0.24], [0.25, 0.3, 0.18], [0.1, -0.42, 0.13], [-0.05, 0.45, 0.1], [0.42, -0.12, 0.09]]) {
+    ctx.beginPath();
+    ctx.arc(x + dx * rad, y + dy * rad, rr * rad, 0, TAU);
+    ctx.fill();
+  }
+  ctx.fillStyle = rgba([255, 250, 236], 0.35);
+  for (const [dx, dy, rr] of [[-0.24, -0.16, 0.06], [0.3, 0.24, 0.05]]) {
     ctx.beginPath();
     ctx.arc(x + dx * rad, y + dy * rad, rr * rad, 0, TAU);
     ctx.fill();
@@ -420,13 +428,14 @@ function paintCheckpoint(ctx, L) {
 function paintWilds(ctx, L) {
   const { w, h, s, horizon } = L;
   const r = rng(14);
-  vgrad(ctx, 0, 0, w, horizon, [[0, hex('#0a1222')], [0.6, hex('#26385a')], [1, hex('#5e6f8e')]]);
+  // deep navy overhead, a faint warm band at the horizon
+  vgrad(ctx, 0, 0, w, horizon, [[0, hex('#070d18')], [0.5, hex('#16243a')], [0.86, hex('#3a4458')], [1, hex('#665e66')]]);
   stars(ctx, L, r, 60, horizon * 0.45);
   moon(ctx, w * 0.74, horizon * 0.28, 18 * s);
   // snow-capped peaks
-  ridge(ctx, w, h, { base: horizon - 60 * s, amp: 90 * s, step: 30 * s, seed: 21, color: hex('#7c8aa6'), rough: 0.7, peaks: 0.2 });
-  ridge(ctx, w, h, { base: horizon - 40 * s, amp: 60 * s, step: 22 * s, seed: 22, color: hex('#4d5c7a'), rough: 0.6 });
-  haze(ctx, L, horizon - 30 * s, 40 * s, hex('#a9b6cc'), 0.35);
+  ridge(ctx, w, h, { base: horizon - 60 * s, amp: 90 * s, step: 30 * s, seed: 21, color: hex('#6c7690'), rough: 0.7, peaks: 0.2 });
+  ridge(ctx, w, h, { base: horizon - 40 * s, amp: 60 * s, step: 22 * s, seed: 22, color: hex('#3f4a64'), rough: 0.6 });
+  haze(ctx, L, horizon - 30 * s, 40 * s, hex('#8e98ac'), 0.26);
   // three depths of pine forest
   const layers = [
     { y: horizon - 4 * s, h0: 50, h1: 80, color: hex('#2b3a55'), snow: [hex('#c6d2e2'), 0.55], n: 26 },
@@ -439,9 +448,10 @@ function paintWilds(ctx, L) {
       pine(ctx, x, layer.y, lerp(layer.h0, layer.h1, r()) * s, layer.color, layer.snow);
     }
   }
-  ground(ctx, L, hex('#9aa8c0'), hex('#3e4a63'), hex('#dfe7f2'));
+  // the snow floor sits a step below the sky light so a dark-furred warg reads against it
+  ground(ctx, L, hex('#7e899e'), hex('#2c3448'), hex('#c9d2e0'));
   // drifts and tracks
-  ctx.fillStyle = rgba(hex('#eef2f8'), 0.35);
+  ctx.fillStyle = rgba(hex('#dfe5ee'), 0.24);
   for (let i = 0; i < 12; i += 1) {
     const z = r();
     const y = rowY(L, 0.05 + z * 0.9);
@@ -541,9 +551,9 @@ function paintFord(ctx, L, winter = false) {
     }
   }
   // the near bank where the duel stands: gravel shallows
-  const near = winter ? [hex('#7d7c8c'), hex('#2a2a36')] : [hex('#2a3448'), hex('#080b12')];
+  const near = winter ? [hex('#69687a'), hex('#22222e')] : [hex('#2a3448'), hex('#080b12')];
   vgrad(ctx, 0, riverBot, w, h - riverBot, [[0, near[0]], [1, near[1]]]);
-  ctx.fillStyle = rgba(winter ? hex('#f2f4f8') : hex('#5a6a86'), winter ? 0.35 : 0.25);
+  ctx.fillStyle = rgba(winter ? hex('#e4e8ee') : hex('#5a6a86'), winter ? 0.26 : 0.25);
   for (let i = 0; i < 120; i += 1) {
     const z = 0.42 + r() * 0.58;
     ctx.beginPath();
@@ -612,9 +622,12 @@ function paintSiege(ctx, L) {
 
 // ── animated passes (every frame) ───────────────────────────────────────────────────────────
 
+const FLAME_HALO = hex('#ff9c48');
+
 function flame(ctx, x, y, size, t, seed, motion) {
   const f = motion ? 0.82 + 0.18 * Math.sin(t * 11 + seed) * Math.sin(t * 5.3 + seed * 2) : 1;
-  glow(ctx, x, y - size * 0.6, size * 7 * f, hex('#ff9c48'), 0.32);
+  // the wide halo is baked into the backdrop (LIGHTS); this is the flicker close to the fire
+  glow(ctx, x, y - size * 0.6, size * 2.6 * f, FLAME_HALO, 0.3);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (const [k, col, a] of [[1, hex('#e0782b'), 0.9], [0.62, hex('#ffc46b'), 0.95], [0.32, hex('#fff2c8'), 1]]) {
@@ -632,7 +645,7 @@ function flame(ctx, x, y, size, t, seed, motion) {
   ctx.restore();
 }
 
-function brazier(ctx, L, x, y, t, seed, motion) {
+function brazierStand(ctx, L, x, y) {
   const { s } = L;
   ctx.fillStyle = rgba(hex('#15110d'));
   ctx.fillRect(x - 3 * s, y, 6 * s, 70 * s);
@@ -644,23 +657,36 @@ function brazier(ctx, L, x, y, t, seed, motion) {
   ctx.fill();
   ctx.fillStyle = rgba(hex('#7d6114'));
   ctx.fillRect(x - 21 * s, y - 6 * s, 42 * s, 3 * s);
-  flame(ctx, x, y - 4 * s, 12 * s, t, seed, motion);
 }
 
-const ANIMATE = {
-  circle(ctx, L, t, motion) {
-    for (const sx of [-1, 1]) brazier(ctx, L, L.cx + sx * L.w * 0.4, L.horizon - 30 * L.s, t, sx + 3, motion);
-    glow(ctx, L.cx, L.horizon - 60 * L.s, 120 * L.s, hex('#ffb070'), 0.08 + (motion ? 0.03 * Math.sin(t * 1.3) : 0));
+/** The wide halo of a fire (baked: it barely changes and it is the costly part). */
+function halo(ctx, x, y, size) {
+  glow(ctx, x, y - size * 0.6, size * 7, FLAME_HALO, 0.3);
+}
+
+const SIEGE_FIRES = [[0.08, 16, 1], [0.92, 18, 2], [0.32, 9, 3], [0.68, 10, 4], [0.5, 7, 5]];
+const fireY = (L, x) => L.horizon - (x === 0.08 || x === 0.92 ? 150 : 120) * L.s;
+
+// ── static light, baked into the backdrop on resize ──────────────────────────────────────────
+// Big soft glows cost the most to draw and barely move, so they live in the backdrop; the
+// animated pass only adds what flickers.
+
+const LIGHTS = {
+  circle(ctx, L) {
+    for (const sx of [-1, 1]) {
+      brazierStand(ctx, L, L.cx + sx * L.w * 0.4, L.horizon - 30 * L.s);
+      halo(ctx, L.cx + sx * L.w * 0.4, L.horizon - 34 * L.s, 12 * L.s);
+    }
+    glow(ctx, L.cx, L.horizon - 60 * L.s, 120 * L.s, hex('#ffb070'), 0.09);
   },
-  yard(ctx, L, t, motion) {
+  yard(ctx, L) {
     // shafts of morning light
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 4; i += 1) {
       const x0 = L.w * (0.55 + i * 0.12);
-      const a = 0.05 + (motion ? 0.02 * Math.sin(t * 0.6 + i) : 0);
       const g = ctx.createLinearGradient(x0, 0, x0 - L.w * 0.4, L.h);
-      g.addColorStop(0, rgba(hex('#ffe9c0'), a));
+      g.addColorStop(0, rgba(hex('#ffe9c0'), 0.055));
       g.addColorStop(1, rgba(hex('#ffe9c0'), 0));
       ctx.fillStyle = g;
       ctx.beginPath();
@@ -673,6 +699,35 @@ const ANIMATE = {
     }
     ctx.restore();
   },
+  checkpoint(ctx, L) {
+    for (const sx of [-1, 1]) halo(ctx, L.cx + sx * 64 * L.s, L.horizon - 4 * L.s, 5 * L.s);
+  },
+  wilds(ctx, L) {
+    glow(ctx, L.cx, L.floorY - 120 * L.s, 220 * L.s, hex('#a9c2e0'), 0.05);
+  },
+  ruin(ctx, L, opts) {
+    if (!opts?.noSymbol) glow(ctx, L.cx, L.horizon - 120 * L.s, 110 * L.s, hex('#ffd98a'), 0.16);
+  },
+  ford(ctx, L) {
+    const { s, w, horizon } = L;
+    halo(ctx, w * 0.72, horizon - 30 * s, 9 * s);
+    glow(ctx, w * 0.72, horizon - 30 * s, 160 * s, hex('#ff8a40'), 0.16);
+    for (const sx of [-1, 1]) glow(ctx, L.cx + sx * L.w * 0.42, rowY(L, 0.55) - 120 * s, 40 * s, hex('#ffd98a'), 0.45);
+  },
+  ford_winter(ctx, L) {
+    LIGHTS.ford(ctx, L);
+  },
+  siege(ctx, L) {
+    for (const [x, sz] of SIEGE_FIRES) halo(ctx, L.w * x, fireY(L, x), sz * L.s);
+    glow(ctx, L.cx, L.horizon, L.w * 0.7, hex('#ff6a2a'), 0.13);
+  },
+};
+
+const ANIMATE = {
+  circle(ctx, L, t, motion) {
+    for (const sx of [-1, 1]) flame(ctx, L.cx + sx * L.w * 0.4, L.horizon - 34 * L.s, 12 * L.s, t, sx + 3, motion);
+  },
+  yard() {},
   checkpoint(ctx, L, t, motion) {
     const { s, cx, horizon } = L;
     for (const sx of [-1, 1]) flame(ctx, cx + sx * 64 * s, horizon - 4 * s, 5 * s, t, sx, motion);
@@ -681,23 +736,21 @@ const ANIMATE = {
       ctx.save();
       for (let i = 0; i < 2; i += 1) {
         const x0 = L.w * (0.3 + i * 0.42);
-        for (let k = 0; k < 6; k += 1) {
-          const p = ((t * 0.08 + k / 6 + i * 0.3) % 1);
+        for (let k = 0; k < 4; k += 1) {
+          const p = ((t * 0.08 + k / 4 + i * 0.3) % 1);
           glow(ctx, x0 + Math.sin(p * 6 + i) * 14 * s + p * 30 * s, horizon - p * 140 * s, (10 + p * 34) * s, hex('#4a3038'), 0.25 * (1 - p), false);
         }
       }
       ctx.restore();
     }
   },
-  wilds(ctx, L, t, motion) {
-    glow(ctx, L.cx, L.floorY - 120 * L.s, 220 * L.s, hex('#a9c2e0'), 0.06 + (motion ? 0.02 * Math.sin(t) : 0));
-  },
+  wilds() {},
   ruin(ctx, L, t, motion, opts) {
     if (opts?.noSymbol) return;
     const { s, cx, horizon } = L;
     const pulse = motion ? 0.6 + 0.4 * Math.sin(t * 1.6) : 0.8;
     const y = horizon - 120 * s;
-    glow(ctx, cx, y, 110 * s * (0.8 + 0.2 * pulse), hex('#ffd98a'), 0.28 * pulse);
+    glow(ctx, cx, y, 56 * s * (0.8 + 0.2 * pulse), hex('#ffd98a'), 0.3 * pulse);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = rgba(hex('#ffe9ae'), 0.55 + 0.45 * pulse);
@@ -740,11 +793,8 @@ const ANIMATE = {
       ctx.fill();
       ctx.restore();
     }
-    // the burning depot
+    // the burning depot (its glow and the Aegis pylon lights are baked)
     flame(ctx, w * 0.72, horizon - 30 * s, 9 * s, t, 5, motion);
-    glow(ctx, w * 0.72, horizon - 30 * s, 160 * s, hex('#ff8a40'), 0.16);
-    // Aegis pylon lights
-    for (const sx of [-1, 1]) glow(ctx, L.cx + sx * L.w * 0.42, rowY(L, 0.55) - 120 * s, 40 * s, hex('#ffd98a'), 0.45);
     // ripples
     if (motion) {
       ctx.strokeStyle = rgba(hex('#c9d4e6'), 0.12);
@@ -763,11 +813,7 @@ const ANIMATE = {
     ANIMATE.ford(ctx, L, t, motion);
   },
   siege(ctx, L, t, motion) {
-    const { s, w, horizon } = L;
-    for (const [x, sz, seed] of [[0.08, 16, 1], [0.92, 18, 2], [0.32, 9, 3], [0.68, 10, 4], [0.5, 7, 5]]) {
-      flame(ctx, w * x, horizon - (x === 0.08 || x === 0.92 ? 150 : 120) * s, sz * s, t, seed, motion);
-    }
-    glow(ctx, L.cx, horizon, L.w * 0.7, hex('#ff6a2a'), 0.12 + (motion ? 0.04 * Math.sin(t * 2.1) : 0));
+    for (const [x, sz, seed] of SIEGE_FIRES) flame(ctx, L.w * x, fireY(L, x), sz * L.s, t, seed, motion);
   },
 };
 
@@ -826,8 +872,11 @@ export const STAGES = {
   },
 };
 
-export function paintStage(ctx, L, stageId) {
-  (STAGES[stageId] ?? STAGES.circle).paint(ctx, L);
+/** Paint a stage's static backdrop with its baked lights (opts.noSymbol: no glow for the ruin's symbol). */
+export function paintStage(ctx, L, stageId, opts = {}) {
+  const id = STAGES[stageId] ? stageId : 'circle';
+  STAGES[id].paint(ctx, L);
+  LIGHTS[id]?.(ctx, L, opts);
 }
 
 /** opts.noSymbol: leave the ruin's glowing symbol out (the title screen draws its own). */
@@ -847,19 +896,51 @@ const PARTICLE = {
   mist: (r, L) => ({ x: r() * L.w, y: lerp(L.horizon, L.h * 0.8, r()), z: 1, vx: 6 + r() * 10, vy: 0, c: hex('#8e9ab4'), a: 0.12, big: true }),
 };
 
-export function createAtmosphere(stageId, L) {
+/** `density` (0..1) thins the particles on slow devices (the renderer's quality tier). */
+export function createAtmosphere(stageId, L, density = 1) {
   const stage = STAGES[stageId] ?? STAGES.circle;
   const r = rng(97);
   const list = [];
   for (const spec of stage.particles) {
-    for (let i = 0; i < spec.count; i += 1) list.push({ kind: spec.kind, ...PARTICLE[spec.kind](r, L), ph: r() * TAU });
+    const n = spec.kind === 'mist' ? spec.count : Math.max(1, Math.round(spec.count * density));
+    for (let i = 0; i < n; i += 1) {
+      const p = { kind: spec.kind, ...PARTICLE[spec.kind](r, L), ph: r() * TAU };
+      p.fill = rgba(p.c);
+      list.push(p);
+    }
   }
+  // mist first, then plain specks, then the additive ones in a single pass
+  const order = (p) => (p.big ? 0 : p.add ? 2 : 1);
+  list.sort((a, b) => order(a) - order(b));
   return list;
+}
+
+const MIST = new Map();
+/** A soft horizontal bank of mist, pre-rendered once per colour (a fraction of a glow's cost). */
+function mistSprite(c) {
+  const key = c.join(',');
+  if (MIST.has(key)) return MIST.get(key);
+  const cv = document.createElement('canvas');
+  cv.width = 128;
+  cv.height = 48;
+  const m = cv.getContext('2d');
+  m.translate(64, 24);
+  m.scale(1, 0.375);
+  const g = m.createRadialGradient(0, 0, 0, 0, 0, 64);
+  g.addColorStop(0, rgba(c, 1));
+  g.addColorStop(0.45, rgba(c, 0.45));
+  g.addColorStop(1, rgba(c, 0));
+  m.fillStyle = g;
+  m.fillRect(-64, -64, 128, 128);
+  MIST.set(key, cv);
+  return cv;
 }
 
 export function drawAtmosphere(ctx, L, list, dtMs, t, motion) {
   const dt = Math.min(0.05, dtMs / 1000);
   const { s, w, h } = L;
+  ctx.save();
+  let add = false;
   for (const p of list) {
     if (motion) {
       p.x += (p.vx + (p.kind === 'snow' ? Math.sin(t * 1.3 + p.ph) * 14 : 0)) * dt * p.z * s;
@@ -870,22 +951,24 @@ export function drawAtmosphere(ctx, L, list, dtMs, t, motion) {
       if (p.x < -60) p.x = w + 60;
     }
     if (p.big) {
-      glow(ctx, p.x, p.y, 120 * s, p.c, p.a, false);
+      // a low bank of mist drifting across the ground
+      ctx.globalAlpha = p.a * 1.5;
+      ctx.drawImage(mistSprite(p.c), p.x - 170 * s, p.y - 46 * s, 340 * s, 92 * s);
       continue;
     }
-    const flick = p.kind === 'embers' || p.kind === 'lattice' ? 0.5 + 0.5 * Math.sin(t * 6 + p.ph) : 1;
-    const a = p.a * flick * clamp01(p.z + 0.2);
-    const rad = (p.kind === 'snow' ? 1.6 : p.kind === 'ash' ? 1.4 : 1.1) * (0.6 + p.z) * s;
-    if (p.add) {
-      ctx.save();
+    if (p.add && !add) {
+      add = true;
       ctx.globalCompositeOperation = 'lighter';
     }
-    ctx.fillStyle = rgba(p.c, a);
+    const flick = p.kind === 'embers' || p.kind === 'lattice' ? 0.5 + 0.5 * Math.sin(t * 6 + p.ph) : 1;
+    ctx.globalAlpha = p.a * flick * clamp01(p.z + 0.2);
+    const rad = (p.kind === 'snow' ? 1.6 : p.kind === 'ash' ? 1.4 : 1.1) * (0.6 + p.z) * s;
+    ctx.fillStyle = p.fill;
     ctx.beginPath();
     ctx.arc(p.x, p.y, rad, 0, TAU);
     ctx.fill();
-    if (p.add) ctx.restore();
   }
+  ctx.restore();
 }
 
 export { rowY };

@@ -6,9 +6,12 @@
 import { TAU, clamp01, easeOut, glow, hex, lerp, rgba } from './util.js';
 
 const GOLD = hex('#ffd98a');
-const WHITE = hex('#f4f6fa');
-const EMBER = hex('#ff9a4a');
+const WHITE = hex('#f3eee1');
+const EMBER = hex('#f4a35e');
 const BLOOD = hex('#9e2b25');
+// shockwave rings are painted in brass and ember over a dark under-stroke, never white on white
+const BRASS = hex('#d6b47a');
+const NAVY = [7, 13, 24];
 
 /** Turn one engine fx event into visuals. Returns { hitstopMs, hit, zoom } hints for the renderer. */
 export function spawnFx(list, ev, now, L, rand) {
@@ -60,7 +63,7 @@ export function spawnFx(list, ev, now, L, rand) {
       sparks(x, y, ev.open ? GOLD : WHITE, ev.open ? 22 : 14, ev.open ? 1.2 : 1);
       impact(x, y, ev.open ? GOLD : WHITE, (ev.open ? 150 : 110) * s, ev.open ? 170 : 120);
       chips(x, y, ev.open ? 7 : 4);
-      add({ kind: 'ring', dur: 300, x, y, color: ev.open ? GOLD : WHITE, r: 120 * s, w: 3 });
+      add({ kind: 'ring', dur: 300, x, y, color: ev.open ? EMBER : BRASS, r: 110 * s, w: 2.5 });
       add({ kind: 'flash', dur: 90, color: WHITE, a: 0.08 });
       out.hitstopMs = ev.open ? 70 : 45;
       out.hit = { dir: dirX || (rand() < 0.5 ? -1 : 1), strength: ev.open ? 1 : 0.7 };
@@ -73,19 +76,20 @@ export function spawnFx(list, ev, now, L, rand) {
       out.hit = { dir: ev.dir === 'left' ? 1 : -1, strength: 0.25 };
       break;
     case 'parry':
-      add({ kind: 'flash', dur: 140, color: WHITE, a: 0.2 });
-      add({ kind: 'ring', dur: 360, x: contact.x, y: contact.y, color: WHITE, r: 90 * s });
-      sparks(contact.x, contact.y, WHITE, 18, 1.1);
+      add({ kind: 'flash', dur: 120, color: WHITE, a: 0.1 });
+      add({ kind: 'ring', dur: 360, x: contact.x, y: contact.y, color: BRASS, r: 90 * s, w: 3 });
+      sparks(contact.x, contact.y, WHITE, 14, 1.1);
       impact(contact.x, contact.y, WHITE, 130 * s, 130);
       chips(contact.x, contact.y, 5);
       out.hitstopMs = 50;
       break;
     case 'perfect_parry':
-      add({ kind: 'flash', dur: 220, color: GOLD, a: 0.38 });
-      add({ kind: 'ring', dur: 560, x: contact.x, y: contact.y, color: GOLD, r: 170 * s, w: 8 });
-      add({ kind: 'ring', dur: 760, x: contact.x, y: contact.y, color: GOLD, r: 280 * s, w: 4 });
-      sparks(contact.x, contact.y, GOLD, 34, 1.4, 700);
-      impact(contact.x, contact.y, GOLD, 220 * s, 200);
+      // one thick ring and one thin one, at most: the foe must stay readable through the clash
+      add({ kind: 'flash', dur: 180, color: GOLD, a: 0.14 });
+      add({ kind: 'ring', dur: 560, x: contact.x, y: contact.y, color: BRASS, r: 150 * s, w: 6 });
+      add({ kind: 'ring', dur: 760, x: contact.x, y: contact.y, color: EMBER, r: 230 * s, w: 2 });
+      sparks(contact.x, contact.y, GOLD, 24, 1.3, 700);
+      impact(contact.x, contact.y, GOLD, 170 * s, 200);
       chips(contact.x, contact.y, 8, GOLD);
       out.hitstopMs = 110;
       out.zoom = 1;
@@ -105,28 +109,28 @@ export function spawnFx(list, ev, now, L, rand) {
       break;
     case 'poise_break':
     case 'interrupt':
-      add({ kind: 'ring', dur: 760, x: torso.x, y: torso.y, color: GOLD, r: 300 * s, w: 7 });
+      add({ kind: 'ring', dur: 760, x: torso.x, y: torso.y, color: EMBER, r: 240 * s, w: 5 });
       add({ kind: 'shake', dur: 240, amp: 7 });
-      sparks(torso.x, torso.y, GOLD, 28, 1.2, 700);
-      impact(torso.x, torso.y, GOLD, 200 * s, 180);
+      sparks(torso.x, torso.y, GOLD, 22, 1.2, 700);
+      impact(torso.x, torso.y, GOLD, 160 * s, 180);
       out.hitstopMs = ev.name === 'poise_break' ? 90 : 40;
       break;
     case 'arc_pulse':
       add({ kind: 'beam', dur: 560, x: torso.x, y: torso.y });
-      add({ kind: 'flash', dur: 240, color: hex('#fff4d6'), a: 0.4 });
+      add({ kind: 'flash', dur: 240, color: hex('#fff4d6'), a: 0.2 });
       sparks(torso.x, torso.y, GOLD, 30, 1.3, 760);
       out.hitstopMs = 80;
       out.zoom = 0.6;
       break;
     case 'royal_command':
       add({ kind: 'wave', dur: 1000, color: hex('#e3c463') });
-      add({ kind: 'flash', dur: 300, color: GOLD, a: 0.2 });
+      add({ kind: 'flash', dur: 300, color: GOLD, a: 0.12 });
       break;
     case 'sparky_acid':
       sparks(torso.x, torso.y + 20 * s, hex('#b4e83f'), 26, 1, 760);
       break;
     case 'ward_block':
-      add({ kind: 'ring', dur: 300, x: cx, y: h * 1.04, color: GOLD, r: Math.min(L.w * 0.66, h * 0.58), w: 4, fixed: true });
+      add({ kind: 'ring', dur: 300, x: cx, y: h * 1.04, color: BRASS, r: Math.min(L.w * 0.66, h * 0.58), w: 3, fixed: true });
       add({ kind: 'flash', dur: 140, color: GOLD, a: 0.14 });
       break;
     case 'ward_broken':
@@ -141,7 +145,7 @@ export function spawnFx(list, ev, now, L, rand) {
       add(dust(ev.side ?? 'left', 13));
       break;
     case 'feint_read':
-      add({ kind: 'ring', dur: 520, x: torso.x, y: torso.y, color: hex('#e9d9ff'), r: 160 * s, w: 4 });
+      add({ kind: 'ring', dur: 520, x: torso.x, y: torso.y, color: hex('#c9b8ec'), r: 160 * s, w: 3 });
       break;
     case 'combo_up':
       add({ kind: 'flash', dur: 160, color: GOLD, a: 0.1 });
@@ -149,8 +153,8 @@ export function spawnFx(list, ev, now, L, rand) {
     case 'victory':
       add({ kind: 'bloom', dur: 1400, color: GOLD });
       impact(torso.x, torso.y, hex('#fff4d6'), 220 * s, 380);
-      add({ kind: 'ring', dur: 900, x: torso.x, y: torso.y, color: GOLD, r: 360 * s, w: 6 });
-      sparks(torso.x, torso.y, GOLD, 40, 1.5, 1100);
+      add({ kind: 'ring', dur: 900, x: torso.x, y: torso.y, color: BRASS, r: 320 * s, w: 5 });
+      sparks(torso.x, torso.y, GOLD, 30, 1.5, 1100);
       out.zoom = 1;
       break;
     case 'defeat':
@@ -203,7 +207,7 @@ export function drawFx(ctx, L, list, now) {
           const vy = p.vy + 840 * s * dt;
           const sp = Math.hypot(vx, vy) || 1;
           ctx.strokeStyle = rgba(f.color, a);
-          ctx.lineWidth = Math.max(1, 2.2 * s * a);
+          ctx.lineWidth = Math.max(1, 1.7 * s * a);
           ctx.beginPath();
           ctx.moveTo(x, y);
           ctx.lineTo(x - (vx / sp) * p.len * s, y - (vy / sp) * p.len * s);
@@ -220,40 +224,31 @@ export function drawFx(ctx, L, list, now) {
         const x1 = x0 + Math.cos(ang) * f.len * grow;
         const y1 = y0 + Math.sin(ang) * f.len * grow;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = rgba(hex('#ffe9ae'), 0.35 * a);
-        ctx.lineWidth = 16 * s * a;
+        ctx.strokeStyle = rgba(EMBER, 0.3 * a);
+        ctx.lineWidth = 11 * s * a;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.lineTo(x1, y1);
         ctx.stroke();
-        ctx.strokeStyle = rgba(WHITE, 0.95 * a);
-        ctx.lineWidth = 4 * s * a;
+        ctx.strokeStyle = rgba(hex('#fff4d6'), 0.85 * a);
+        ctx.lineWidth = 3 * s * a;
         ctx.stroke();
         break;
       }
       case 'ring': {
-        // a shockwave: a soft wide band of air with a hard bright leading edge
-        ctx.globalCompositeOperation = 'lighter';
+        // a shockwave: a painted band of brass or ember over a dark under-stroke, so it reads
+        // against a bright foe as well as the night (no additive halo: it never washes the body)
         const rr = f.fixed ? f.r : f.r * easeOut(k);
-        const path = () => {
-          ctx.beginPath();
-          if (f.fixed) ctx.arc(f.x, f.y, rr, Math.PI * 1.04, Math.PI * 1.96);
-          else ctx.arc(f.x, f.y, rr, 0, TAU);
-        };
-        path();
-        ctx.strokeStyle = rgba(f.color, 0.16 * a);
-        ctx.lineWidth = (f.w ?? 5) * s * (3.5 + 3 * k);
+        ctx.beginPath();
+        if (f.fixed) ctx.arc(f.x, f.y, rr, Math.PI * 1.04, Math.PI * 1.96);
+        else ctx.arc(f.x, f.y, rr, 0, TAU);
+        const lw = Math.max(1, (f.w ?? 4) * s * a);
+        ctx.strokeStyle = rgba(NAVY, 0.4 * a);
+        ctx.lineWidth = lw + 2.5 * s;
         ctx.stroke();
-        ctx.strokeStyle = rgba(f.color, 0.9 * a);
-        ctx.lineWidth = (f.w ?? 5) * s * a;
+        ctx.strokeStyle = rgba(f.color, 0.85 * a);
+        ctx.lineWidth = lw;
         ctx.stroke();
-        if (!f.fixed) {
-          ctx.beginPath();
-          ctx.arc(f.x, f.y, rr * 0.82, 0, TAU);
-          ctx.strokeStyle = rgba(WHITE, 0.35 * a * a);
-          ctx.lineWidth = Math.max(1, 1.4 * s);
-          ctx.stroke();
-        }
         break;
       }
       case 'impact': {
@@ -261,19 +256,21 @@ export function drawFx(ctx, L, list, now) {
         ctx.globalCompositeOperation = 'lighter';
         const e = easeOut(k);
         const sz = f.size * (0.55 + 0.45 * e);
+        // the speed lines stay close to the blow (under a third of the screen's radius)
+        const reach = Math.hypot(w, h) * 0.5 * 0.3;
         ctx.lineCap = 'round';
+        ctx.strokeStyle = rgba(f.color, 0.55 * a);
+        ctx.lineWidth = Math.max(1, 1.6 * s * a);
+        ctx.beginPath();
         for (const ray of f.rays) {
-          const r0 = sz * (0.25 + 0.5 * e);
-          const r1 = sz * (0.55 + 0.75 * e) * ray.l;
-          ctx.strokeStyle = rgba(f.color, 0.7 * a);
-          ctx.lineWidth = Math.max(1, 2.4 * s * a);
-          ctx.beginPath();
+          const r0 = Math.min(reach * 0.6, sz * (0.25 + 0.5 * e));
+          const r1 = Math.min(reach, r0 + sz * (0.45 + 0.5 * e) * ray.l);
           ctx.moveTo(f.x + Math.cos(ray.a) * r0, f.y + Math.sin(ray.a) * r0);
-          ctx.lineTo(f.x + Math.cos(ray.a) * (r0 + r1), f.y + Math.sin(ray.a) * (r0 + r1));
-          ctx.stroke();
+          ctx.lineTo(f.x + Math.cos(ray.a) * r1, f.y + Math.sin(ray.a) * r1);
         }
-        const fl = sz * 0.9 * a;
-        ctx.fillStyle = rgba(WHITE, 0.95 * a);
+        ctx.stroke();
+        const fl = sz * 0.55 * a;
+        ctx.fillStyle = rgba(hex('#fff4d6'), 0.85 * a);
         ctx.beginPath();
         ctx.moveTo(f.x - fl, f.y);
         ctx.quadraticCurveTo(f.x, f.y, f.x, f.y - fl * 0.55);
@@ -281,7 +278,7 @@ export function drawFx(ctx, L, list, now) {
         ctx.quadraticCurveTo(f.x, f.y, f.x, f.y + fl * 0.55);
         ctx.quadraticCurveTo(f.x, f.y, f.x - fl, f.y);
         ctx.fill();
-        glow(ctx, f.x, f.y, sz * 0.7, f.color, 0.75 * a);
+        glow(ctx, f.x, f.y, sz * 0.5, f.color, 0.4 * a);
         break;
       }
       case 'chips':
@@ -464,10 +461,10 @@ export function fxLights(list, now, L) {
     const k = (now - f.t0) / f.dur;
     if (k < 0 || k >= 1) continue;
     const a = (1 - k) * (1 - k);
-    if (f.kind === 'sparks') out.push({ x: f.x, y: f.y, r: 170 * L.s, color: f.color, a: 0.55 * a });
-    else if (f.kind === 'impact') out.push({ x: f.x, y: f.y, r: f.size * 1.6, color: f.color, a: 0.7 * a });
-    else if (f.kind === 'flash') out.push({ x: torso.x, y: torso.y, r: 420 * L.s, color: f.color, a: Math.min(0.6, f.a * 2.2) * a });
-    else if (f.kind === 'beam') out.push({ x: f.x, y: f.y, r: 260 * L.s, color: GOLD, a: 0.6 * a });
+    if (f.kind === 'sparks') out.push({ x: f.x, y: f.y, r: 150 * L.s, color: f.color, a: 0.3 * a });
+    else if (f.kind === 'impact') out.push({ x: f.x, y: f.y, r: f.size * 1.4, color: f.color, a: 0.4 * a });
+    else if (f.kind === 'flash') out.push({ x: torso.x, y: torso.y, r: 420 * L.s, color: f.color, a: Math.min(0.3, f.a * 1.5) * a });
+    else if (f.kind === 'beam') out.push({ x: f.x, y: f.y, r: 260 * L.s, color: GOLD, a: 0.4 * a });
   }
   return out;
 }

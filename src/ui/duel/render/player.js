@@ -33,8 +33,48 @@ function bladeAngle(p, guarding) {
   return { a: -0.2, k: 0, d: null };
 }
 
-/** Draw the blade. `hist` is the renderer's short history of blade angles, for the swing trail. */
-export function drawPlayer(ctx, L, duel, t, guarding, hist, motion) {
+const bladeLength = (L) => Math.min(L.h * (L.phone ? 0.27 : 0.34), 250 * L.s);
+
+/**
+ * Paint the arm, hilt and blade once (per resize) into a sprite: they are rigid, and their
+ * engraving, rivets and bevels are most of the cost. The light that lives on them (the magitech
+ * thread, the stones, the running glint) is drawn over the sprite every frame.
+ */
+export function createPlayerArt(L, dpr) {
+  const { s } = L;
+  const bl = bladeLength(L) / s;
+  const x0 = -54;
+  const x1 = 56;
+  const y0 = -bl - 4;
+  const y1 = 274;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round((x1 - x0) * s * dpr));
+  c.height = Math.max(1, Math.round((y1 - y0) * s * dpr));
+  const g = c.getContext('2d');
+  g.setTransform(s * dpr, 0, 0, s * dpr, -x0 * s * dpr, -y0 * s * dpr);
+  drawArm(g);
+  if (L.phone) {
+    // on phones the controls own the bottom of the screen: the vambrace sinks into the dark
+    // below the fist, so the engraving never fights the buttons drawn over it
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    const fg = g.createLinearGradient(0, 58, 0, 150);
+    fg.addColorStop(0, 'rgba(0,0,0,0)');
+    fg.addColorStop(1, 'rgba(0,0,0,0.62)');
+    g.fillStyle = fg;
+    g.fillRect(x0, 58, x1 - x0, y1 - 58);
+    g.restore();
+  }
+  drawHilt(g);
+  drawBlade(g, bl);
+  return { canvas: c, x0, y0, w: x1 - x0, h: y1 - y0, bl };
+}
+
+/**
+ * Draw the blade. `hist` is the renderer's short history of blade angles, for the swing trail;
+ * `art` is the cached sprite from createPlayerArt (drawn from scratch without it).
+ */
+export function drawPlayer(ctx, L, duel, t, guarding, hist, motion, art = null) {
   const { w, h, cx, s, bladeY } = L;
   const p = duel.player;
 
@@ -85,9 +125,11 @@ export function drawPlayer(ctx, L, duel, t, guarding, hist, motion) {
     oy += 18 * s;
   }
   const idle = motion ? Math.sin(t * 1.8) * 4 * s : 0;
-  const bx = cx + 108 * s + ox;
+  // at rest the crossguard sits low and right, so the blade rests beside the foe's hip
+  // (on wide screens it sits in the gap between the Sovereign's bar and the right-hand controls)
+  const bx = cx + (L.phone ? 122 * s : Math.max(112 * s, L.w * 0.15)) + ox;
   const by = bladeY + oy + idle;
-  const len = Math.min(h * (L.phone ? 0.27 : 0.34), 250 * s);
+  const len = bladeLength(L);
 
   // swing trail: a crescent of light along the recent arc, brightest at the tip
   hist.push({ a: angle, x: bx, y: by, at: t });
@@ -136,12 +178,17 @@ export function drawPlayer(ctx, L, duel, t, guarding, hist, motion) {
   ctx.rotate(angle);
   ctx.scale(s, s);
   const bl = len / s;
-  if (guarding) glow(ctx, 0, -bl * 0.5, bl * 0.75, hex('#ffe9ae'), 0.22);
+  if (guarding) glow(ctx, 0, -bl * 0.55, bl * 0.5, hex('#ffe9ae'), 0.2);
   const pulse = motion ? 0.75 + 0.25 * Math.sin(t * 2.6) : 0.85;
   const charged = clamp01(p.arcCharge ?? 0);
-  drawArm(ctx, pulse, charged);
-  drawHilt(ctx, pulse);
-  drawBlade(ctx, bl, t, motion, Boolean(swingDir), pulse, charged);
+  if (art && Math.abs(art.bl - bl) < 0.5) ctx.drawImage(art.canvas, art.x0, art.y0, art.w, art.h);
+  else {
+    drawArm(ctx);
+    drawHilt(ctx);
+    drawBlade(ctx, bl);
+  }
+  armLights(ctx, pulse, charged, L.phone ? 0.45 : 1);
+  bladeLights(ctx, bl, t, motion, Boolean(swingDir), pulse, charged);
   ctx.restore();
 }
 
@@ -185,7 +232,7 @@ function brassBand(ctx, y0, y1, wA, wB) {
   ctx.fill();
 }
 
-function drawArm(ctx, pulse, charged) {
+function drawArm(ctx) {
   // the sleeve, disappearing off the bottom of the frame
   ctx.fillStyle = steelAcross(ctx, -40, 50, NAVY, 0.35);
   ctx.beginPath();
@@ -232,20 +279,13 @@ function drawArm(ctx, pulse, charged) {
     ctx.bezierCurveTo(sx * 20 + 3, 128, sx * 18 + 3, 142, sx * 9 + 3, 146);
     ctx.stroke();
   }
-  // the magitech channel: a warm thread of light along the plate into the wrist medallion
-  const live = Math.min(1.2, 0.45 + 0.4 * pulse + 0.4 * charged);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.strokeStyle = rgba(LATTICE, 0.3 * live);
-  ctx.lineWidth = 5;
+  // the magitech channel, unlit (armLights runs the light along it)
+  ctx.strokeStyle = rgba(BRASS_DARK, 0.9);
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(-8, 150);
   ctx.quadraticCurveTo(-8, 110, -4, 76);
   ctx.stroke();
-  ctx.strokeStyle = rgba(LATTICE_HI, 0.85 * Math.min(1, live));
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  ctx.restore();
   // the medallion: a brass boss with the Architect's broken circle
   const mg = ctx.createRadialGradient(0, 64, 1, -3, 68, 11);
   mg.addColorStop(0, rgba(BRASS_HI));
@@ -260,7 +300,6 @@ function drawArm(ctx, pulse, charged) {
   ctx.beginPath();
   ctx.arc(-3, 68, 5.5, -1.2, 4.4);
   ctx.stroke();
-  glow(ctx, -3, 68, 16, LATTICE, 0.28 * live);
   for (const [x, y] of [[-24, 122], [30, 122], [-27, 148], [34, 148]]) rivet(ctx, x, y, 2.2);
 
   // the fist around the grip: a back-of-hand plate, four knuckle plates, the thumb across
@@ -322,9 +361,29 @@ function drawArm(ctx, pulse, charged) {
   rivet(ctx, 12, 40, 2);
 }
 
+/** The live light on the arm and hilt: the magitech thread, the medallion and the ember stone. */
+function armLights(ctx, pulse, charged, dim = 1) {
+  const live = Math.min(1.2, 0.45 + 0.4 * pulse + 0.4 * charged) * dim;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = rgba(LATTICE, 0.3 * live);
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(-8, 150);
+  ctx.quadraticCurveTo(-8, 110, -4, 76);
+  ctx.stroke();
+  ctx.strokeStyle = rgba(LATTICE_HI, 0.85 * Math.min(1, live));
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.restore();
+  glow(ctx, -3, 68, 16, LATTICE, 0.28 * live);
+  glow(ctx, 0, -13, 16, hex('#f4a35e'), 0.3 + 0.2 * pulse);
+}
+
 // ── the hilt: a leather grip, a brass crossguard with down-turned quillons and an ember stone ──
 
-function drawHilt(ctx, pulse) {
+function drawHilt(ctx) {
   // the grip, between fist and guard
   ctx.fillStyle = rgba(LEATHER);
   ctx.fillRect(-7, -9, 14, 12);
@@ -392,28 +451,34 @@ function drawHilt(ctx, pulse) {
   ctx.beginPath();
   ctx.arc(0, -13, 5.2, 0, TAU);
   ctx.fill();
-  glow(ctx, 0, -13, 16, hex('#f4a35e'), 0.3 + 0.2 * pulse);
 }
 
 // ── the blade: two bevels, a fuller with a thread of light, an engraved ricasso, bright edges ──
 
-function drawBlade(ctx, len, t, motion, swinging, pulse, charged) {
-  const base = -24;
-  const half = 11.5;
+const BLADE_BASE = -24;
+const BLADE_HALF = 11.5;
+
+function bladeOutline(ctx, len) {
+  const base = BLADE_BASE;
+  const half = BLADE_HALF;
   const shoulder = -len + 40;
-  const outline = () => {
-    ctx.beginPath();
-    ctx.moveTo(-half, base);
-    ctx.lineTo(-half + 0.5, base - 18);
-    ctx.lineTo(-half * 0.72, shoulder);
-    ctx.lineTo(0, -len);
-    ctx.lineTo(half * 0.72, shoulder);
-    ctx.lineTo(half - 0.5, base - 18);
-    ctx.lineTo(half, base);
-    ctx.closePath();
-  };
+  ctx.beginPath();
+  ctx.moveTo(-half, base);
+  ctx.lineTo(-half + 0.5, base - 18);
+  ctx.lineTo(-half * 0.72, shoulder);
+  ctx.lineTo(0, -len);
+  ctx.lineTo(half * 0.72, shoulder);
+  ctx.lineTo(half - 0.5, base - 18);
+  ctx.lineTo(half, base);
+  ctx.closePath();
+}
+
+function drawBlade(ctx, len) {
+  const base = BLADE_BASE;
+  const half = BLADE_HALF;
+  const shoulder = -len + 40;
   ctx.save();
-  outline();
+  bladeOutline(ctx, len);
   ctx.clip();
   // the shadow-side bevel (left) and the lit bevel (right) meet at the spine
   const lg = ctx.createLinearGradient(-half, 0, 0, 0);
@@ -451,19 +516,10 @@ function drawBlade(ctx, len, t, motion, swinging, pulse, charged) {
   ctx.moveTo(3.2, base - 22);
   ctx.lineTo(2, fTop);
   ctx.stroke();
-  // a running glint: a diagonal band of light sliding up the steel
-  const gk = motion ? ((t * 0.35) % 1.6) / 1.6 : 0.4;
-  const gy = lerp(base, -len, gk);
-  const band = ctx.createLinearGradient(-half, gy + 26, half, gy - 26);
-  band.addColorStop(0, 'rgba(255,255,255,0)');
-  band.addColorStop(0.5, `rgba(255,252,240,${swinging ? 0.75 : 0.42})`);
-  band.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = band;
-  ctx.fillRect(-half - 1, gy - 40, half * 2 + 2, 80);
   ctx.restore();
   // edges: a hard bright line on the lit edge, a fine one on the shadow edge
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.strokeStyle = 'rgba(255,250,240,0.92)';
   ctx.lineWidth = 1.3;
   ctx.beginPath();
   ctx.moveTo(half - 0.4, base - 2);
@@ -502,6 +558,28 @@ function drawBlade(ctx, len, t, motion, swinging, pulse, charged) {
     ctx.lineTo(3.6, y);
     ctx.stroke();
   }
+}
+
+/** The live light on the blade: the running glint, the fuller's thread, the point mid-swing. */
+function bladeLights(ctx, len, t, motion, swinging, pulse, charged) {
+  const base = BLADE_BASE;
+  const half = BLADE_HALF;
+  const fTop = -len * 0.72;
+  // a running glint: a diagonal band of light sliding up the steel
+  const gk = motion ? ((t * 0.35) % 1.6) / 1.6 : 0.4;
+  if (gk < 1) {
+    const gy = lerp(base, -len, gk);
+    ctx.save();
+    bladeOutline(ctx, len);
+    ctx.clip();
+    const band = ctx.createLinearGradient(-half, gy + 26, half, gy - 26);
+    band.addColorStop(0, 'rgba(255,255,255,0)');
+    band.addColorStop(0.5, `rgba(255,248,232,${swinging ? 0.7 : 0.4})`);
+    band.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = band;
+    ctx.fillRect(-half - 1, gy - 40, half * 2 + 2, 80);
+    ctx.restore();
+  }
   // the thread of light in the fuller: warm gold, reaching further as the Arc charges
   const live = Math.min(1, 0.35 + 0.35 * pulse + 0.6 * charged + (swinging ? 0.3 : 0));
   const top = lerp(base - 22, fTop, 0.55 + 0.45 * charged);
@@ -522,5 +600,5 @@ function drawBlade(ctx, len, t, motion, swinging, pulse, charged) {
   ctx.stroke();
   ctx.restore();
   // the point catches the light mid-swing
-  if (swinging) glow(ctx, 0, -len, 22, hex('#ffffff'), 0.55);
+  if (swinging) glow(ctx, 0, -len, 20, hex('#fff4d6'), 0.5);
 }
