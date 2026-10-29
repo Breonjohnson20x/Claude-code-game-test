@@ -69,7 +69,7 @@ src/ui/              React UI
   screens/           Title, WarRoom, Resolution, Expedition, Campfire, Passing
   overlays/          Settings, Saves, Chronicle, Dossier (council/factions/world)
   duel/              DuelScreen (canvas, real-time input)
-  art/               procedural SVG/canvas art (region scenes, portraits, crests, backdrops)
+  art/               procedural SVG/canvas art (region scenes in scene/, portraits in portrait/, crests, backdrops)
   audio/audio.js     procedural Web Audio engine + haptics
 scripts/             e2e.mjs (Playwright gate), context-bundle.mjs, pwa/ (manifest, icons, service worker)
 .github/workflows/   ci.yml (test, lint, build), pages.yml (deploy main to GitHub Pages)

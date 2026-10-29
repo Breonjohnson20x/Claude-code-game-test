@@ -22,11 +22,11 @@ Where the screens live (helpers sit in a folder named after the screen):
 |---|---|---|
 | Title | `src/ui/screens/TitleScreen.jsx` | `ui/pwa.js` (`useInstallState`, `promptInstall`: the install button and the iOS hint) |
 | Training yard | `src/ui/screens/TrainingScreen.jsx` (shown when `training` is set in `useGame()` and no reign is loaded) | `screens/training/records.js` (per-device progress) |
-| War Room | `src/ui/screens/WarRoomScreen.jsx` | `screens/warroom/` (Crisis, Council, Orders, CustomDecree, Trial, shared, words) |
+| War Room | `src/ui/screens/WarRoomScreen.jsx` | `screens/warroom/` (Crisis, Council, Orders, CustomDecree, Trial, shared, words, ornate, tones) |
 | Resolution | `src/ui/screens/ResolutionScreen.jsx` | `screens/resolution/` (Report, Decisions) |
 | March | `src/ui/screens/ExpeditionScreen.jsx` | `screens/expedition/` (MarchRail, ChoiceList, DuelOutcome, words) |
 | Campfire | `src/ui/screens/CampfireScreen.jsx` | — |
-| The Passing | `src/ui/screens/PassingScreen.jsx` | `screens/passing/` (one component per step, Backdrop, StepIndicator, ActionBar, copy) |
+| The Passing | `src/ui/screens/PassingScreen.jsx` | `screens/passing/` (one component per step, Backdrop, StepIndicator, StepHeader, ActionBar, Manuscript, copy) |
 | Duel | `src/ui/duel/DuelScreen.jsx` | `duel/hud.jsx` (nameplate, bars, controls, intro), `duel/render/` (canvas renderer), `duel/colors.js` |
 | Chronicle | `src/ui/overlays/ChronicleSheet.jsx` | `overlays/chronicle/` |
 | Council dossier | `src/ui/overlays/DossierSheet.jsx` | `overlays/dossier/` (Council, Factions, World tabs) |
@@ -135,25 +135,86 @@ relationship numbers or NarrativeIntensity (§16, §22).
 `Panel({ parchment, tight, as })`, `Eyebrow`, `Title({ as })`, `Rule`, `Prose({ lines, serif })`,
 `Chip({ tone: gold|ember|crimson|frost|iron|parchment })`, `Meter({ value, max, label, tone })`,
 `ResourceHud({ resources, deltas, compact })`, `Sheet({ open, onClose, title, eyebrow, footer, wide })`,
-`Screen({ backdrop, wide })`, `Shift({ label, from, to, good })`, `cx(...)`, `RESOURCE_META`,
+`Screen({ backdrop, wide })`, `Shift({ label, from, to, good })`, `Toggle({ checked, onChange, label, id })`
+(a `role="switch"` in `.switch`), `Segmented({ options, value, onChange, label })` (a radiogroup with
+arrow keys, `.seg` / `.seg__opt`; `overlays/chronicle/Segmented.jsx` re-exports it), `signed(n)` (deltas
+with a true minus sign, U+2212), `cx(...)`, `RESOURCE_META`,
 `Icon({ name, size, label })` (names: treasury manpower readiness stability unrest intel chronicle
 council saves settings close back forward sword crown fire map check alert quill scroll menu flag
 heart sound mute download upload trash). `TopBar` (`src/ui/game/TopBar.jsx`) is the in-game header.
 
-Theme classes (`src/styles/theme.css`): `.panel .panel-parchment .btn-royal .btn-ghost .order-card
-(.order-card__key/__body/__title/__desc/__meta, .order-card--danger, aria-pressed for selected)
-.chip--* .meter .gold-rule .text-gilded .text-engraved .text-glow-gold .glow-gold .vignette
-.scroll-elvia .bg-war-room .chrome-bar .screen-veil`; tokens `navy-950…500, stone-*, parchment-50…500, ink-*, gold-200…800,
+Theme classes (`src/styles/theme.css`): `.panel .panel--quiet .panel-parchment .btn-royal .btn-ghost
+.btn-danger .btn-icon .order-card (.order-card__key/__body/__title/__desc/__meta, .order-card--danger,
+.order-card--quiet, aria-pressed for selected) .chip--* .meter .gold-rule .plaque .text-gilded
+.text-engraved .text-glow-gold .glow-gold .vignette .drop-cap .scroll-elvia .bg-war-room .chrome-bar
+.topbar-nav .screen-veil .switch .seg .range-elvia .field`, and the nested-surface materials below;
+tokens `navy-950…500, stone-*, parchment-50…500, ink-*, gold-200…800,
 ember-*, crimson-*, lattice-*, iron-*, brass-*, frost-*, acid-*, moss-*`; fonts `font-display`
 (Cinzel), `font-serif` (Cormorant Garamond), `font-body`.
 
+**Surface ranking.** `.panel` is the hero surface (bevel, hairline, gilded corner caps): one per
+screen. Panels that are direct children of a `.grid`, and `.panel--quiet`, drop the caps. Inside
+sheets and panels use `.tablet` (raised card), `.tablet--stone` (dead or settled), `.well`
+(recessed), `.well--lit` (earned or in effect) and `.well--stone`, never flat rgba boxes. Helpers:
+`.label-engraved` (small kicker labels), `.coin` (struck gold numerals), `.socket` (an icon in a
+brass socket), `.pip` / `.pip--on` (diamond progress). Council, Factions and World cards, the
+Chronicler's Pen, save slots, monuments and Legacies in effect use them.
+
+**Chrome.** `TopBar` icon buttons are 44 px on phones and 48 px from `sm` up, 6 px apart, with a
+1 px focus offset (`.topbar-nav`); resource delta tabs straddle the plaque's top-right corner.
+`.chrome-bar` is opaque on a brass rail with a 14 px fade under it; the War Room and Resolution
+HUDs override it with an opaque gradient and no backdrop-filter. Sheets: the scrim is navy-950 at
+80% with no blur. Saves shows exactly one gold button: "Save here" on the first empty slot during
+a reign, "Load" on the newest save from the title. Dossier tabs share the `.seg` look and take an
+optional `short` label for phones ("World"; the full label stays the accessible name), sit on an
+opaque sticky row, and show crests at 88 px from `sm` up.
+
+## Screens: what they look like
+
+- **War Room**: the `WarRoomBackdrop` with its room layer. The crisis eyebrow is the season
+  followed by five inline season diamonds (the diamonds carry the `aria-label`; "Turn n of 5"
+  words show from `sm` up); the location is an engraved gold line; a `TitleRule` runs the full
+  title width. The briefing's opening paragraph gets a `.drop-cap` when it is at least 150
+  characters (`dropCapClass`). Royal orders do not use `.order-card`: they are dossier cards with
+  a struck letter `Medallion` (48 px on phones, 58 px from `sm`), a category accent from
+  `tones.js` (only the first category's short name on phones), a brass cost plate, and
+  `aria-pressed` while their confirm sheet is open. Order and reaction portraits at small sizes
+  render as head crops with a hairline. Voices put the quote glyph inside the card with an
+  italic gold attribution.
+- **Resolution**: a static gradient backdrop; the header is a hero view of the Marches at dusk (a
+  still `RegionScene` whose beat follows the order's category) with the eyebrow, `h1` and
+  `TitleRule` over its masked foot, full-bleed on phones and a card with gilt corners from `sm`
+  up. New Chronicle entries sit on a `Manuscript` page.
+- **Campfire**: an `h-dvh` column. The `CampfireScene` is the full-bleed hero behind everything,
+  with its fire group in a clear band at the foot of the screen (`clamp(220px,30dvh,280px)`, 30dvh
+  under 600 px tall) that words never cover. The talk scrolls above the band over scrims passed
+  as the scene's `scrim` (dark where text sits, clear over the band; a further dimming layer fades
+  in once the conversation or the short moment starts) and returns to the top on each view
+  change. Answers are kit `.order-card`s with a tone plaque; quotes are typographic.
+- **The Passing**: step I, the last fire, sits under the left column on `lg` screens (the
+  backdrop hides its vignette for this step) and in a 248 px strip (300 px from `sm`, `lg:hidden`)
+  inside the step on phones; farewells get smart quotes. The Chronicle step is an illuminated
+  `Manuscript`. Legacy cards carry a `Medallion` with the Legacy's roman numeral; earned cards are
+  warm parchment with a brass spine, unearned ones dimmed parchment with a wax "Not earned" stamp,
+  the status chip under the name.
+- **Duel HUD** (`duel/hud.jsx`): the foe's name card is drawn on the canvas in the sky band at the
+  start, and the HUD nameplate fades in once `r.introShowing()` turns false. `FoePlate` never
+  truncates the name (it steps down in size and may wrap); the epithet line still truncates.
+  `FoePlate` and `Controls` are memoized. `Controls` is one CSS grid: on a phone the Sovereign's
+  bar, then abilities and Royal, then Dodge / Guard / Dodge; from `lg` the controls split around
+  the foe column, the bar centred under the foe, captions at 0.82rem. Bars are bevelled with
+  quarter ticks, a warm damage chip and a lit leading edge; round controls share a brass `Medal`
+  rim.
+
 ## Art (`src/ui/art/index.js`) and duel
 
-`RegionScene({ beat, regionState, timeOfDay, monuments })`, `WarRoomBackdrop({ threats: {
-syndicate, wargs, refugees }, regionState, dim })`, `Portrait({ id, size, mood, label })` (ids
+`RegionScene({ beat, regionState, timeOfDay, season, monuments, label, animated, card })` (an
+unlabelled scene is decorative and still unless `animated`), `WarRoomBackdrop({ threats: {
+syndicate, wargs, refugees }, regionState, dim })`, `Portrait({ id, size, mood, label, ring })` (ids
 mara vale cassian sparky mika nyra vex skaela sovereign chronicler), `FactionCrest({ id: 'iron_syndicate'
 |'frost_wargs'|'elvia', size })`, `ArchitectSymbol({ size, glow, animated })`, `CampfireScene({
-intensity })`, `Sigil`, `GoldDivider`, `PanelCorners`. Duel: `DuelScreen` from
+intensity, fireX, fireY, band, moon, zoom, variant, scrim })`, `Sigil`, `GoldDivider`, `PanelCorners`;
+`LightRays` and `Motes` from `src/ui/art/Atmosphere.jsx`. Duel: `DuelScreen` from
 `src/ui/duel/DuelScreen.jsx` (`{ config, onComplete(result), showHints? }`, full-screen, owns its
 own music). `StageBackdrop({ stage, noSymbol })` (`src/ui/duel/StageBackdrop.jsx`) puts a living
 duel stage behind a page: the title screen shows the broken-circle ruin at night, the training
@@ -178,7 +239,8 @@ Only call when `aiOn`. Label AI text subtly ("Narrated by Claude").
 ## Presentation rules
 
 Mobile-first at 390×844, then desktop. The War Room, Resolution and march headers stick to the top
-as a frosted `.chrome-bar`, so the story scrolls cleanly under them. Body ≥ 15px (`text-base` or larger, serif prose
+as an opaque `.chrome-bar`, so the story scrolls cleanly under them (no `backdrop-filter`
+over animated art: see the performance rules in [ART_AND_AUDIO.md](ART_AND_AUDIO.md#performance-and-accessibility)). Body ≥ 15px (`text-base` or larger, serif prose
 `text-[1.18rem]`). Tap targets ≥ 48px. Every action reachable by keyboard (real `<button>`s,
 visible focus). Headline per screen (`h1`), `aria-live="polite"` on results. Respect reduced
 motion. Regal magitech: stone, brass, navy, gold light, ember — no neon/cyan. AAA-inspired

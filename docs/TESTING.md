@@ -31,7 +31,9 @@ Code, the project skill `verify-elvia` (`.claude/skills/verify-elvia/SKILL.md`) 
 ## Unit and integration tests (vitest)
 
 Tests sit next to the code (`*.test.js`). They are pure Node: no DOM, no network. AI tests use a
-fake `fetch`, and save tests use an in-memory storage. 162 tests across 11 files:
+fake `fetch`, and save tests use an in-memory storage. Agent worktrees under `.claude/` hold whole
+copies of the repo, so vitest (`vite.config.js` `test.exclude`) and eslint (with `e2e-artifacts/`)
+skip them. 167 tests across 12 files:
 
 | File | Tests | What it proves |
 |---|---:|---|
@@ -45,6 +47,7 @@ fake `fetch`, and save tests use an in-memory storage. 162 tests across 11 files
 | `src/game/ai/client.test.js` | 6 | The request built for the default model (structured output, server-side refusal fallbacks, effort), feature gating per model, the beta header, SDK error classification by class (never by message text), refusal and fallback handling. |
 | `src/game/dev/scenarios.test.js` | 19 | Every dev scenario reaches its phase through real actions, passes `validateStateShape`, and `getView` does not throw. Beats and offers are where the UI previews expect them. |
 | `src/ui/duel/render/stages.test.js` | 4 | Every march beat, the trial and the yard map to a duel stage; the layout never collapses to a zero scale (the painters step by it); every stage has scenery, foe lighting and an atmosphere; each named foe gets their own look. |
+| `src/ui/art/scene/frame.test.js` | 5 | RegionScene framing: an unmeasured or 0×0 box shows the whole painting; wide boxes keep the full width and crop height around the focus; a portrait hero keeps every beat's focal point in frame and in the upper part of the box; extreme aspect ratios never give a degenerate box; a wide card zooms so the focal point sits about 60% across (and a portrait box ignores the card option). |
 | `scripts/pwa/pwa.test.mjs` | 4 | The PNG encoder round-trips; the icon has transparent corners (maskable: full bleed) and a bright star; the manifest uses relative URLs; the service worker gets the precache list and a content-derived version. |
 
 ### Bots

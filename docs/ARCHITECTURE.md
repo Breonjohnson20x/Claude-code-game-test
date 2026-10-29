@@ -40,9 +40,9 @@ src/
     kit/                kit.jsx (buttons, panels, sheets, meters, HUD) · icons.jsx
     screens/            Title · WarRoom · Resolution · Expedition · Campfire · Passing (+ helper folders)
     overlays/           Settings · Saves · Chronicle · Dossier (+ helper folders)
-    duel/               DuelScreen.jsx · hud.jsx · render/ (stages, foes, telegraph, player, fx)
+    duel/               DuelScreen.jsx · hud.jsx · render/ (stages, foes, telegraph, player, fx, post)
     dev/                DuelLab.jsx (dev-only duel lab, /?lab=duel)
-    art/                RegionScene · WarRoomBackdrop · CampfireScene · Portrait · FactionCrest · ArchitectSymbol · Ornaments · scene/
+    art/                RegionScene · WarRoomBackdrop · CampfireScene · Portrait · FactionCrest · ArchitectSymbol · Ornaments · Atmosphere · scene/ · portrait/
     audio/              audio.js (Web Audio engine + haptics)
     pwa.js              service worker registration and the install prompt (useInstallState)
   styles/theme.css      Tailwind v4 tokens and component classes
