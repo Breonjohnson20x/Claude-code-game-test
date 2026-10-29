@@ -7,6 +7,8 @@ import { Icon } from '../../kit/icons.jsx';
 import { Button, Sheet, cx } from '../../kit/kit.jsx';
 import { useReducedMotion, reactionWord, ADVISOR_IDS } from './words.js';
 import { CategoryIcon, CostLine, ReactionMark, SealOverlay, SectionHeading } from './shared.jsx';
+import { Medallion } from './ornate.jsx';
+import { CATEGORY_TONE, categoryTone, shortCategoryName } from './tones.js';
 
 function Reactions({ reactions, characters, size = 26, withWords = false }) {
   const ids = ADVISOR_IDS.filter((id) => reactions?.[id]);
@@ -41,43 +43,88 @@ function Reactions({ reactions, characters, size = 26, withWords = false }) {
   );
 }
 
-function OrderCard({ order, characters, onOpen, index }) {
+/** An order as a sealed dossier: an engraved letter medallion, a category accent, the cost plate. */
+function OrderCard({ order, characters, onOpen, index, selected }) {
   const danger = Boolean(order.warning);
+  const tone = categoryTone(order.category);
+  const edge = danger ? '194 65 58' : tone.glow;
   return (
     <li className="animate-fade-up" style={{ animationDelay: `${160 + index * 70}ms` }}>
       <button
         type="button"
-        className={cx('order-card min-h-[5.5rem]', danger && 'order-card--danger')}
+        className={cx(
+          'group relative isolate flex w-full min-h-[5rem] items-start gap-3 overflow-hidden rounded-[0.9rem] border px-3 py-3 pr-3.5 text-left transition duration-200 sm:gap-4 sm:p-4',
+          'shadow-[inset_0_1px_0_rgb(255_244_214/0.08),0_14px_28px_-16px_rgb(0_0_0/0.9),0_2px_5px_rgb(0_0_0/0.45)]',
+          'focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-lattice-200 active:translate-y-[2px]',
+          'aria-disabled:cursor-not-allowed aria-disabled:opacity-55',
+          selected
+            ? 'border-gold-400 shadow-[0_0_0_1px_rgb(227_196_99/0.45),0_0_34px_-10px_rgb(227_196_99/0.7),0_14px_28px_-16px_rgb(0_0_0/0.9)]'
+            : danger
+              ? 'border-crimson-400/60 hover:border-crimson-300'
+              : 'border-gold-700/55 hover:-translate-y-0.5 hover:border-gold-500/80',
+        )}
+        style={{
+          background: [
+            'var(--elvia-grain)',
+            `radial-gradient(120% 90% at 0% 0%, rgb(${edge} / ${selected ? 0.2 : 0.11}), transparent 55%)`,
+            'radial-gradient(90% 70% at 100% 0%, rgb(255 244 214 / 0.06), transparent 60%)',
+            danger ? 'linear-gradient(180deg, #2a1418 0%, #170f16 60%, #0f0d14 100%)' : 'linear-gradient(180deg, #1d293d 0%, #141e30 58%, #0e1625 100%)',
+          ].join(','),
+        }}
         onClick={() => onOpen(order)}
+        aria-pressed={selected}
         aria-disabled={order.locked ? true : undefined}
         aria-describedby={`order-${order.id}-meta`}
       >
-        <span className="order-card__key" aria-hidden="true">
-          {order.id}
+        {/* inner engraved frame and a category accent along the top edge */}
+        <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] -z-10 rounded-[0.7rem] border border-gold-500/15 group-hover:border-gold-400/25" />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
+          style={{ background: `linear-gradient(90deg, rgb(${edge} / 0.95), rgb(${edge} / 0.35) 45%, transparent 85%)` }}
+        />
+        <span className="relative mt-0.5 shrink-0">
+          <Medallion
+            letter={order.id}
+            size={58}
+            tone={danger ? CATEGORY_TONE.military : tone}
+            lit={selected}
+            dim={Boolean(order.locked)}
+            className="size-12 sm:size-[58px]"
+          />
         </span>
-        <span className="order-card__body">
-          <span className="flex items-center gap-2 font-display text-[0.72rem] uppercase tracking-[0.18em] text-gold-500">
-            <CategoryIcon category={order.category} size={14} />
-            {order.categoryName}
+        <span className="flex min-w-0 flex-1 flex-col">
+          {/* category eyebrow: uppercase, tracked, in the category's bright accent */}
+          <span
+            className="flex items-center gap-1.5 font-display text-[0.8rem] font-semibold uppercase leading-snug tracking-[0.16em]"
+            style={{ color: danger ? '#d9726b' : tone.accent, textShadow: '0 1px 0 rgb(0 0 0 / 0.7)' }}
+          >
+            <CategoryIcon category={order.category} size={14} className="shrink-0" />
+            <span className="sm:hidden">{shortCategoryName(order.categoryName)}</span>
+            <span className="hidden sm:inline">{order.categoryName}</span>
           </span>
-          <span className="order-card__title">{order.label}</span>
-          <span className="order-card__desc line-clamp-3">{order.text}</span>
-          <span id={`order-${order.id}-meta`} className="order-card__meta mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <CostLine cost={order.cost} size={15} className="text-parchment-200" />
-            <Reactions reactions={order.reactions} characters={characters} />
-            {!order.affordable ? (
-              <span className="inline-flex items-center gap-1 text-ember-300">
-                <Icon name="alert" size={14} /> Underfunded
+          <span className="mt-0.5 font-display text-[1.14rem] leading-[1.2] text-gold-100 text-engraved sm:mt-1 sm:text-[1.2rem]">{order.label}</span>
+          <span className="mt-1 line-clamp-3 text-[0.98rem] leading-snug text-parchment-200 sm:mt-1.5">{order.text}</span>
+          <span id={`order-${order.id}-meta`} className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gold-700/30 pt-2 sm:mt-3 sm:pt-2.5">
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="inline-flex min-h-8 items-center rounded-md border border-brass-500/45 bg-[linear-gradient(180deg,rgb(122_95_54/0.38),rgb(11_20_36/0.6))] px-2.5 shadow-[inset_0_1px_0_rgb(255_244_214/0.12)]">
+                <CostLine cost={order.cost} size={15} className="text-[0.98rem] font-semibold text-parchment-50" />
               </span>
-            ) : null}
+              {!order.affordable ? (
+                <span className="inline-flex items-center gap-1 text-[0.92rem] font-semibold text-ember-300">
+                  <Icon name="alert" size={14} /> Underfunded
+                </span>
+              ) : null}
+            </span>
+            <Reactions reactions={order.reactions} characters={characters} />
           </span>
           {order.warning ? (
-            <span className="mt-1 inline-flex items-start gap-1.5 text-[0.9rem] font-semibold text-crimson-300">
+            <span className="mt-2 inline-flex items-start gap-1.5 text-[0.92rem] font-semibold text-crimson-300">
               <Icon name="alert" size={15} className="mt-0.5 shrink-0" />
               {order.warning}
             </span>
           ) : null}
-          {order.locked ? <span className="mt-1 text-[0.9rem] text-stone-300">{order.locked}</span> : null}
+          {order.locked ? <span className="mt-2 text-[0.92rem] text-stone-300">{order.locked}</span> : null}
         </span>
       </button>
     </li>
@@ -156,7 +203,7 @@ export function Orders({ crisis, characters, onIssue }) {
       </SectionHeading>
       <ol className="space-y-3">
         {crisis.orders.map((o, i) => (
-          <OrderCard key={o.id} order={o} characters={characters} onOpen={setOpen} index={i} />
+          <OrderCard key={o.id} order={o} characters={characters} onOpen={setOpen} index={i} selected={(open ?? sealing)?.id === o.id} />
         ))}
       </ol>
       <OrderSheet order={open} characters={characters} onClose={() => setOpen(null)} onSeal={seal} />

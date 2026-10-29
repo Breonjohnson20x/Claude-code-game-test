@@ -295,19 +295,32 @@ misread detection, telegraph shape, specials, and the full fairness sweep.
 ## The DuelScreen
 
 `src/ui/duel/DuelScreen.jsx` (`<DuelScreen config onComplete showHints? brief? goalLabel? hudLabel?
-continueLabel? withdrawText? />`), `src/ui/duel/hud.jsx` (nameplate, bars, controls, intro card)
-and `src/ui/duel/render/` (the canvas renderer; see [ART_AND_AUDIO.md](ART_AND_AUDIO.md#duel-rendering)).
+continueLabel? withdrawText? quality? />`; `quality` pins a render tier, dev and tests only), `src/ui/duel/hud.jsx` (nameplate, bars, controls, intro card)
+and `src/ui/duel/render/` (the canvas renderer: `index.js`, `stages.js`, `foes.js`, `player.js`,
+`telegraph.js`, `fx.js`, `post.js`; see [ART_AND_AUDIO.md](ART_AND_AUDIO.md#duel-rendering)).
 
-- Full-viewport canvas (DPR capped at 2, resize-aware) driven by `requestAnimationFrame`:
-  real frame time is clamped to 50 ms and fed to `stepDuel`; the loop pauses when the tab is
-  hidden or while the withdraw confirmation is open. The HUD re-renders about 10 times a second.
+- Full-viewport canvas driven by `requestAnimationFrame`: real frame time is clamped to 50 ms
+  and fed to `stepDuel`; the loop pauses when the tab is hidden or while the withdraw
+  confirmation is open. The HUD re-renders about 10 times a second (`FoePlate` and `Controls` are
+  memoized).
+- **Renderer and quality**: the canvas resolution follows the renderer's quality tier
+  (`r.dprCap`: 2, then 1.5, then 1.25). The renderer measures the median frame time and steps the
+  tier down on a slow device (smaller foe layer, no ghosts, fewer particles, no rim, lower
+  resolution); it never steps back up within a duel. Only the look changes: the engine's fixed
+  timestep and the fairness rules are untouched. The post pass (`render/post.js`: baked grade and
+  vignette, a foe layer lit from a cached light map, rim, wet-ground reflection) is described in
+  [ART_AND_AUDIO.md](ART_AND_AUDIO.md#duel-rendering).
 - **Hitstop**: after a clean hit (45 ms, 70 ms into a feint's opening), a parry (50 ms), a heavy
   blow landing (60 ms), an Arc Pulse (80 ms), a poise break (90 ms) or a perfect parry (110 ms)
   the screen holds the engine still for those few frames. Both sides freeze and inputs queue, so
   timing stays fair. Off under reduced motion.
 - **Intro**: a "Read the wind-up" card with controls for touch or keyboard/mouse (auto-detected).
-  The fight stays paused until Ready, the first input, or 6 seconds. The `showHints` setting
-  turns the card off.
+  The fight stays paused until Ready, the first input, or 6 seconds; the renderer holds its
+  opening shot behind it (`frame(..., { hold: true })`). The `showHints` setting turns the card
+  off. Then the opening plays (about 2.1 s): a push-in, letterbox bars sliding away and the foe's
+  name card on a gold rule in the sky band; the HUD nameplate fades in once `r.introShowing()`
+  turns false. Long foe names step down in size and may wrap rather than ellipsize; the epithet
+  line still truncates.
 - **Controls**:
 
   | Action | Touch / mouse | Keyboard | Gamepad |
@@ -321,23 +334,33 @@ and `src/ui/duel/render/` (the canvas renderer; see [ART_AND_AUDIO.md](ART_AND_A
   | Withdraw | the ‹ button by the foe's name (with confirm) | Esc (with confirm) | — |
 
   Every strike gesture leaves a trail of gold light. The controls sit on a dark scrim at the
-  bottom; on wide screens they anchor bottom-left so the foe stays clear.
+  bottom, laid out by one CSS grid: on a phone the Sovereign's bar, then the abilities and Royal
+  Command, then Dodge / Guard / Dodge (the vambrace fades into the dark under them). From `lg`
+  the controls split around the foe column, the Sovereign's bar centred under the foe, with
+  larger captions.
 
-- **Feedback**: telegraph arcs and marching chevrons by colour with a label pill ("Dodge",
-  "Parry or dodge", "Feint: wait"), the foe's weapon glowing the same colour, sparks with gravity,
-  slash marks and a white flash on the foe when you land a blow, rings and a gold flash on parries,
+- **Feedback**: telegraph arcs and marching chevrons by colour (painted brush strokes over navy,
+  no glow) with a label pill ("Dodge", "Parry or dodge", "Feint: wait"), the foe's weapon glowing
+  the same colour, sparks with gravity, impact frames, slash marks and a short silhouette flash on
+  the foe when you land a blow, brass and ember shockwave rings and a gold flash on parries,
   a red flare from the side a blow came from, camera shake and a slide away from your dodge (off
   under reduced motion), captions for `line` events, misread callouts (ember) and good-read callouts
   (gold: "Perfect parry", "Read it! Strike the opening", "Guard broken: punish!"), haptics, and audio
   cues from `sfx` events (`audio.ambient('duel')` on mount, the previous theme restored on unmount). An assertive live region announces each wind-up in words
   ("Heavy from the left: dodge right.") for screen-reader users.
+- **Finish**: the last blow plays in slow motion on the renderer's visual clock only (0.3× for
+  650 ms, then easing back; the engine has already declared the duel over), with a warm flash and
+  shafts of light turning behind the foe. A defeat drains, cools and darkens the colour.
 - **Result**: Victory / Flawless Victory / Withdrawn / Retreated, four stats, "What you misread"
   (or "Sharpen next time"), the foe's lesson, and Continue → `onComplete(result)`. Defeat copy says
   it is not the end, except in a last stand.
 - **Dev hooks**: in dev builds, `window.__elviaDuel.current` is the live duel (read-only); the
   e2e playthrough uses it to play duels with real key presses. `/?lab=duel` opens the duel lab
   (`src/ui/dev/DuelLab.jsx`): any foe (`foe=`, `name=`) on any stage (`stage=`) frozen at any moment
-  (`t=` ms, `script=move:dir,…`, `bot=idle|oracle|spam`), or the real screen with `live=1`.
+  (`t=` ms, `script=move:dir,…`, `bot=idle|oracle|spam`, `intro=<ms>` for the opening shot,
+  `over=<ms>` for a finished duel's ending), or the real screen with `live=1`. Dev-only profiling
+  switches: `quality=0..2` pins a quality tier (lab and `live=1`), `off=foe,stage,atmos,player,bd,
+  refl,rim,ghost,light` turns render passes off, and `nohud` hides the HUD.
 
 ## How to add an archetype or tune difficulty
 

@@ -20,13 +20,14 @@ function FactionCard({ f, history, index }) {
   const past = history.filter((h) => h.civilization?.[f.id]);
   return (
     <li
-      className="animate-fade-up relative overflow-hidden rounded-xl border border-gold-700/35 bg-[radial-gradient(120%_90%_at_0%_0%,rgb(227_196_99/0.08),transparent_55%),linear-gradient(180deg,rgb(22_36_58/0.75),rgb(11_20_36/0.75))] p-4 sm:p-5"
+      className="tablet animate-fade-up p-4 sm:p-5"
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <div className="flex gap-4">
-        <FactionCrest id={f.id} size={64} className="shrink-0 drop-shadow-[0_4px_10px_rgb(0_0_0/0.6)]" />
+      <div className="flex items-center gap-4">
+        {/* the crest is drawn for 64px and shown larger where there is room, so its metalwork reads */}
+        <FactionCrest id={f.id} size={64} className="size-16 shrink-0 drop-shadow-[0_4px_10px_rgb(0_0_0/0.6)] sm:size-[88px]" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-[1.12rem] leading-snug text-gold-200">{f.name}</h3>
+          <h3 className="font-display text-[1.12rem] leading-snug text-gold-200 text-engraved sm:text-[1.2rem]">{f.name}</h3>
           <p className="mt-0.5 text-[0.95rem] text-parchment-200">
             <span className="text-parchment-400">Led by </span>
             {f.leader}
@@ -34,16 +35,17 @@ function FactionCard({ f, history, index }) {
         </div>
       </div>
 
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-gold-700/25 bg-navy-950/50 p-3">
-          <dt className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-gold-400/90">Attitude to Elvia</dt>
-          <dd className="mt-1.5">
+      {/* attitude and tension share one well, stacked, so neither box is ever half empty */}
+      <dl className="well mt-4 divide-y divide-black/40 px-3.5">
+        <div className="py-3">
+          <dt className="label-engraved">Attitude to Elvia</dt>
+          <dd className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className={attitudeTone(attitude)}>{attitude}</span>
-            <p className="mt-1.5 text-[0.95rem] leading-snug text-parchment-300">{ATTITUDE_GLOSS[attitude]}</p>
+            <span className="text-[0.95rem] leading-snug text-parchment-200">{ATTITUDE_GLOSS[attitude]}</span>
           </dd>
         </div>
-        <div className="rounded-lg border border-gold-700/25 bg-navy-950/50 p-3">
-          <dt className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-gold-400/90">Tension</dt>
+        <div className="py-3 shadow-[inset_0_1px_0_rgb(255_244_214/0.05)]">
+          <dt className="label-engraved">Tension</dt>
           <dd className="mt-1.5">
             <p className={cx('font-display text-[1.02rem]', tensionTone(f.tension) === 'crimson' ? 'text-crimson-300' : tensionTone(f.tension) === 'ember' ? 'text-ember-300' : 'text-gold-300')}>
               {tension}
@@ -53,11 +55,11 @@ function FactionCard({ f, history, index }) {
         </div>
       </dl>
 
-      <div className="mt-3 rounded-lg border border-gold-600/35 bg-[linear-gradient(90deg,rgb(79_61_13/0.35),rgb(11_20_36/0.2))] p-3">
-        <p className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-gold-400/90">How they remember Elvia</p>
+      <div className="well well--lit mt-3 px-3.5 py-3">
+        <p className="label-engraved">How they remember Elvia</p>
         <p className="mt-1 font-display text-[1.15rem] text-gold-200">{civ.label}</p>
         <p className="font-serif text-[1.1rem] italic leading-snug text-parchment-200">{civ.gloss[0].toUpperCase() + civ.gloss.slice(1)}.</p>
-        <p className="mt-1.5 text-[0.9rem] leading-snug text-parchment-400">Civilization memory outlives the Sovereign. It carries into every reign and does not fade by waiting.</p>
+        <p className="mt-1.5 text-[0.95rem] leading-snug text-parchment-300">Civilization memory outlives the Sovereign. It carries into every reign and does not fade by waiting.</p>
         {past.length ? (
           <ul className="mt-2 flex flex-wrap gap-2" aria-label={`How ${f.name} remembered earlier reigns`}>
             {past.map((h) => (

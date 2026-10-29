@@ -8,6 +8,9 @@ import { ChronicleEntry } from '../../overlays/chronicle/ChronicleEntry.jsx';
 import { isApprovable, PEN_GOAL } from '../../overlays/chronicle/meta.js';
 import { SectionHeading } from '../warroom/shared.jsx';
 import { REGION_WORDS, outcomeWord, sentimentWord, signed } from '../warroom/words.js';
+import { GiltCorners } from '../warroom/shared.jsx';
+import { dropCapClass } from '../warroom/tones.js';
+import { Manuscript } from '../passing/Manuscript.jsx';
 
 export function Outcome({ report }) {
   return (
@@ -23,7 +26,11 @@ export function Outcome({ report }) {
       ) : null}
       <div className="max-w-prose space-y-4">
         {report.outcome.map((line, i) => (
-          <p key={i} className="font-serif text-[1.2rem] leading-relaxed text-parchment-50 animate-fade-up" style={{ animationDelay: `${i * 120}ms` }}>
+          <p
+            key={i}
+            className={cx('font-serif text-[1.2rem] leading-relaxed text-parchment-50 animate-fade-up', i === 0 && dropCapClass(line))}
+            style={{ animationDelay: `${i * 120}ms` }}
+          >
             {line}
           </p>
         ))}
@@ -41,8 +48,13 @@ export function Events({ events }) {
       </SectionHeading>
       <ul className="space-y-3">
         {events.map((e, i) => (
-          <li key={i} className="rounded-[var(--radius-panel)] border border-ember-500/45 bg-[linear-gradient(180deg,rgb(138_58_28/0.28),rgb(11_20_36/0.85))] p-4 glow-ember">
-            <p className="font-display text-[1.02rem] text-ember-200">{e.title}</p>
+          <li
+            key={i}
+            className="relative overflow-hidden rounded-[0.9rem] border border-ember-500/55 p-4 pl-5 shadow-[inset_0_1px_0_rgb(255_244_214/0.08),0_0_26px_-8px_rgb(224_120_43/0.5),0_14px_28px_-16px_rgb(0_0_0/0.9)]"
+            style={{ background: 'var(--elvia-grain), radial-gradient(90% 80% at 0% 0%, rgb(224 120 43 / 0.22), transparent 60%), linear-gradient(180deg, #2a1a16 0%, #141420 60%, #0d1220 100%)' }}
+          >
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-ember-300 via-ember-500 to-transparent" />
+            <p className="font-display text-[1.04rem] text-ember-200 text-engraved">{e.title}</p>
             <p className="mt-1 font-serif text-[1.12rem] leading-snug text-parchment-100">{e.text}</p>
           </li>
         ))}
@@ -127,10 +139,12 @@ function RegionChange({ before, after, region }) {
   const words = REGION_WORDS[after] ?? REGION_WORDS.STABLE;
   const changed = before !== after;
   return (
-    <div className="overflow-hidden rounded-[var(--radius-panel)] border border-gold-700/35 bg-navy-900/70">
-      <div className="relative h-36 sm:h-44">
+    <div className="relative overflow-hidden rounded-[0.9rem] border border-gold-600/50 bg-navy-900/80 shadow-[0_14px_28px_-16px_rgb(0_0_0/0.9)]">
+      <div className="relative h-40 sm:h-48">
         <RegionScene beat="road" regionState={after} timeOfDay="dusk" monuments={region.monuments} animated={false} className="absolute inset-0 h-full w-full" />
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/20 to-transparent" />
+        <div aria-hidden="true" className="absolute inset-0 shadow-[inset_0_0_40px_6px_rgb(3_5_10/0.7)]" />
+        <GiltCorners />
         <p className="absolute bottom-3 left-4 font-display text-[1.05rem] text-gold-100 text-engraved">
           {region.name} · {changed ? `${REGION_WORDS[before]?.label ?? before} → ${words.label}` : words.label}
         </p>
@@ -165,10 +179,10 @@ export function Memories({ memories, characters }) {
       </SectionHeading>
       <ul className="space-y-3">
         {memories.map((m, i) => (
-          <li key={i} className="flex gap-3 rounded-lg border border-gold-700/30 bg-navy-950/50 p-3">
+          <li key={i} className="flex gap-3 rounded-[0.8rem] border border-gold-700/40 bg-[linear-gradient(180deg,rgb(27_38_57/0.85),rgb(11_20_36/0.85))] p-3.5 shadow-[inset_0_1px_0_rgb(255_244_214/0.07)]">
             <Portrait id={m.characterId} size={44} mood={m.sentiment > 0.15 ? 'warm' : m.sentiment < -0.15 ? 'grim' : 'neutral'} />
             <div className="min-w-0">
-              <p className="text-[0.88rem] text-parchment-300">
+              <p className="text-[0.95rem] text-parchment-300">
                 <span className="font-display text-gold-200">{characters[m.characterId]?.short ?? m.characterId}</span> · {sentimentWord(m.sentiment)}
               </p>
               <p className="font-serif text-[1.12rem] italic leading-snug text-parchment-50">&ldquo;{m.description}&rdquo;</p>
@@ -190,9 +204,13 @@ export function Voices({ voices }) {
       <ul className="grid gap-3 sm:grid-cols-2">
         {voices.map((v, i) => (
           <li key={i}>
-            <figure className="h-full rounded-lg border-l-2 border-gold-600/60 bg-navy-950/45 py-2 pl-4 pr-3">
-              <blockquote className="font-serif text-[1.15rem] italic leading-snug text-parchment-50">{v.text}</blockquote>
-              <figcaption className="mt-1.5 text-[0.9rem] text-parchment-300">— {v.speaker}</figcaption>
+            <figure className="relative h-full overflow-hidden rounded-[0.8rem] border border-gold-700/35 bg-[linear-gradient(180deg,rgb(27_38_57/0.8),rgb(11_20_36/0.85))] py-3 pl-5 pr-4 shadow-[inset_0_1px_0_rgb(255_244_214/0.07)]">
+              <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[2px] bg-gradient-to-b from-gold-400 via-gold-600/70 to-transparent" />
+              <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1 h-12 font-serif text-[3.5rem] leading-[1] text-gold-500/20">
+                &rdquo;
+              </span>
+              <blockquote className="relative pr-8 font-serif text-[1.15rem] italic leading-snug text-parchment-50">{v.text}</blockquote>
+              <figcaption className="mt-2 font-serif text-[1.02rem] italic leading-snug text-gold-300">— {v.speaker}</figcaption>
             </figure>
           </li>
         ))}
@@ -210,13 +228,13 @@ export function NewChronicle({ entries, state, onApprove }) {
       <SectionHeading id="rs-chronicle-title" icon="quill">
         Written in the Chronicle
       </SectionHeading>
-      <div className="panel-parchment px-4 pb-2 pt-3 sm:px-6">
+      <Manuscript as="div" vines={false} className="px-6 pb-4 pt-6 sm:px-8">
         <ol className="divide-y divide-ink-500/20">
           {live.map((e) => (
             <ChronicleEntry key={e.id} entry={e} canApprove={isApprovable(state, e)} onApprove={onApprove} />
           ))}
         </ol>
-      </div>
+      </Manuscript>
       <p className="mt-2 text-[0.92rem] text-parchment-300">
         Approving an entry has the Chronicler record it in full. {Math.min(approved, PEN_GOAL)} of {PEN_GOAL} approved this reign
         {approved >= PEN_GOAL ? ': The Chronicler’s Pen is earned.' : ' toward The Chronicler’s Pen.'}

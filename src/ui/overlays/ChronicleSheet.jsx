@@ -21,26 +21,20 @@ function PenProgress({ state }) {
   const inEffect = state.cycle.activeLegacies?.includes('chroniclers_pen');
   const left = PEN_GOAL - n;
   return (
-    <section aria-labelledby="pen-title" className="mt-4 rounded-xl border border-gold-700/40 bg-[radial-gradient(120%_120%_at_0%_0%,rgb(227_196_99/0.10),transparent_60%),linear-gradient(180deg,#14203a,#0d1525)] p-4">
+    <section aria-labelledby="pen-title" className={cx('tablet mt-4 p-4', done && 'shadow-[0_0_0_1px_#04070d,0_0_24px_-8px_rgb(227_196_99/0.55)]')}>
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full border border-gold-500/60 bg-navy-950 text-gold-300 shadow-[0_0_14px_-4px_rgb(227_196_99/0.6)]">
+        <span aria-hidden="true" className="socket size-11 shrink-0">
           <Sigil name="quill" size={22} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <h3 id="pen-title" className="font-display text-[1.02rem] text-gold-200">
+            <h3 id="pen-title" className="font-display text-[1.02rem] text-gold-200 text-engraved">
               The Chronicler&rsquo;s Pen
             </h3>
-            <p className="flex items-center gap-2 text-[0.92rem] text-parchment-200">
-              <span aria-hidden="true" className="flex gap-1">
+            <p className="flex items-center gap-2.5 text-[0.95rem] text-parchment-200">
+              <span aria-hidden="true" className="flex gap-2 px-0.5">
                 {Array.from({ length: PEN_GOAL }, (_, i) => (
-                  <span
-                    key={i}
-                    className={cx(
-                      'size-3 rotate-45 rounded-[2px] border',
-                      i < n ? 'border-gold-300 bg-[linear-gradient(135deg,#f6e9bd,#c9a227)] shadow-[0_0_6px_rgb(227_196_99/0.6)]' : 'border-gold-700/70 bg-navy-950',
-                    )}
-                  />
+                  <span key={i} className={cx('pip', i < n && 'pip--on')} />
                 ))}
               </span>
               <span className="font-semibold tabular-nums">
@@ -68,7 +62,7 @@ function ReignPage({ group, state, onApprove, fresh }) {
       <header className="flex items-center gap-3 sm:gap-4">
         <span
           aria-hidden="true"
-          className="grid size-12 shrink-0 place-items-center rounded-full border border-gold-700/60 bg-[radial-gradient(circle_at_35%_30%,#fbefc2,#e3c463_40%,#a8841b_85%)] font-display text-[1.05rem] font-bold text-navy-950 shadow-[inset_0_1px_1px_rgb(255_252_240/0.8),0_2px_5px_rgb(60_40_10/0.4)]"
+          className="coin size-12 shrink-0 text-[1.05rem]"
         >
           {info.numeral}
         </span>
@@ -77,7 +71,7 @@ function ReignPage({ group, state, onApprove, fresh }) {
             <span className="sr-only">Reign {info.numeral}: </span>
             {info.sovereign}
           </h3>
-          <p className="mt-0.5 text-[0.9rem] text-ink-500">
+          <p className="mt-0.5 text-[0.95rem] text-ink-500">
             {[info.years, info.status].filter(Boolean).join(' · ')}
           </p>
         </div>
@@ -141,13 +135,13 @@ export function ChronicleSheet({ open, onClose }) {
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="The Chronicle" eyebrow="Write-only · nothing is ever overwritten" wide>
+    <Sheet open={open} onClose={onClose} title="The Chronicle" eyebrow="Write-only · never overwritten" wide>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <p className="max-w-prose text-[0.95rem] leading-relaxed text-parchment-300">
           The dynasty&rsquo;s record, in the order it was written. Every reign stays readable; the world can only cite what is written here.
           {pending ? ` ${pending} ${pending === 1 ? 'entry awaits' : 'entries await'} your approval.` : ''}
         </p>
-        <Segmented label="Show entries from" options={SCOPES} value={scope} onChange={setScope} className="self-start sm:self-auto" />
+        <Segmented label="Show entries from" options={SCOPES} value={scope} onChange={setScope} className="shrink-0 self-start sm:self-auto" />
       </div>
       <PenProgress state={state} />
       <p className="sr-only" aria-live="polite">
@@ -157,10 +151,10 @@ export function ChronicleSheet({ open, onClose }) {
         <ReignPage key={g.info.cycle} group={g} state={state} onApprove={approve} fresh={fresh} />
       ))}
       {scope === 'all' && groups.length === 1 ? (
-        <p className="mt-4 text-center text-[0.92rem] italic text-parchment-400">Earlier reigns appear here once a reign has passed.</p>
+        <p className="mt-4 text-center text-[0.95rem] italic text-parchment-300">Earlier reigns appear here once a reign has passed.</p>
       ) : null}
       {scope === 'reign' && state.history.length ? (
-        <p className="mt-4 text-center text-[0.92rem] text-parchment-400">
+        <p className="mt-4 text-center text-[0.95rem] text-parchment-300">
           {state.history.length === 1 ? 'One earlier reign is' : `${state.history.length} earlier reigns are`} kept under &ldquo;All reigns&rdquo;.
         </p>
       ) : null}

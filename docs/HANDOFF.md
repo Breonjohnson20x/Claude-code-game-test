@@ -41,16 +41,26 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 
 | Area | State |
 |---|---|
-| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic, 162 vitest tests incl. a full-cycle playthrough |
+| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic; 167 vitest tests in all (12 files) incl. a full-cycle playthrough |
 | Duel engine (`src/game/duel/**`): 3 archetypes, telegraphs, misread analysis, bots | **Done**: tested, including a fairness sweep |
 | Saves (3 slots + autosave, export/import, dynasty meta), optional Claude narrator | **Done**: tested |
 | UI: Title, War Room, Resolution, March, Campfire, the Passing, Chronicle, Council, Settings, Saves | **Done** |
-| Real-time DuelScreen (touch, mouse, keyboard, basic gamepad): eight painted stages, detailed animated foes, hitstop and impact effects, thumb controls (tap or swipe to strike, ◀ ▶ dodge, hold-to-guard shield) | **Done**: `/?lab=duel` in dev to inspect any foe, stage and moment |
+| Real-time DuelScreen (touch, mouse, keyboard, basic gamepad): eight painted stages, painted foes lit by a budgeted post pass (rim, wet-ground reflection, baked grade), adaptive quality tiers, an opening name card and a slow-motion finishing blow, hitstop and impact effects, thumb controls (tap or swipe to strike, ◀ ▶ dodge, hold-to-guard shield) | **Done**: `/?lab=duel` in dev to inspect any foe, stage and moment; 15–25 fps on a 4×-throttled phone (8 before the graphics pass) |
 | Training yard: four drills (one per telegraph read) and sparring with every foe, from the title screen | **Done**: drills proven passable by the oracle bot |
-| Procedural art (scenes in 3 region states, portraits, crests, war table, campfire canvas) and Web Audio | **Done** |
+| Procedural art (matte-painted scenes in 3 region states, painted portraits, crests, war table and room, campfire canvas, title and Resolution heroes, a brass-and-lacquer material language across the kit and overlays) and Web Audio | **Done**: every non-duel screen 55–60 fps on a 4×-throttled phone (see [ART_AND_AUDIO.md](ART_AND_AUDIO.md#performance-and-accessibility)) |
 | `npm run e2e` (every screen at phone + desktop, overlays, a full UI playthrough into reign II, the installable build played offline) | **Passing** |
 | Installable PWA (manifest, procedural icons, offline service worker) and GitHub Pages deploy | **Done**: Pages needs a one-time switch in repository settings |
 | Playtesting with real first-time players | **Not yet**, and it is the next milestone |
+
+**Recent work: the graphics pass** (`fc08d10..5a03462`, presentation only; no game logic, saves or
+rules changed). Matte-painted Southern Marches vistas (`src/ui/art/scene/`: atmosphere, tone,
+flora, actors, framing) with optional seasons and still decorative backdrops; painted portraits
+with size-based level of detail (`src/ui/art/portrait/`); the campfire repainted and lit from the
+fire, with a real Last Fire for the Passing; a War Room room layer, title and Resolution heroes,
+illuminated manuscripts and shared `LightRays` / `Motes` (`src/ui/art/Atmosphere.jsx`); a
+lacquer-and-brass material language in `theme.css` and the kit (`Toggle`, `Segmented`, tablets,
+wells); and a budgeted duel post pass with adaptive quality tiers (`src/ui/duel/render/post.js`).
+Then a performance pass: no blend modes, backdrop-filters or CSS filters over animated layers.
 
 See the compliance matrix in [`docs/DESIGN_DIGEST.md`](DESIGN_DIGEST.md#compliance-matrix) for
 requirement-by-requirement status against the design documents.
@@ -265,6 +275,11 @@ after the second reuse the same arc with memory callbacks; Warg culture beyond S
 not for menu navigation; no input remapping or caption toggle; the narrator requires the
 player's own Anthropic API key (fine for personal use; a public deployment should proxy it via a
 server).
+
+Known visual issues after the graphics pass: in the duel the crossguard sits at the right end of
+the Sovereign's bar on phones; long foe epithets truncate (names wrap); the Frost Wargs' anatomy in
+the duel has not been reworked like the human figures; the duel's quality tiers only step down and
+never back up within a duel; `RegionScene`'s `season` prop exists but no screen passes it yet.
 
 ## Glossary
 

@@ -131,6 +131,7 @@ export function DuelScreen({
   hudLabel = null,
   continueLabel,
   withdrawText = 'The realm will remember that you chose to live. It is recorded.',
+  quality = null,
 }) {
   const reduced = useReducedMotion();
   const wrapRef = useRef(null);
@@ -138,12 +139,14 @@ export function DuelScreen({
   const duelRef = useRef(null);
   if (!duelRef.current) duelRef.current = createDuel(config);
   const rendererRef = useRef(null);
-  if (!rendererRef.current) rendererRef.current = createDuelRenderer({ config, archetypeId: duelRef.current.archetypeId, reduced });
+  // `quality` (dev and tests only) pins the renderer's quality tier instead of letting it adapt
+  if (!rendererRef.current) rendererRef.current = createDuelRenderer({ config, archetypeId: duelRef.current.archetypeId, reduced, quality });
   const inputs = useRef([]);
   const held = useRef({ guard: new Set(), ward: new Set() });
   const gestures = useRef(new Map());
   const pausedRef = useRef(false);
-  const [hud, setHud] = useState(() => snapshot(duelRef.current));
+  // `intro`: the renderer's opening name card is up, so the nameplate waits its turn
+  const [hud, setHud] = useState(() => ({ ...snapshot(duelRef.current), intro: rendererRef.current.introShowing(0) }));
   const [caption, setCaption] = useState(null);
   const [callout, setCallout] = useState(null);
   const [announce, setAnnounce] = useState('');
@@ -216,10 +219,13 @@ export function DuelScreen({
     let lastTele = null;
     let overAt = 0;
     let hitstopUntil = 0;
+    // the canvas resolution follows the renderer's quality tier (it steps down on slow devices)
+    let dprCap = renderer.dprCap;
     const size = () => {
       const r = wrap.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) return;
-      const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+      dprCap = renderer.dprCap;
+      const dpr = Math.min(dprCap, globalThis.devicePixelRatio || 1);
       cv.width = Math.round(r.width * dpr);
       cv.height = Math.round(r.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -255,9 +261,10 @@ export function DuelScreen({
       last = ms;
       if (pausedRef.current || document.hidden) return;
       pollPad();
+      if (renderer.dprCap !== dprCap) size();
       const prev = duelRef.current;
       if (hintsRef.current && !inputs.current.length) {
-        renderer.frame(ctx, prev, ms, { guarding: false });
+        renderer.frame(ctx, prev, ms, { guarding: false, hold: true });
         return;
       }
       let d = prev;
@@ -286,13 +293,13 @@ export function DuelScreen({
       renderer.frame(ctx, d, ms, { guarding: guardActive(d.player) });
       if (ms - lastHud > 100) {
         lastHud = ms;
-        setHud(snapshot(d));
+        setHud({ ...snapshot(d), intro: renderer.introShowing(ms) });
       }
       if (d.phase === 'over') {
         if (!overAt) overAt = ms;
         if (ms - overAt > (reduced ? 200 : 1300)) {
           cancelAnimationFrame(raf);
-          setHud(snapshot(d));
+          setHud({ ...snapshot(d), intro: false });
           setResult(getDuelResult(d));
         }
       }
@@ -422,7 +429,7 @@ export function DuelScreen({
         <canvas ref={canvasRef} className={cx('block h-full w-full transition duration-500', result && 'opacity-35 blur-[3px]')} aria-hidden="true" />
       </div>
 
-      {result ? (
+      {import.meta.env?.DEV && globalThis.location?.search?.includes('nohud') ? null : result ? (
         <div className="absolute inset-0 overflow-y-auto bg-navy-950/55">
           <ResultView result={result} config={d.config} onContinue={finish} goalLabel={goalLabel} continueLabel={continueLabel} />
         </div>
@@ -430,7 +437,10 @@ export function DuelScreen({
         <>
           <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
             <div className="relative mx-auto max-w-3xl px-12">
-              <FoePlate stakesLabel={STAKES_LABEL[stakes] ?? 'Single combat'} name={name} epithet={epithet} hud={hud} hudLabel={hudLabel} />
+              {/* the opening name card owns this slot until it rises away; then the plate fades in */}
+              <div className={cx('transition-opacity duration-500 motion-reduce:transition-none', hud.intro ? 'opacity-0' : 'opacity-100')}>
+                <FoePlate stakesLabel={STAKES_LABEL[stakes] ?? 'Single combat'} name={name} epithet={epithet} hud={hud} hudLabel={hudLabel} />
+              </div>
               {d.config.allowRetreat ? (
                 <button
                   type="button"

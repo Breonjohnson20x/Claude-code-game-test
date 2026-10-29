@@ -34,12 +34,12 @@ function MemoryMark({ tone }) {
 function Memories({ ch, memories, cycle }) {
   const [all, setAll] = useState(false);
   if (!memories.length) {
-    return <p className="mt-3 text-[0.95rem] italic text-parchment-400">Nothing you have done has stayed with {ch.short} yet.</p>;
+    return <p className="well mt-3 px-3.5 py-2.5 text-[0.95rem] italic text-parchment-300">Nothing you have done has stayed with {ch.short} yet.</p>;
   }
   const shown = all ? memories : memories.slice(0, SHOW);
   return (
-    <div className="mt-3">
-      <p className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-gold-400/90">What {ch.short} remembers</p>
+    <div className="well mt-3 px-3.5 pb-2.5 pt-3">
+      <p className="label-engraved">What {ch.short} remembers</p>
       <ul className="mt-2 space-y-2">
         {shown.map((m) => {
           const tone = sentimentOf(m);
@@ -50,7 +50,7 @@ function Memories({ ch, memories, cycle }) {
               <p className="min-w-0 font-serif text-[1.1rem] leading-snug text-parchment-100">
                 <q className="italic [quotes:'“'_'”'_'‘'_'’']">{nested(m.description)}</q>
                 {older || m.type === 'inherited' ? (
-                  <span className="ml-2 whitespace-nowrap align-middle font-body text-[0.78rem] not-italic text-parchment-400">
+                  <span className="ml-2 whitespace-nowrap align-middle font-body text-[0.85rem] not-italic text-parchment-300">
                     {m.type === 'inherited' ? 'family story' : `reign ${romanNumeral(m.cycle)}`}
                   </span>
                 ) : null}
@@ -79,28 +79,27 @@ function CharacterCard({ ch, memories, cycle, index }) {
   const notes = relationshipNotes(ch.rel);
   return (
     <li
-      className={cx('animate-fade-up rounded-xl border p-4 sm:p-5', dead ? 'border-stone-600/50 bg-stone-950/60' : 'border-gold-700/35 bg-navy-900/60')}
+      className={cx('tablet animate-fade-up p-4 sm:p-5', dead && 'tablet--stone')}
       style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
     >
       <div className="flex gap-3.5 sm:gap-4">
-        <Portrait id={ch.id} size={68} mood={dead ? 'grim' : 'neutral'} className={cx('shrink-0', dead && 'grayscale-[0.85] opacity-80')} />
+        <Portrait id={ch.id} size={68} mood={dead ? 'grim' : 'neutral'} className={cx('shrink-0 self-start', dead && 'grayscale-[0.85] opacity-80')} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-            <h3 className="min-w-0 font-display text-[1.08rem] leading-snug text-gold-200">{ch.name}</h3>
-            {dead ? <span className="chip chip--iron">Remembered</span> : <span className={tierChip(tier)}>{tier}</span>}
-          </div>
+          <h3 className="font-display text-[1.08rem] leading-snug text-gold-200 text-engraved">{ch.name}</h3>
           <p className="mt-0.5 text-[0.95rem] leading-snug text-parchment-200">{ch.role}</p>
-          <p className="mt-1 text-[0.9rem] text-parchment-300">
-            {dead ? statusWord(ch) : `${statusWord(ch)} · age ${ch.age}`}
+          {/* the standing chip always sits on its own row under the name, whatever the name's length */}
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.95rem] text-parchment-300">
+            {dead ? <span className="chip chip--iron">Remembered</span> : <span className={tierChip(tier)}>{tier}</span>}
+            <span>{dead ? statusWord(ch) : `${statusWord(ch)} · age ${ch.age}`}</span>
           </p>
         </div>
       </div>
       {dead ? (
-        <p className="mt-3 border-l-2 border-stone-500/60 pl-3 font-serif text-[1.1rem] italic leading-snug text-parchment-300">
+        <p className="well well--stone mt-3 px-3.5 py-2.5 font-serif text-[1.1rem] italic leading-snug text-parchment-300">
           {ch.short} does not come back. The Chronicle keeps what you did; the world keeps how it felt.
         </p>
       ) : (
-        <p className="mt-3 text-[0.98rem] leading-relaxed text-parchment-200">
+        <p className="mt-3 text-[0.98rem] leading-relaxed text-parchment-100">
           {notes.length ? `${ch.short} ${joinAnd(notes)}.` : `${ch.short} has not made up their mind about you yet.`}
         </p>
       )}

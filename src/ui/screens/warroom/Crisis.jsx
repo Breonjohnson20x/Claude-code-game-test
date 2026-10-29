@@ -4,6 +4,8 @@
 import { Chip, Eyebrow, cx } from '../../kit/kit.jsx';
 import { Icon } from '../../kit/icons.jsx';
 import { GiltCorners, SectionHeading } from './shared.jsx';
+import { Filigree, TitleRule } from './ornate.jsx';
+import { dropCapClass } from './tones.js';
 import { roman, threadUrgency } from './words.js';
 
 const BORDER_CHIPS = {
@@ -15,7 +17,7 @@ const BORDER_CHIPS = {
 /** Five season marks for the reign's arc, the current one lit. */
 function ReignProgress({ turn, total, cycle }) {
   return (
-    <div className="flex items-center gap-2" role="img" aria-label={`Reign ${roman(cycle)}, turn ${Math.min(turn, total)} of ${total}`}>
+    <span className="inline-flex shrink-0 items-center gap-[7px] align-middle" role="img" aria-label={`Reign ${roman(cycle)}, turn ${Math.min(turn, total)} of ${total}`}>
       {Array.from({ length: total }, (_, i) => {
         const n = i + 1;
         const done = n < turn;
@@ -25,14 +27,14 @@ function ReignProgress({ turn, total, cycle }) {
             key={n}
             aria-hidden="true"
             className={cx(
-              'size-2.5 rotate-45 border transition',
-              now ? 'border-gold-200 bg-gold-400 shadow-[0_0_10px_rgb(227_196_99/0.7)]' : done ? 'border-gold-600 bg-gold-700' : 'border-gold-700/60 bg-transparent',
-              n === total && 'size-3',
+              'size-[9px] rotate-45 border',
+              now ? 'border-gold-200 bg-gold-400 shadow-[0_0_8px_rgb(227_196_99/0.7)]' : done ? 'border-gold-600 bg-gold-700' : 'border-gold-600/70 bg-transparent',
+              n === total && 'size-[11px]',
             )}
           />
         );
       })}
-    </div>
+    </span>
   );
 }
 
@@ -42,9 +44,15 @@ export function CrisisHero({ view, state, headingId }) {
   const border = crisis.era ? BORDER_CHIPS[crisis.borderOutcome] : null;
   return (
     <header className="relative pb-6 pt-8 sm:pt-12 lg:pb-8 lg:pt-16">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 animate-fade-up">
-        <Eyebrow className="!text-gold-300">
-          {crisis.season} <span aria-hidden="true">·</span> Turn {Math.min(view.turn, view.turnsPerCycle)} of {view.turnsPerCycle}
+      {/* season, then the five season marks; the words "Turn n of 5" only where they fit beside
+          them (the marks say the same thing, and carry it for screen readers) */}
+      <div className="flex items-center gap-4 animate-fade-up">
+        <Eyebrow className="min-w-0 !text-gold-300">
+          {crisis.season}
+          <span className="hidden sm:inline">
+            {' '}
+            <span aria-hidden="true">·</span> Turn {Math.min(view.turn, view.turnsPerCycle)} of {view.turnsPerCycle}
+          </span>
         </Eyebrow>
         <ReignProgress turn={view.turn} total={view.turnsPerCycle} cycle={view.cycle} />
       </div>
@@ -54,15 +62,28 @@ export function CrisisHero({ view, state, headingId }) {
           Era milestone
         </p>
       ) : null}
-      <h1
-        id={headingId}
-        className="mt-3 max-w-3xl font-display text-[2.35rem] leading-[1.05] text-gilded text-glow-gold sm:text-5xl lg:text-[3.6rem] animate-fade-up"
-        style={{ animationDelay: '60ms' }}
+      <div className="relative">
+        {/* warm bloom behind the title, as if the table lamp lit the lettering */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-8 -top-6 h-[140%] w-[min(42rem,110%)]"
+          style={{ background: 'radial-gradient(closest-side, rgb(255 214 150 / 0.16), rgb(224 120 43 / 0.05) 60%, transparent)' }}
+        />
+        <h1
+          id={headingId}
+          className="relative mt-3 max-w-3xl font-display text-[2.35rem] leading-[1.05] text-gilded text-glow-gold sm:text-5xl lg:text-[3.6rem] animate-fade-up"
+          style={{ animationDelay: '60ms', filter: 'drop-shadow(0 2px 0 rgb(0 0 0 / 0.55)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.55))' }}
+        >
+          {crisis.title}
+        </h1>
+      </div>
+      <TitleRule className="mt-3 max-w-3xl animate-fade-up" />
+      {/* the place, engraved under the rule like a caption on a chart */}
+      <p
+        className="mt-2 flex items-center gap-2 font-display text-[0.95rem] tracking-[0.06em] text-gold-300 animate-fade-up"
+        style={{ animationDelay: '120ms', textShadow: '0 1px 0 rgb(0 0 0 / 0.8), 0 0 12px rgb(7 13 24 / 0.9)' }}
       >
-        {crisis.title}
-      </h1>
-      <p className="mt-3 flex items-center gap-2 text-[0.95rem] text-parchment-200 animate-fade-up" style={{ animationDelay: '120ms' }}>
-        <Icon name="map" size={16} className="text-gold-400" />
+        <Icon name="map" size={16} className="shrink-0 text-gold-400" />
         {crisis.location}
       </p>
       {crisis.era ? (
@@ -161,10 +182,7 @@ export function Briefing({ intro, lines }) {
           {lines.map((line, i) => (
             <p
               key={`${i}-${line.slice(0, 16)}`}
-              className={cx(
-                'font-serif text-[1.18rem] leading-relaxed text-parchment-100 animate-fade-up',
-                i === 0 && 'first-letter:float-left first-letter:mr-2 first-letter:mt-1 first-letter:font-display first-letter:text-[3.1rem] first-letter:leading-[0.8] first-letter:text-gold-300',
-              )}
+              className={cx('font-serif text-[1.18rem] leading-relaxed text-parchment-100 animate-fade-up', i === 0 && dropCapClass(line))}
               style={{ animationDelay: `${Math.min(i, 8) * 80}ms` }}
             >
               {line}
@@ -178,10 +196,29 @@ export function Briefing({ intro, lines }) {
 
 export function Conflict({ text }) {
   return (
-    <section aria-label="The question before the Crown" className="relative mb-8 px-5 py-6 text-center animate-fade-up sm:px-10">
-      <GiltCorners className="!inset-0" />
-      <p className="font-display text-xs uppercase tracking-[0.26em] text-gold-400">The question before the Crown</p>
-      <p className="mx-auto mt-2 max-w-2xl font-serif text-[1.4rem] italic leading-snug text-gold-100 text-gold-200 sm:text-[1.6rem]">{text}</p>
+    <section
+      aria-label="The question before the Crown"
+      className="relative mb-9 mt-10 rounded-[0.9rem] border border-gold-600/60 px-5 pb-6 pt-9 text-center shadow-[inset_0_1px_0_rgb(255_244_214/0.1),0_18px_40px_-18px_rgb(0_0_0/0.9)] animate-fade-up sm:px-10"
+      style={{
+        background:
+          'var(--elvia-grain), radial-gradient(80% 90% at 50% 0%, rgb(255 214 150 / 0.16), transparent 65%), radial-gradient(70% 60% at 50% 110%, rgb(224 120 43 / 0.1), transparent 70%), linear-gradient(180deg, #1d2235 0%, #121625 60%, #0c0f1a 100%)',
+      }}
+    >
+      <span aria-hidden="true" className="pointer-events-none absolute inset-[5px] rounded-[0.7rem] border border-gold-500/20" />
+      <GiltCorners className="!inset-2.5" />
+      {/* the crown's question carries the crown's mark */}
+      <span
+        aria-hidden="true"
+        className="absolute left-1/2 top-0 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-gold-400/80 text-gold-200 shadow-[0_0_0_4px_rgb(7_13_24/0.95),0_0_26px_rgb(227_196_99/0.4)]"
+        style={{ background: 'radial-gradient(circle at 35% 30%, #2b4268, #0b1424 75%)' }}
+      >
+        <Icon name="crown" size={22} />
+      </span>
+      <p className="font-display text-xs uppercase tracking-[0.28em] text-gold-400">The question before the Crown</p>
+      <Filigree className="mx-auto mt-2 max-w-[14rem]" />
+      <p className="mx-auto mt-3 max-w-2xl font-serif text-[1.42rem] italic leading-snug text-gold-100 sm:text-[1.65rem]" style={{ textShadow: '0 2px 10px rgb(0 0 0 / 0.6)' }}>
+        {text}
+      </p>
     </section>
   );
 }

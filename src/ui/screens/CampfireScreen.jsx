@@ -2,7 +2,7 @@
 // conversation, take a short moment, or skip — skipping never costs anything.
 // Lines are paced with CSS animation delays (instant under reduced motion), never with timers.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../game/GameProvider.jsx';
 import { TopBar } from '../game/TopBar.jsx';
 import { Button, cx } from '../kit/kit.jsx';
@@ -31,9 +31,9 @@ function Lines({ lines, start = 0, className }) {
 function Sparky({ text, delay }) {
   if (!text) return null;
   return (
-    <div className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-acid-600/30 bg-navy-950/55 p-4 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <div className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-brass-700/55 bg-[radial-gradient(120%_100%_at_0%_100%,rgb(224_120_43/0.12),transparent_60%),rgb(7_13_24/0.62)] p-4 shadow-[inset_0_1px_0_rgb(255_244_214/0.06)] animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
       <Portrait id="sparky" size={52} mood="warm" label="Sparky" />
-      <p className="font-serif text-[1.15rem] italic leading-relaxed text-parchment-100">{text}</p>
+      <p className="font-serif text-[1.15rem] italic leading-relaxed text-parchment-100">{smartQuotes(text)}</p>
     </div>
   );
 }
@@ -99,13 +99,11 @@ function Conversation({ scene, onRespond }) {
       <ul className="grid gap-2.5 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: `${450 + afterLines}ms` }} aria-label="Your answer">
         {scene.responses.map((r) => (
           <li key={r.id}>
-            <button
-              type="button"
-              onClick={() => onRespond(r)}
-              className="flex min-h-14 w-full flex-col items-start gap-0.5 rounded-xl border border-ember-500/35 bg-navy-950/70 px-4 py-3 text-left transition hover:border-ember-300/80 hover:bg-navy-900/80 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200"
-            >
-              <span className="font-display text-[0.72rem] uppercase tracking-[0.22em] text-ember-300">{r.tone}</span>
-              <span className="font-serif text-[1.15rem] leading-snug text-parchment-50">{r.label}</span>
+            <button type="button" onClick={() => onRespond(r)} aria-label={`${r.tone}: ${r.label}`} className="order-card h-full !min-h-14 !py-3">
+              <span className="order-card__body">
+                <span className="self-start rounded-md border border-brass-700/70 bg-navy-950/60 px-2 py-0.5 font-display text-[0.72rem] uppercase tracking-[0.22em] text-ember-300 shadow-[inset_0_1px_0_rgb(255_244_214/0.08)]">{r.tone}</span>
+                <span className="mt-1 font-serif text-[1.15rem] leading-snug text-parchment-50">{smartQuotes(r.label)}</span>
+              </span>
             </button>
           </li>
         ))}
@@ -156,6 +154,12 @@ export function CampfireScreen() {
   const [mode, setMode] = useState(null); // null | 'enter' | 'short'
   const [response, setResponse] = useState(null);
   const [extra, setExtra] = useState(null);
+  const scroller = useRef(null);
+
+  // Each new view of the talk starts at its top.
+  useEffect(() => {
+    scroller.current?.scrollTo?.({ top: 0 });
+  }, [mode, response]);
 
   // Optional narrator voices after an answer: never blocks; authored text stands alone.
   useEffect(() => {
@@ -183,26 +187,51 @@ export function CampfireScreen() {
   };
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-navy-950" aria-labelledby="cf-title">
+    <main className="relative flex h-dvh flex-col overflow-hidden bg-navy-950" aria-labelledby="cf-title">
+      {/* The camp is the hero, full-bleed behind everything. Its fire group sits in a clear band at
+          the foot of the screen that words never cover: the talk scrolls in the space above it, over
+          a scrim that stops at the band, so the fire, the two figures and Sparky always show. */}
       <div className="pointer-events-none fixed inset-0" aria-hidden="true">
-        <CampfireScene intensity={0.7} />
-        <div className="absolute inset-0 bg-[radial-gradient(130%_85%_at_50%_100%,transparent_35%,rgb(5_7_12/0.7)_80%)]" />
-        <div className="absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-navy-950/85 via-navy-950/45 to-transparent" />
+        <CampfireScene intensity={0.7} band scrim={<Scrim talking={mode !== null} />} />
       </div>
-      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 sm:px-6" style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))', paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
-        <TopBar subtitle="The camp, after dark" />
-        <h1 id="cf-title" className="mt-8 font-display text-[2.2rem] leading-tight text-gilded text-glow-ember sm:text-5xl animate-fade-in">
-          The Fire
-        </h1>
-        <div className="mt-6 flex-1">
-          {mode === null ? <Choose offer={view.offer} onPick={pick} /> : null}
-          {mode === 'enter' && !response ? <Conversation scene={view.scene} onRespond={setResponse} /> : null}
-          {mode === 'enter' && response ? (
-            <Reply response={response} scene={view.scene} extra={extra} onBank={() => act({ type: 'CAMPFIRE_COMPLETE', mode: 'enter', responseId: response.id })} />
-          ) : null}
-          {mode === 'short' ? <Short scene={view.shortScene} onBank={() => act({ type: 'CAMPFIRE_COMPLETE', mode: 'short' })} /> : null}
+      <div ref={scroller} className="scroll-elvia relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain [mask-image:linear-gradient(180deg,#000_calc(100%-2.25rem),transparent)]">
+        <div className="mx-auto flex w-full max-w-2xl flex-col px-4 pb-10 sm:px-6" style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))' }}>
+          <TopBar subtitle="The camp, after dark" />
+          <h1 id="cf-title" className="mt-6 font-display text-[2.2rem] leading-tight text-gilded text-glow-ember sm:mt-8 sm:text-5xl animate-fade-in">
+            The Fire
+          </h1>
+          <div className="mt-5 sm:mt-6">
+            {mode === null ? <Choose offer={view.offer} onPick={pick} /> : null}
+            {mode === 'enter' && !response ? <Conversation scene={view.scene} onRespond={setResponse} /> : null}
+            {mode === 'enter' && response ? (
+              <Reply response={response} scene={view.scene} extra={extra} onBank={() => act({ type: 'CAMPFIRE_COMPLETE', mode: 'enter', responseId: response.id })} />
+            ) : null}
+            {mode === 'short' ? <Short scene={view.shortScene} onBank={() => act({ type: 'CAMPFIRE_COMPLETE', mode: 'short' })} /> : null}
+          </div>
         </div>
       </div>
+      <div aria-hidden="true" className={cx('pointer-events-none relative shrink-0', BAND)} />
     </main>
+  );
+}
+
+// The fire band's height: the same rule as CampfireScene's `band` layout (campfireBand).
+const BAND = 'h-[clamp(220px,30dvh,280px)] [@media(max-height:599px)]:h-[30dvh]';
+const ABOVE_BAND = 'bottom-[clamp(220px,30dvh,280px)] [@media(max-height:599px)]:bottom-[30dvh]';
+
+/** Scrims over the camp, under the fire: dark where words sit, clear over the fire band. */
+function Scrim({ talking }) {
+  return (
+    <>
+      <div className={cx('absolute inset-x-0 top-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.82)_0%,rgb(7_13_24/0.6)_40%,rgb(7_13_24/0.2)_100%)] sm:bg-[linear-gradient(180deg,rgb(7_13_24/0.62)_0%,rgb(7_13_24/0.38)_55%,rgb(7_13_24/0.06)_100%)]', ABOVE_BAND)} />
+      <div className="absolute inset-y-0 left-1/2 hidden w-[56rem] -translate-x-1/2 bg-[radial-gradient(50%_50%_at_50%_30%,rgb(7_13_24/0.55),transparent_100%)] sm:block" />
+      <div
+        className={cx(
+          'absolute inset-x-0 top-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.32)_0%,rgb(7_13_24/0.3)_60%,rgb(7_13_24/0)_100%)] transition-opacity duration-700 motion-reduce:transition-none',
+          ABOVE_BAND,
+          talking ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+    </>
   );
 }

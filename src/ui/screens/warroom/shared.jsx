@@ -31,14 +31,23 @@ export function SectionHeading({ id, children, icon, aside, className, tone = 'g
   return (
     <div className={cx('mb-3 flex items-center gap-3', className)}>
       {icon ? (
-        <span className={cx('grid size-8 shrink-0 place-items-center rounded-full border', tone === 'ember' ? 'border-ember-400/50 text-ember-300' : 'border-gold-600/50 text-gold-400')}>
-          <Icon name={icon} size={16} />
+        <span
+          className={cx(
+            'grid size-9 shrink-0 place-items-center rounded-full border shadow-[inset_0_1px_0_rgb(255_244_214/0.12),0_2px_6px_rgb(0_0_0/0.5)]',
+            tone === 'ember' ? 'border-ember-400/60 text-ember-300' : 'border-gold-500/60 text-gold-300',
+          )}
+          style={{ background: tone === 'ember' ? 'radial-gradient(circle at 35% 30%, #3a2018, #0b1424 75%)' : 'radial-gradient(circle at 35% 30%, #24324a, #0b1424 75%)' }}
+        >
+          <Icon name={icon} size={17} />
         </span>
       ) : null}
       <h2 id={id} className={cx('font-display text-[0.95rem] uppercase tracking-[0.2em] text-engraved', tone === 'ember' ? 'text-ember-200' : 'text-gold-300')}>
         {children}
       </h2>
-      <span className="h-px min-w-6 flex-1 bg-gradient-to-r from-gold-600/50 to-transparent" aria-hidden="true" />
+      <span className="flex min-w-6 flex-1 items-center" aria-hidden="true">
+        <span className={cx('size-1.5 shrink-0 rotate-45', tone === 'ember' ? 'bg-ember-400/70' : 'bg-gold-500/70')} />
+        <span className={cx('h-px flex-1 bg-gradient-to-r to-transparent', tone === 'ember' ? 'from-ember-400/50' : 'from-gold-500/55')} />
+      </span>
       {aside}
     </div>
   );

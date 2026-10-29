@@ -11,19 +11,37 @@ function AdvisorCard({ advisor, character, index }) {
   return (
     <li
       className={cx(
-        'relative flex w-[78vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-[var(--radius-panel)] border p-4 animate-fade-up sm:w-auto sm:max-w-none',
-        action ? 'border-acid-600/35 bg-navy-900/70' : 'border-gold-700/35 bg-navy-900/75',
+        'relative isolate flex w-[80vw] max-w-[21rem] shrink-0 snap-start flex-col overflow-hidden rounded-[0.9rem] border p-4 pt-3.5 animate-fade-up sm:w-auto sm:max-w-none',
+        'shadow-[inset_0_1px_0_rgb(255_244_214/0.08),0_14px_28px_-16px_rgb(0_0_0/0.9)]',
+        action ? 'border-acid-600/35' : 'border-gold-700/50',
       )}
-      style={{ animationDelay: `${120 + index * 90}ms` }}
+      style={{
+        animationDelay: `${120 + index * 90}ms`,
+        background: [
+          'var(--elvia-grain)',
+          action ? 'radial-gradient(90% 70% at 0% 0%, rgb(111 154 30 / 0.12), transparent 60%)' : 'radial-gradient(90% 70% at 0% 0%, rgb(227 196 99 / 0.12), transparent 60%)',
+          'linear-gradient(180deg, #1b2639 0%, #121b2b 60%, #0d1523 100%)',
+        ].join(','),
+      }}
     >
+      <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] -z-10 rounded-[0.7rem] border border-gold-500/12" />
+      {/* a large engraved quotation mark behind the words */}
+      {!action ? (
+        <span aria-hidden="true" className="pointer-events-none absolute -right-1 -top-5 -z-10 font-serif text-[7rem] leading-none text-gold-500/10">
+          &rdquo;
+        </span>
+      ) : null}
       <div className="flex items-center gap-3">
-        <Portrait id={advisor.id} size={52} mood={action ? 'warm' : 'neutral'} />
+        <span className="relative shrink-0 rounded-full shadow-[0_0_18px_-2px_rgb(227_196_99/0.35)]">
+          <Portrait id={advisor.id} size={56} mood={action ? 'warm' : 'neutral'} />
+        </span>
         <div className="min-w-0">
-          <p className="truncate font-display text-[1rem] leading-tight text-gold-200">{name}</p>
-          <p className="truncate text-[0.85rem] text-parchment-300">{character?.role}</p>
+          <p className="truncate font-display text-[1.02rem] leading-tight text-gold-200 text-engraved">{name}</p>
+          <p className="truncate text-[0.88rem] text-parchment-300">{character?.role}</p>
         </div>
       </div>
-      <p className={cx('mt-3 font-serif text-[1.12rem] leading-snug', action ? 'italic text-parchment-200' : 'text-parchment-100')}>{advisor.line}</p>
+      <span aria-hidden="true" className="mt-3 h-px w-full bg-gradient-to-r from-gold-600/50 via-gold-700/20 to-transparent" />
+      <p className={cx('mt-3 font-serif text-[1.14rem] leading-snug', action ? 'italic text-parchment-200' : 'text-parchment-50')}>{advisor.line}</p>
     </li>
   );
 }

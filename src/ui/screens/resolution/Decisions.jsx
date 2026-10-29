@@ -19,14 +19,25 @@ function DeploymentCard({ d, characters, onChoose }) {
   return (
     <li
       className={cx(
-        'flex flex-col rounded-[var(--radius-panel)] border p-4 shadow-panel sm:p-5',
-        danger ? 'border-crimson-400/60 bg-[linear-gradient(180deg,rgb(122_31_26/0.35),rgb(11_20_36/0.9))]' : 'border-gold-600/45 bg-[linear-gradient(180deg,rgb(31_49_80/0.65),rgb(11_20_36/0.9))]',
+        'relative isolate flex flex-col overflow-hidden rounded-[0.9rem] border p-4 shadow-panel sm:p-5',
+        danger ? 'border-crimson-400/60' : 'border-gold-600/55',
       )}
+      style={{
+        background: danger
+          ? 'var(--elvia-grain), radial-gradient(100% 70% at 0% 0%, rgb(194 65 58 / 0.25), transparent 60%), linear-gradient(180deg, #2a1418, #0f0d14)'
+          : 'var(--elvia-grain), radial-gradient(100% 70% at 100% 0%, rgb(255 214 150 / 0.14), transparent 60%), linear-gradient(180deg, #1f3150 0%, #121b2d 60%, #0b1424 100%)',
+      }}
     >
+      <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] -z-10 rounded-[0.7rem] border border-gold-500/15" />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
+        style={{ background: danger ? 'linear-gradient(90deg, #d9726b, transparent 80%)' : 'linear-gradient(90deg, #f0dc95, rgb(201 162 39 / 0.4) 50%, transparent 90%)' }}
+      />
       <p className="font-display text-[0.75rem] uppercase tracking-[0.2em] text-gold-400">
         {d.kind === 'march' ? 'Leave the War Room' : d.kind === 'skirmish' ? 'The deployment that matters' : 'Last stand'}
       </p>
-      <p className="mt-1 font-display text-[1.25rem] leading-tight text-gold-100">{d.title}</p>
+      <p className="mt-1 font-display text-[1.3rem] leading-tight text-gold-100 text-engraved">{d.title}</p>
       <p className="mt-2 text-[1rem] leading-relaxed text-parchment-200">{d.text}</p>
       {d.line ? (
         <div className="mt-3 flex items-start gap-3">

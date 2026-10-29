@@ -45,9 +45,17 @@ export function SavesSheet({ open, onClose, mode = 'game' }) {
     importSlot(importTarget.current, await file.text());
   };
 
+  // One gold button per sheet: in a reign, "Save here" on the first empty slot; from the title,
+  // "Load" on the most recent save. Every other action stays brass-edged glass.
+  const saveTarget = mode === 'game' && state ? slots.find((s) => s.slot !== 'auto' && !s.summary && !s.corrupt)?.slot : undefined;
+  const loadTarget =
+    mode === 'title'
+      ? [...slots].filter((s) => s.summary && !s.corrupt).sort((a, b) => String(b.savedAt ?? '').localeCompare(String(a.savedAt ?? '')))[0]?.slot
+      : undefined;
+
   return (
     <Sheet open={open} onClose={onClose} title="The Royal Archive" eyebrow="Save & load" wide>
-      <p className="mb-3 text-[0.92rem] text-parchment-300">
+      <p className="mb-4 text-[0.95rem] leading-relaxed text-parchment-300">
         Saves hold a reign. The dynasty record above them holds everything the world remembers — loading an older save never makes Elvia forget.
       </p>
       <ul className="space-y-3">
@@ -55,32 +63,32 @@ export function SavesSheet({ open, onClose, mode = 'game' }) {
           const label = s.slot === 'auto' ? 'Autosave' : `Slot ${s.slot}`;
           const sum = s.summary;
           return (
-            <li key={String(s.slot)} className={cx('rounded-xl border p-3', sum ? 'border-gold-600/40 bg-navy-900/70' : 'border-gold-800/40 bg-navy-950/50')}>
+            <li key={String(s.slot)} className={cx(sum || s.corrupt ? 'tablet p-3.5 sm:p-4' : 'well p-3.5 sm:p-4')}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <Eyebrow>{label}</Eyebrow>
-                {s.savedAt ? <span className="text-[0.82rem] text-parchment-300">{when(s.savedAt)}</span> : null}
+                {s.savedAt ? <span className="text-[0.88rem] tabular-nums text-parchment-300">{when(s.savedAt)}</span> : null}
               </div>
               {s.corrupt ? (
                 <p className="mt-1 text-crimson-300">This save is damaged and cannot be loaded.</p>
               ) : sum ? (
                 <div className="mt-1">
-                  <p className="font-display text-gold-100">{sum.sovereign}</p>
-                  <p className="text-[0.92rem] text-parchment-200">
+                  <p className="font-display text-[1.05rem] text-gold-100 text-engraved">{sum.sovereign}</p>
+                  <p className="text-[0.95rem] text-parchment-200">
                     {sum.label}
                     {s.reason ? ` · ${REASON[s.reason] ?? s.reason}` : ''}
                   </p>
                 </div>
               ) : (
-                <p className="mt-1 text-parchment-400">Empty</p>
+                <p className="mt-1 font-serif text-[1.1rem] italic text-parchment-300">Empty</p>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {mode === 'game' && state && s.slot !== 'auto' ? (
-                  <Button variant={sum ? 'ghost' : 'royal'} onClick={() => (sum ? setConfirm({ kind: 'overwrite', slot: s.slot }) : saveSlot(s.slot))}>
+                  <Button variant={!sum && s.slot === saveTarget ? 'royal' : 'ghost'} onClick={() => (sum ? setConfirm({ kind: 'overwrite', slot: s.slot }) : saveSlot(s.slot))}>
                     {sum ? 'Overwrite' : 'Save here'}
                   </Button>
                 ) : null}
                 {sum && !s.corrupt ? (
-                  <Button variant={mode === 'title' ? 'royal' : 'ghost'} onClick={() => (state ? setConfirm({ kind: 'load', slot: s.slot }) : loadSlot(s.slot))}>
+                  <Button variant={s.slot === loadTarget ? 'royal' : 'ghost'} onClick={() => (state ? setConfirm({ kind: 'load', slot: s.slot }) : loadSlot(s.slot))}>
                     Load
                   </Button>
                 ) : null}

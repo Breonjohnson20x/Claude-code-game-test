@@ -13,7 +13,7 @@ import { WorldTab } from './dossier/WorldTab.jsx';
 const TABS = [
   { id: 'council', label: 'Council', icon: 'council' },
   { id: 'factions', label: 'Factions', icon: 'flag' },
-  { id: 'world', label: 'The World', icon: 'map' },
+  { id: 'world', label: 'The World', short: 'World', icon: 'map' },
 ];
 
 const ID = 'dossier';
@@ -32,7 +32,7 @@ export function DossierSheet({ open, onClose }) {
   return (
     <Sheet open={open} onClose={onClose} title="Council & Realm" eyebrow="The dossier · words, not numbers" wide>
       <div ref={bodyRef}>
-        <Tabs tabs={TABS} value={tab} onChange={change} idBase={ID} label="Dossier sections" className="sticky -top-4 z-10 -mx-1 shadow-[0_8px_16px_-8px_rgb(4_8_15/0.9)]" />
+        <Tabs tabs={TABS} value={tab} onChange={change} idBase={ID} label="Dossier sections" className="sticky -top-5 z-10 shadow-[0_10px_18px_-6px_rgb(4_8_15/0.95)]" />
         <div id={`${ID}-panel-${tab}`} role="tabpanel" aria-labelledby={`${ID}-tab-${tab}`} tabIndex={0} className="mt-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lattice-200">
           {tab === 'council' ? <CouncilTab state={state} /> : tab === 'factions' ? <FactionsTab state={state} /> : <WorldTab state={state} />}
         </div>

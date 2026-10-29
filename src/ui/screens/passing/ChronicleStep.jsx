@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, cx } from '../../kit/kit.jsx';
-import { FactionCrest, GoldDivider, PanelCorners, Sigil } from '../../art/index.js';
+import { FactionCrest, GoldDivider, Sigil } from '../../art/index.js';
+import { Headpiece, Manuscript } from './Manuscript.jsx';
 import { ActionBar } from './ActionBar.jsx';
 import { StepHeader } from './StepHeader.jsx';
 
@@ -12,9 +13,20 @@ function DropCap({ text }) {
     <>
       <span
         aria-hidden="true"
-        className="float-left mr-2.5 mt-1 grid size-[3.4rem] place-items-center rounded-[0.35rem] border border-gold-700/70 bg-[radial-gradient(circle_at_30%_25%,#2b4268,#0b1424_75%)] font-display text-[2.3rem] leading-none text-gold-300 shadow-[inset_0_0_0_2px_rgb(227_196_99/0.25),0_2px_4px_rgb(60_40_10/0.4)]"
+        className="relative float-left mr-3 mt-1 grid size-[3.9rem] place-items-center rounded-[0.3rem] border-2 border-gold-600 font-display text-[2.6rem] leading-none shadow-[inset_0_0_0_1px_rgb(122_31_26/0.9),inset_0_0_0_4px_rgb(227_196_99/0.22),0_3px_6px_rgb(60_40_10/0.45)]"
+        style={{ background: 'radial-gradient(circle at 30% 25%, #2b4268, #0b1424 78%)' }}
       >
-        {first}
+        {/* gilt filigree inside the initial's frame */}
+        <svg viewBox="0 0 40 40" className="absolute inset-0 size-full" aria-hidden="true" focusable="false">
+          <path d="M4 4c6 0 8 3 8 7M36 4c-6 0-8 3-8 7M4 36c6 0 8-3 8-7M36 36c-6 0-8-3-8-7" fill="none" stroke="#a8841b" strokeWidth="0.8" />
+          <circle cx="4.5" cy="4.5" r="1.3" fill="#c9a227" />
+          <circle cx="35.5" cy="4.5" r="1.3" fill="#c9a227" />
+          <circle cx="4.5" cy="35.5" r="1.3" fill="#c9a227" />
+          <circle cx="35.5" cy="35.5" r="1.3" fill="#c9a227" />
+        </svg>
+        <span className="relative text-gilded" style={{ filter: 'drop-shadow(0 1px 0 rgb(0 0 0 / 0.7))' }}>
+          {first}
+        </span>
       </span>
       <span className="sr-only">{first}</span>
       {rest}
@@ -26,7 +38,10 @@ function ReadbackLine({ line, index }) {
   return (
     <li className="animate-fade-up py-5 first:pt-3 last:pb-2" style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}>
       <article aria-labelledby={`rb-${line.id}`}>
-        <p className="font-serif text-[1.12rem] italic leading-snug text-crimson-600">{line.voice}&thinsp;&mdash;</p>
+        <p className="flex items-center gap-1.5 font-serif text-[1.12rem] italic leading-snug text-crimson-600">
+          <span aria-hidden="true" className="size-1.5 shrink-0 rotate-45 bg-crimson-500/80" />
+          {line.voice}&thinsp;&mdash;
+        </p>
         <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
           <h3 id={`rb-${line.id}`} className="font-display text-[1.08rem] leading-snug text-ink-900 sm:text-[1.15rem]">
             {line.title}
@@ -140,18 +155,18 @@ export function ChronicleStep({ view, state, tone, onNext, headingRef, aiOn, gen
       <div className="mt-7 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
         <div className="min-w-0">
           <ScribesNarration state={state} cause={view.passing.cause} aiOn={aiOn} generators={generators} />
-          <section aria-labelledby="manuscript-title" className="panel-parchment relative px-5 pb-4 pt-7 sm:px-9 sm:pt-9">
-            <PanelCorners size={26} inset={9} color="#7d6114" opacity={0.7} />
+          <Manuscript aria-labelledby="manuscript-title" className="px-6 pb-6 pt-9 sm:px-14 sm:pt-11">
             <header className="text-center">
-              <p className="font-display text-[0.72rem] uppercase tracking-[0.26em] text-ink-500">The Chronicle of Elvia</p>
-              <h2 id="manuscript-title" className="mt-1 font-display text-[1.45rem] leading-tight text-ink-900 sm:text-[1.7rem]">
+              <Headpiece />
+              <p className="mt-3 font-display text-[0.74rem] uppercase tracking-[0.3em] text-crimson-600">The Chronicle of Elvia</p>
+              <h2 id="manuscript-title" className="mt-1.5 text-balance font-display text-[1.5rem] leading-tight text-ink-900 sm:text-[1.85rem]">
                 The Reign of {rb.sovereign}
               </h2>
-              <p className="mt-1 font-serif text-[1.1rem] italic text-ink-500">{rb.years}</p>
+              <p className="mt-1 font-serif text-[1.12rem] italic text-ink-500">{rb.years}</p>
             </header>
             <GoldDivider className="mx-auto mt-4 max-w-sm" />
             {rb.lines.length ? (
-              <ol className="divide-y divide-ink-500/20">
+              <ol className="divide-y divide-ink-500/20 [&>li]:border-dotted">
                 {rb.lines.map((l, i) => (
                   <ReadbackLine key={l.id} line={l} index={i} />
                 ))}
@@ -159,12 +174,20 @@ export function ChronicleStep({ view, state, tone, onNext, headingRef, aiOn, gen
             ) : (
               <p className="py-6 text-center font-serif text-[1.18rem] italic text-ink-500">The Chronicle of this reign is short. Nothing was written that the world repeats.</p>
             )}
-            <p className="mt-2 border-t border-ink-500/20 pt-3 text-center text-[0.88rem] text-ink-500">
-              {approved
-                ? `${approved} ${approved === 1 ? 'entry was' : 'entries were'} approved and recorded in full. Words said by the fire stay by the fire.`
-                : 'Words said by the fire stay by the fire. Nothing here is ever rewritten.'}
-            </p>
-          </section>
+            <div className="mt-3 border-t border-ink-500/25 pt-4 text-center">
+              <svg viewBox="0 0 60 12" className="mx-auto mb-2 h-3 w-16" aria-hidden="true" focusable="false">
+                <path d="M2 6h20M38 6h20" stroke="#a8841b" strokeWidth="0.9" />
+                <path d="M30 1l5 5-5 5-5-5Z" fill="#7a1f1a" />
+                <circle cx="24" cy="6" r="1.2" fill="#a8841b" />
+                <circle cx="36" cy="6" r="1.2" fill="#a8841b" />
+              </svg>
+              <p className="text-[0.92rem] text-ink-500">
+                {approved
+                  ? `${approved} ${approved === 1 ? 'entry was' : 'entries were'} approved and recorded in full. Words said by the fire stay by the fire.`
+                  : 'Words said by the fire stay by the fire. Nothing here is ever rewritten.'}
+              </p>
+            </div>
+          </Manuscript>
         </div>
         <div className="mt-6 lg:mt-0 lg:sticky lg:top-6 lg:self-start">
           <Verdicts verdicts={rb.verdicts} />
