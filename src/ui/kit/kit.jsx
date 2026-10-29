@@ -17,6 +17,11 @@ export function cx(...parts) {
   return parts.filter(Boolean).join(' ');
 }
 
+/** A signed number for display: "+5", "−5" (a true minus sign U+2212, never a hyphen). */
+export function signed(n) {
+  return n > 0 ? `+${n}` : n < 0 ? `\u2212${Math.abs(n)}` : '0';
+}
+
 export function Button({ variant = 'royal', icon, children, className, ...rest }) {
   const base = variant === 'royal' ? 'btn-royal' : variant === 'danger' ? 'btn-ghost btn-danger' : 'btn-ghost';
   return (
@@ -51,7 +56,8 @@ export function Panel({ as: Tag = 'section', parchment = false, tight = false, c
 }
 
 export function Eyebrow({ children, className }) {
-  return <p className={cx('font-display text-xs uppercase tracking-[0.22em] text-gold-400/90', className)}>{children}</p>;
+  // tighter tracking on phones so a kicker wraps (if at all) into balanced lines, not one orphan word
+  return <p className={cx('font-display text-xs uppercase tracking-[0.14em] text-balance text-gold-400/90 sm:tracking-[0.22em]', className)}>{children}</p>;
 }
 
 export function Title({ children, className, as: Tag = 'h1' }) {
@@ -98,6 +104,53 @@ export function Meter({ value, max = 100, label, tone = 'gold', className }) {
   );
 }
 
+/** Toggle switch (role="switch"): a recessed channel with a struck brass knob. */
+export function Toggle({ checked, onChange, label, id, className }) {
+  return (
+    <button id={id} type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className={cx('switch', className)}>
+      <span className="switch__knob" aria-hidden="true" />
+    </button>
+  );
+}
+
+/** Radio-style segmented control with arrow-key support. options: [{ id, label }] */
+export function Segmented({ options, value, onChange, label, className }) {
+  const refs = useRef([]);
+  const onKey = (e, i) => {
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const next = (i + step + options.length) % options.length;
+    onChange(options[next].id);
+    refs.current[next]?.focus();
+  };
+  const current = options.some((o) => o.id === value) ? value : options[0]?.id;
+  return (
+    <div role="radiogroup" aria-label={label} className={cx('seg', className)}>
+      {options.map((o, i) => {
+        const on = current === o.id;
+        return (
+          <button
+            key={o.id}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            tabIndex={on ? 0 : -1}
+            onClick={() => onChange(o.id)}
+            onKeyDown={(e) => onKey(e, i)}
+            className="seg__opt"
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Live resource strip (Master Build §17: the five visible resources). */
 export function ResourceHud({ resources, deltas = {}, compact = false, className }) {
   return (
@@ -119,10 +172,7 @@ export function ResourceHud({ resources, deltas = {}, compact = false, className
             </dt>
             <dd className="plaque__value mt-0.5 truncate font-display text-[0.98rem] font-semibold tabular-nums">{meta.format(resources[key])}</dd>
             {d ? (
-              <span className={cx('plaque__delta', bad ? 'plaque__delta--bad' : 'plaque__delta--good')}>
-                {d > 0 ? '+' : ''}
-                {d}
-              </span>
+              <span className={cx('plaque__delta', bad ? 'plaque__delta--bad' : 'plaque__delta--good')}>{signed(d)}</span>
             ) : null}
           </div>
         );
@@ -183,7 +233,7 @@ export function Sheet({ open, onClose, title, eyebrow, children, footer, wide = 
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="presentation">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-navy-950/75 backdrop-blur-[2px] animate-fade-in" onClick={onClose} tabIndex={-1} />
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-navy-950/80 animate-fade-in" onClick={onClose} tabIndex={-1} />
       <div
         ref={ref}
         role="dialog"

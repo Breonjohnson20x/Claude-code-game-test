@@ -116,13 +116,8 @@ function ElviaCrest({ uid }) {
       </defs>
       <circle cx="50" cy="52" r="44.6" fill="#2a2006" />
       <circle cx="50" cy="52" r="44" fill={`url(#${uid}-g)`} />
-      <Bevel id={`${uid}-rim`} cx={50} cy={52} r={42.5} width={2.6} />
-      {/* beaded rim */}
-      {Array.from({ length: 36 }, (_, i) => {
-        const a = (i * Math.PI * 2) / 36;
-        return <circle key={i} cx={f(50 + Math.cos(a) * 42.5)} cy={f(52 + Math.sin(a) * 42.5)} r="0.62" fill="#4f3d0d" opacity="0.55" />;
-      })}
-      <circle cx="50" cy="52" r="41" fill="#0b1424" />
+      <Bevel id={`${uid}-rim`} cx={50} cy={52} r={42} width={3.6} />
+      <circle cx="50" cy="52" r="40.6" fill="#04070d" />
       <circle cx="50" cy="52" r="39.5" fill={`url(#${uid}-field)`} />
       <circle cx="50" cy="56" r="30" fill={`url(#${uid}-halo)`} />
       <circle cx="50" cy="52" r="39.5" fill="none" stroke="#c9a227" strokeOpacity="0.55" strokeWidth="0.8" />
@@ -175,13 +170,14 @@ function SyndicateCrest({ uid }) {
     <>
       <defs>
         <linearGradient id={`${uid}-m`} x1="0" y1="0" x2="0.4" y2="1">
-          <stop offset="0" stopColor="#a7adb5" />
-          <stop offset="0.45" stopColor="#5d636b" />
-          <stop offset="1" stopColor="#25282d" />
+          <stop offset="0" stopColor="#eef2f5" />
+          <stop offset="0.4" stopColor="#9aa0a8" />
+          <stop offset="1" stopColor="#3b3f45" />
         </linearGradient>
         <linearGradient id={`${uid}-b`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#e6c890" />
-          <stop offset="0.5" stopColor="#b08d57" />
+          <stop offset="0" stopColor="#f6e9bd" />
+          <stop offset="0.35" stopColor="#d6b47a" />
+          <stop offset="0.7" stopColor="#b08d57" />
           <stop offset="1" stopColor="#6a5230" />
         </linearGradient>
         <linearGradient id={`${uid}-edge`} x1="0.1" y1="0" x2="0.9" y2="1">
@@ -190,26 +186,28 @@ function SyndicateCrest({ uid }) {
           <stop offset="1" stopColor="#0e0f11" stopOpacity="0.6" />
         </linearGradient>
         <radialGradient id={`${uid}-heat`} cx="50%" cy="58%" r="50%">
-          <stop offset="0" stopColor="#e0782b" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#1b1d21" stopOpacity="0" />
+          <stop offset="0" stopColor="#e0782b" stopOpacity="0.7" />
+          <stop offset="0.55" stopColor="#8a3a1c" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#0e0f11" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <path d={gearPath(50, 50, 12, 47, 39, 0.46)} fill={`url(#${uid}-m)`} stroke="#15171a" strokeWidth="1.2" strokeLinejoin="round" />
-      <path d={gearPath(50, 50, 12, 46, 39.6, 0.42)} fill="none" stroke={`url(#${uid}-edge)`} strokeWidth="0.9" strokeLinejoin="round" />
-      <circle cx="50" cy="50" r="38.2" fill={`url(#${uid}-b)`} stroke="#15171a" strokeWidth="0.8" />
-      <Bevel id={`${uid}-rim`} cx={50} cy={50} r={37.4} width={1.6} light="#f6e9bd" dark="#0e0f11" />
-      <circle cx="50" cy="50" r="36.5" fill="#1b1d21" stroke="#0e0f11" strokeWidth="1" />
-      <circle cx="50" cy="50" r="36.5" fill={`url(#${uid}-heat)`} />
-      <circle cx="50" cy="50" r="34" fill="none" stroke="#b08d57" strokeWidth="1" strokeOpacity="0.75" />
-      {rivets.map(([x, y]) => (
+      <path d={gearPath(50, 50, 12, 48, 39, 0.5)} fill={`url(#${uid}-b)`} stroke="#15171a" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d={gearPath(50, 50, 12, 46.8, 39.8, 0.44)} fill="none" stroke={`url(#${uid}-edge)`} strokeWidth="1" strokeLinejoin="round" />
+      <Bevel id={`${uid}-rim`} cx={50} cy={50} r={38} width={3.4} light="#fffaf0" dark="#1b1d21" />
+      <circle cx="50" cy="50" r="35.6" fill="#0e0f11" stroke="#04070d" strokeWidth="1.2" />
+      <circle cx="50" cy="50" r="35.6" fill={`url(#${uid}-heat)`} />
+      <circle cx="50" cy="50" r="32.6" fill="none" stroke="#b08d57" strokeWidth="1.1" strokeOpacity="0.8" />
+      {rivets.filter((_, i) => i % 2 === 0).map(([x, y]) => (
         <g key={`${x}-${y}`}>
-          <circle cx={x} cy={y} r="1.9" fill="#3b3f45" />
-          <circle cx={x - 0.45} cy={y - 0.45} r="0.85" fill="#c3c7cc" />
+          <circle cx={x} cy={y} r="2.2" fill="#6a5230" />
+          <circle cx={x - 0.5} cy={y - 0.5} r="1.1" fill="#f6e9bd" />
         </g>
       ))}
-      {/* inner cog behind hammer */}
-      <path d={gearPath(50, 50, 8, 21, 16.5, 0.5)} fill="#33373d" stroke="#0e0f11" strokeWidth="0.8" />
-      <circle cx="50" cy="50" r="7.5" fill="#1b1d21" stroke="#b08d57" strokeWidth="0.9" />
+      {/* inner cog behind hammer: iron with a lit edge, an ember heart */}
+      <path d={gearPath(50, 50, 8, 22, 17, 0.5)} fill="#5d636b" stroke="#0e0f11" strokeWidth="1" />
+      <path d={gearPath(50, 50, 8, 21.2, 17.6, 0.44)} fill="none" stroke="#c3c7cc" strokeOpacity="0.55" strokeWidth="0.7" />
+      <circle cx="50" cy="50" r="7.5" fill="#e0782b" stroke="#6a5230" strokeWidth="1.2" />
+      <circle cx="48.6" cy="48.6" r="2.4" fill="#f9c99a" opacity="0.8" />
       {/* hammer, diagonal */}
       <g transform="rotate(-38 50 50)">
         <rect x="47.4" y="30" width="5.2" height="44" rx="1.4" fill={`url(#${uid}-b)`} stroke="#3d2f1a" strokeWidth="0.9" />
@@ -268,8 +266,9 @@ function WargCrest({ uid }) {
       <path d={icicles} fill="#d9e2e8" opacity="0.9" />
       <circle cx="50" cy="50" r="43.6" fill="#1f3150" />
       <circle cx="50" cy="50" r="43" fill={`url(#${uid}-silver)`} />
-      <Bevel id={`${uid}-rim`} cx={50} cy={50} r={41.8} width={2.2} light="#fffdf7" dark="#1f3150" />
-      <circle cx="50" cy="50" r="40.5" fill={`url(#${uid}-night)`} />
+      <Bevel id={`${uid}-rim`} cx={50} cy={50} r={41.6} width={3.4} light="#fffdf7" dark="#1f3150" />
+      <circle cx="50" cy="50" r="40.5" fill="#04070d" />
+      <circle cx="50" cy="50" r="39.6" fill={`url(#${uid}-night)`} />
       <circle cx="50" cy="50" r="38" fill="none" stroke="#d9e2e8" strokeOpacity="0.45" strokeWidth="0.8" />
       <path d={flake} stroke="#b8c6d1" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" fill="none" />
       {/* wolf head, front-facing */}

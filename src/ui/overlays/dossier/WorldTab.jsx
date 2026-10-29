@@ -14,8 +14,8 @@ const REGION_GLOSS = {
 function Section({ id, title, eyebrow, children, className }) {
   return (
     <section aria-labelledby={id} className={cx('mt-6 first:mt-0', className)}>
-      {eyebrow ? <p className="font-display text-[0.72rem] uppercase tracking-[0.22em] text-gold-400/90">{eyebrow}</p> : null}
-      <h3 id={id} className="font-display text-[1.12rem] text-gold-200">
+      {eyebrow ? <p className="label-engraved">{eyebrow}</p> : null}
+      <h3 id={id} className="font-display text-[1.12rem] text-gold-200 text-engraved">
         {title}
       </h3>
       <div className="mt-3">{children}</div>
@@ -34,15 +34,15 @@ function Threads({ state }) {
         const resolved = t.status === 'resolved';
         const word = resolved ? 'Settled' : urgencyWord(t.urgency);
         return (
-          <li key={t.id} className={cx('rounded-xl border p-3.5', resolved ? 'border-stone-600/50 bg-stone-950/50' : 'border-gold-700/30 bg-navy-900/60')}>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <p className="min-w-0 font-display text-[1rem] leading-snug text-parchment-50">{t.title}</p>
+          <li key={t.id} className={cx('tablet p-3.5', resolved && 'tablet--stone')}>
+            <p className="font-display text-[1rem] leading-snug text-parchment-50">{t.title}</p>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.95rem] text-parchment-300">
               <span className={t.visibility === 'rumored' ? 'chip chip--frost !text-[0.8rem]' : 'chip chip--iron !text-[0.8rem]'}>
                 {t.visibility === 'rumored' ? 'Rumored' : 'Known'}
               </span>
-            </div>
-            <p className="mt-1 text-[0.92rem] text-parchment-300">
+              <span>
               {THREAD_STATUS_WORD[t.status] ?? 'Unfolding'} · <span className={cx(!resolved && t.urgency >= 70 ? 'text-crimson-300' : !resolved && t.urgency >= 40 ? 'text-ember-300' : 'text-gold-300')}>{word}</span>
+              </span>
             </p>
             {resolved ? null : <Meter value={t.urgency} label={`Urgency of ${t.title}: ${word}`} tone={t.urgency >= 70 ? 'crimson' : t.urgency >= 40 ? 'ember' : 'gold'} className="mt-2" />}
           </li>
@@ -56,14 +56,14 @@ function Marches({ region }) {
   const word = REGION_STATE_WORD[region.state] ?? region.state;
   const monuments = region.monuments ?? [];
   return (
-    <div className="overflow-hidden rounded-xl border border-gold-700/35 bg-navy-900/60">
-      <div className="relative h-32 sm:h-40">
+    <div className="tablet overflow-hidden">
+      <div className="relative h-32 overflow-hidden rounded-t-[0.75rem] sm:h-40">
         <RegionScene beat="road" regionState={region.state} timeOfDay="dusk" monuments={monuments} animated={false} className="absolute inset-0 h-full w-full" />
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-4 pb-3">
           <div className="min-w-0">
             <p className="font-display text-[1.08rem] leading-tight text-gold-200 text-engraved">{region.name}</p>
-            <p className="text-[0.88rem] text-parchment-200">{region.subtitle}</p>
+            <p className="text-[0.95rem] text-parchment-200 text-engraved">{region.subtitle}</p>
           </div>
           <span className={cx('chip', region.state === 'AFTERMATH' ? 'chip--crimson' : region.state === 'FORTIFIED' ? 'chip--gold' : 'chip--iron')}>{word}</span>
         </div>
@@ -76,19 +76,19 @@ function Marches({ region }) {
             ? `${region.casualties} ${region.casualties === 1 ? 'name is' : 'names are'} on the wall at Greywater this reign.`
             : 'No soldier of the Marches has been lost this reign.'}
         </p>
-        <p className="mt-4 font-display text-[0.72rem] uppercase tracking-[0.2em] text-gold-400/90">Monuments</p>
+        <p className="label-engraved mt-4">Monuments</p>
         {monuments.length ? (
           <ul className="mt-2 space-y-2">
             {monuments.map((m) => (
-              <li key={m.id} className="flex gap-3 rounded-lg border border-gold-700/25 bg-navy-950/50 p-3">
-                <span aria-hidden="true" className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md border border-stone-500/50 bg-stone-800 text-stone-200">
+              <li key={m.id} className="well flex gap-3 p-3">
+                <span aria-hidden="true" className="socket mt-0.5 size-8 shrink-0">
                   <Sigil name="diamond" size={14} />
                 </span>
                 <div className="min-w-0">
                   <p className="font-display text-[0.98rem] text-parchment-50">{m.title}</p>
                   <p className="font-serif text-[1.08rem] leading-snug text-parchment-200">
                     {m.text[0].toUpperCase() + m.text.slice(1)}
-                    {m.year ? <span className="ml-2 whitespace-nowrap font-body text-[0.8rem] text-parchment-400">raised {m.year} E.R.</span> : null}
+                    {m.year ? <span className="ml-2 whitespace-nowrap font-body text-[0.85rem] text-parchment-300">raised {m.year} E.R.</span> : null}
                   </p>
                 </div>
               </li>
@@ -109,7 +109,7 @@ function ActiveLegacies({ ids }) {
   return (
     <ul className="grid gap-2.5 sm:grid-cols-2">
       {ids.map((id) => (
-        <li key={id} className="rounded-xl border border-gold-500/45 bg-[radial-gradient(120%_120%_at_0%_0%,rgb(227_196_99/0.14),transparent_60%),rgb(11_20_36/0.7)] p-3.5">
+        <li key={id} className="well well--lit p-3.5">
           <p className="flex items-center gap-2 font-display text-[1rem] text-gold-200">
             <Sigil name="star" size={14} className="text-gold-400" />
             {legacyName(id)}
@@ -129,11 +129,8 @@ function PastReigns({ history }) {
   return (
     <ol className="space-y-2.5">
       {list.map((h) => (
-        <li key={h.cycle} className="flex gap-3.5 rounded-xl border border-gold-700/30 bg-navy-900/60 p-3.5">
-          <span
-            aria-hidden="true"
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-gold-700/60 bg-[radial-gradient(circle_at_35%_30%,#fbefc2,#e3c463_40%,#a8841b_85%)] font-display text-[0.95rem] font-bold text-navy-950"
-          >
+        <li key={h.cycle} className="tablet flex gap-3.5 p-3.5">
+          <span aria-hidden="true" className="coin size-11 shrink-0 text-[0.95rem]">
             {romanNumeral(h.cycle)}
           </span>
           <div className="min-w-0 flex-1">
@@ -141,10 +138,10 @@ function PastReigns({ history }) {
               <span className="sr-only">Reign {romanNumeral(h.cycle)}: </span>
               {h.sovereign}
             </p>
-            <p className="text-[0.92rem] text-parchment-300">
+            <p className="text-[0.95rem] text-parchment-300">
               {h.startYear}–{h.endYear} E.R. · {causeWord(h.cause)}
             </p>
-            <p className="mt-1.5 text-[0.92rem] text-parchment-200">
+            <p className="mt-1.5 text-[0.95rem] text-parchment-200">
               {h.legacies?.length ? (
                 <>
                   <span className="text-parchment-400">Carried on: </span>

@@ -33,7 +33,7 @@ export function TopBar({ className, subtitle }) {
           )}
         </p>
       </div>
-      <nav aria-label="Game menu" className="flex shrink-0 gap-1 sm:gap-1.5 [&>button]:max-sm:size-11">
+      <nav aria-label="Game menu" className="topbar-nav flex shrink-0 gap-1.5 sm:gap-2 [&>button]:max-sm:size-11">
         <IconButton icon="chronicle" label="The Chronicle" onClick={() => openOverlay('chronicle')} badge={pending > 0 ? pending : null} />
         <IconButton icon="council" label="Council and factions" onClick={() => openOverlay('dossier')} />
         <IconButton icon="saves" label="Save and load" onClick={() => openOverlay('saves')} />
