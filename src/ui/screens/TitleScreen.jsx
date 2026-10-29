@@ -6,12 +6,11 @@ import { StageBackdrop } from '../duel/StageBackdrop.jsx';
 import { audio } from '../audio/audio.js';
 import { promptInstall, useInstallState } from '../pwa.js';
 import { useReducedMotion } from '../art/util.js';
-import { Filigree, LightRays, Motes } from './warroom/ornate.jsx';
+import { LightRays, Motes } from '../art/Atmosphere.jsx';
+import { Filigree } from './warroom/ornate.jsx';
 
-const TITLE_STYLE = `
-@keyframes title-drift { 0%,100% { transform: scale(1.07) translate3d(-0.8%, 0.4%, 0) } 50% { transform: scale(1.07) translate3d(0.8%, -0.6%, 0) } }
-@keyframes title-bloom { 0%,100% { opacity: .75 } 50% { opacity: 1 } }
-`;
+// Only opacity breathes, on one small layer; the scene behind is a canvas that animates itself.
+const TITLE_STYLE = `@keyframes title-bloom { 0%,100% { opacity: .72 } 50% { opacity: 1 } }`;
 
 /** Fine engraved flourish under the title: two scrolled hairlines meeting at a lozenge. */
 function TitleFlourish({ className }) {
@@ -53,27 +52,44 @@ export function TitleScreen() {
     <main className="relative min-h-dvh overflow-hidden bg-navy-950" aria-labelledby="title-heading">
       <style>{TITLE_STYLE}</style>
       <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-        {/* the living ruin, drifting very slowly like a held camera */}
-        <div className="absolute inset-0" style={{ transform: 'scale(1.07)', animation: reduced ? 'none' : 'title-drift 38s ease-in-out infinite', willChange: reduced ? undefined : 'transform' }}>
-          <StageBackdrop stage="ruin" noSymbol className="block h-full w-full" />
-        </div>
-        {/* key light from the upper right */}
-        <div className="absolute inset-0 bg-[radial-gradient(70%_45%_at_78%_0%,rgb(255_233_174/0.12),transparent_70%)] mix-blend-screen" />
-        <div className="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_40%,rgb(7_13_24/0.1)_0%,rgb(7_13_24/0.5)_55%,rgb(7_13_24/0.92)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-navy-950 via-navy-950/75 to-transparent" />
-        <Motes count={30} seed={5} rise={1.6} opacity={0.8} />
-        <div className="absolute inset-0 shadow-[inset_0_0_140px_40px_rgb(3_5_10/0.85)]" />
+        {/* the living ruin (its own canvas animates the lights and embers) */}
+        <StageBackdrop stage="ruin" noSymbol className="block h-full w-full" />
+        {/* one static grade: a warm key light from above, the vignette and the floor falling into
+            night, all plain alpha gradients (no blend modes, no inset shadows over the canvas) */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: [
+              'radial-gradient(60% 34% at 56% 0%, rgb(255 233 174 / 0.1), transparent 75%)',
+              'linear-gradient(0deg, #070d18 0%, rgb(7 13 24 / 0.78) 26%, transparent 55%)',
+              'radial-gradient(125% 80% at 50% 40%, rgb(7 13 24 / 0.08) 0%, rgb(7 13 24 / 0.5) 52%, rgb(4 7 13 / 0.94) 100%)',
+            ].join(','),
+          }}
+        />
       </div>
       <div
         className="relative z-10 mx-auto flex min-h-dvh max-w-xl flex-col items-center justify-center px-6 text-center"
         style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))', paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
       >
         <div className="relative mb-5 grid place-items-center" aria-hidden="true">
-          <LightRays className="absolute left-1/2 top-1/2 size-[30rem] -translate-x-1/2 -translate-y-1/2 sm:size-[40rem]" rays={28} strength={0.12} />
-          <span
-            className="absolute left-1/2 top-1/2 size-48 -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgb(255 233 174 / 0.32), rgb(224 120 43 / 0.08) 50%, transparent 70%)', animation: reduced ? 'none' : 'title-bloom 6s ease-in-out infinite' }}
+          {/* a few soft shafts falling on the emblem from above; gone before the title */}
+          <LightRays
+            className="absolute bottom-[-1.5rem] left-1/2 h-[19rem] w-[22rem] -translate-x-1/2 sm:h-[22rem] sm:w-[28rem]"
+            style={{ WebkitMaskImage: 'linear-gradient(180deg, #000 55%, transparent 100%)', maskImage: 'linear-gradient(180deg, #000 55%, transparent 100%)' }}
+            rays={5}
+            strength={0.3}
+            spread={20}
           />
+          <span
+            className="absolute left-1/2 top-1/2 size-44 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ background: 'radial-gradient(circle, rgb(255 233 174 / 0.3), rgb(224 120 43 / 0.07) 50%, transparent 70%)', animation: reduced ? 'none' : 'title-bloom 6s ease-in-out infinite' }}
+          />
+          {/* a faint halo ring */}
+          <span className="absolute left-1/2 top-1/2 size-[9.5rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-gold-400/15" />
+          {/* dust in the light, on a canvas the size of the emblem's glow */}
+          <span className="absolute left-1/2 top-1/2 size-60 -translate-x-1/2 -translate-y-[58%]">
+            <Motes count={15} seed={5} rise={1.4} opacity={0.85} />
+          </span>
           <ArchitectSymbol size={104} glow animated className="relative" />
         </div>
         <div className="flex w-full max-w-sm items-center gap-3">
@@ -89,7 +105,10 @@ export function TitleScreen() {
           Empire of Elvia
         </h1>
         <TitleFlourish className="mt-3 h-6 w-72 sm:w-80" />
-        <p className="mt-4 max-w-md font-serif text-[1.22rem] italic leading-snug text-parchment-100" style={{ textShadow: '0 2px 12px rgb(0 0 0 / 0.8)' }}>
+        <p
+          className="mt-4 max-w-md font-serif text-[1.2rem] font-medium leading-snug text-parchment-100 sm:text-[1.28rem]"
+          style={{ textShadow: '0 1px 0 rgb(0 0 0 / 0.7), 0 2px 12px rgb(0 0 0 / 0.85)' }}
+        >
           You are the God-King. Command the War Room, walk the border in person, prove the crown with one blade — and when you fall, return to a world that
           remembers.
         </p>
@@ -138,12 +157,11 @@ export function TitleScreen() {
             </Button>
           ) : null}
         </div>
-        <Filigree className="mt-6 w-full max-w-xs opacity-70" />
-        {latest ? <p className="mt-4 text-[0.88rem] text-parchment-300">Last reign: {latest.summary.sovereign} · {latest.summary.label}</p> : null}
+        {latest ? <p className="mt-5 text-[0.95rem] text-parchment-300">Last reign: {latest.summary.sovereign} · {latest.summary.label}</p> : null}
         {install.iosHint ? (
           <p className="mt-6 max-w-sm text-[0.95rem] text-parchment-300">To install: tap Share, then Add to Home Screen.</p>
         ) : null}
-        <p className="mt-8 max-w-sm text-[0.8rem] text-parchment-400">
+        <p className="mt-8 max-w-sm text-[0.95rem] leading-relaxed text-parchment-300">
           Plays entirely offline once loaded. An optional Claude narrator can be turned on in Settings. Original world and art; no assets from other games.
         </p>
       </div>

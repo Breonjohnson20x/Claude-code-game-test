@@ -9,6 +9,7 @@ import { isApprovable, PEN_GOAL } from '../../overlays/chronicle/meta.js';
 import { SectionHeading } from '../warroom/shared.jsx';
 import { REGION_WORDS, outcomeWord, sentimentWord, signed } from '../warroom/words.js';
 import { GiltCorners } from '../warroom/shared.jsx';
+import { dropCapClass } from '../warroom/tones.js';
 import { Manuscript } from '../passing/Manuscript.jsx';
 
 export function Outcome({ report }) {
@@ -27,11 +28,7 @@ export function Outcome({ report }) {
         {report.outcome.map((line, i) => (
           <p
             key={i}
-            className={cx(
-              'font-serif text-[1.2rem] leading-relaxed text-parchment-50 animate-fade-up',
-              i === 0 &&
-                'first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:rounded-[0.3rem] first-letter:border first-letter:border-gold-600/70 first-letter:bg-[radial-gradient(circle_at_30%_25%,#2b4268,#0b1424_75%)] first-letter:px-3 first-letter:pb-1.5 first-letter:pt-2.5 first-letter:font-display first-letter:text-[2.7rem] first-letter:leading-[0.85] first-letter:text-gold-300 first-letter:shadow-[inset_0_0_0_2px_rgb(227_196_99/0.18),0_3px_8px_rgb(0_0_0/0.5)]',
-            )}
+            className={cx('font-serif text-[1.2rem] leading-relaxed text-parchment-50 animate-fade-up', i === 0 && dropCapClass(line))}
             style={{ animationDelay: `${i * 120}ms` }}
           >
             {line}
@@ -185,7 +182,7 @@ export function Memories({ memories, characters }) {
           <li key={i} className="flex gap-3 rounded-[0.8rem] border border-gold-700/40 bg-[linear-gradient(180deg,rgb(27_38_57/0.85),rgb(11_20_36/0.85))] p-3.5 shadow-[inset_0_1px_0_rgb(255_244_214/0.07)]">
             <Portrait id={m.characterId} size={44} mood={m.sentiment > 0.15 ? 'warm' : m.sentiment < -0.15 ? 'grim' : 'neutral'} />
             <div className="min-w-0">
-              <p className="text-[0.88rem] text-parchment-300">
+              <p className="text-[0.95rem] text-parchment-300">
                 <span className="font-display text-gold-200">{characters[m.characterId]?.short ?? m.characterId}</span> · {sentimentWord(m.sentiment)}
               </p>
               <p className="font-serif text-[1.12rem] italic leading-snug text-parchment-50">&ldquo;{m.description}&rdquo;</p>
@@ -209,11 +206,11 @@ export function Voices({ voices }) {
           <li key={i}>
             <figure className="relative h-full overflow-hidden rounded-[0.8rem] border border-gold-700/35 bg-[linear-gradient(180deg,rgb(27_38_57/0.8),rgb(11_20_36/0.85))] py-3 pl-5 pr-4 shadow-[inset_0_1px_0_rgb(255_244_214/0.07)]">
               <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[2px] bg-gradient-to-b from-gold-400 via-gold-600/70 to-transparent" />
-              <span aria-hidden="true" className="pointer-events-none absolute -right-1 -top-4 font-serif text-[5.5rem] leading-none text-gold-500/10">
+              <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1 h-12 font-serif text-[3.5rem] leading-[1] text-gold-500/20">
                 &rdquo;
               </span>
-              <blockquote className="relative font-serif text-[1.15rem] italic leading-snug text-parchment-50">{v.text}</blockquote>
-              <figcaption className="mt-2 font-display text-[0.86rem] uppercase tracking-[0.12em] text-gold-400/90">— {v.speaker}</figcaption>
+              <blockquote className="relative pr-8 font-serif text-[1.15rem] italic leading-snug text-parchment-50">{v.text}</blockquote>
+              <figcaption className="mt-2 font-serif text-[1.02rem] italic leading-snug text-gold-300">— {v.speaker}</figcaption>
             </figure>
           </li>
         ))}

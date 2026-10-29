@@ -17,7 +17,7 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { C } from './palette.js';
 import { clamp, mulberry32, r1, useReducedMotion, useUid } from './util.js';
-import { Motes } from '../screens/warroom/ornate.jsx';
+import { Motes } from './Atmosphere.jsx';
 
 // ---------------------------------------------------------------- geometry
 const WW = 1800; // table world, viewBox units
@@ -884,8 +884,6 @@ function SmokeArt({ uid, seed }) {
 const STYLE = `
 @keyframes wrb-flicker { 0%{opacity:1;transform:scale(1,1)} 9%{opacity:.86;transform:scale(.96,1.05)} 17%{opacity:1;transform:scale(1.02,.96)} 31%{opacity:.9;transform:scale(.97,1.03)} 48%{opacity:1;transform:scale(1,1.06)} 63%{opacity:.82;transform:scale(1.03,.95)} 79%{opacity:.97;transform:scale(.98,1.02)} 100%{opacity:1;transform:scale(1,1)} }
 @keyframes wrb-glow { 0%{opacity:.92} 13%{opacity:.74} 27%{opacity:.95} 41%{opacity:.82} 58%{opacity:1} 73%{opacity:.78} 88%{opacity:.9} 100%{opacity:.92} }
-@keyframes wrb-sway { 0%,100%{transform:rotate(-0.7deg)} 50%{transform:rotate(0.9deg)} }
-@keyframes wrb-breathe { 0%,100%{opacity:.8} 50%{opacity:1} }
 @keyframes wrb-smoke { 0%{opacity:.0;transform:translateY(8%) scaleX(.9)} 30%{opacity:.85} 100%{opacity:0;transform:translateY(-14%) scaleX(1.15)} }
 `;
 
@@ -1038,7 +1036,13 @@ function HangingBanner({ uid, flip = false }) {
           <stop offset="0.45" stopColor="#c9a227" />
           <stop offset="1" stopColor="#4f3d0d" />
         </linearGradient>
+        {/* close to the lens: soft focus and a little darker, baked into the static SVG */}
+        <filter id={`${id}-dof`} x="-10%" y="-5%" width="120%" height="110%" colorInterpolationFilters="sRGB">
+          <feGaussianBlur stdDeviation="1.8" />
+          <feColorMatrix type="matrix" values="0.78 0 0 0 0  0 0.78 0 0 0  0 0 0.78 0 0  0 0 0 1 0" />
+        </filter>
       </defs>
+      <g filter={`url(#${id}-dof)`}>
       {/* rod and finials */}
       <rect x="2" y="14" width="116" height="7" rx="3.5" fill={`url(#${id}-gold)`} />
       <circle cx="4" cy="17.5" r="6" fill={`url(#${id}-gold)`} />
@@ -1062,6 +1066,7 @@ function HangingBanner({ uid, flip = false }) {
       <circle cx="110" cy="378" r="4" fill="#c9a227" />
       {/* key-light rim along the lit edge */}
       <path d="M110 22V350" stroke="#ffe9ae" strokeOpacity="0.28" strokeWidth="2" />
+      </g>
     </svg>
   );
 }
@@ -1069,7 +1074,7 @@ function HangingBanner({ uid, flip = false }) {
 const SHAFT = { top: 0.86, bottom: 0.28, width: 0.36 };
 
 /** Window light, out-of-focus foreground standards and candle bokeh, dust in the beam. */
-function RoomLayer({ uid, motion, wide }) {
+function RoomLayer({ uid, wide }) {
   return (
     <>
       {/* a shaft of high-window light from the upper right, falling across the table */}
@@ -1082,11 +1087,9 @@ function RoomLayer({ uid, motion, wide }) {
             'linear-gradient(112deg, transparent 0%, transparent 46%, rgb(255 233 174 / 0.05) 54%, rgb(255 244 214 / 0.11) 62%, rgb(255 233 174 / 0.06) 70%, transparent 80%)',
           WebkitMaskImage: 'linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.8) 35%, transparent 80%)',
           maskImage: 'linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.8) 35%, transparent 80%)',
-          mixBlendMode: 'screen',
-          animation: motion ? 'wrb-breathe 9s ease-in-out infinite' : 'none',
         }}
       />
-      <Motes count={wide ? 56 : 34} shaft={SHAFT} seed={23} opacity={0.9} />
+      <Motes count={wide ? 30 : 18} shaft={SHAFT} seed={23} opacity={0.95} />
       {/* foreground standards, close to the lens: soft focus */}
       {[false, true].map((flip) => (
         <div
@@ -1097,9 +1100,7 @@ function RoomLayer({ uid, motion, wide }) {
             [flip ? 'right' : 'left']: wide ? '1.5%' : '-11%',
             width: wide ? 'min(10vw, 140px)' : '24vw',
             height: wide ? '64%' : '52%',
-            filter: 'blur(1.4px) brightness(0.78)',
             transformOrigin: '50% 0%',
-            animation: motion ? `wrb-sway ${11 + (flip ? 2.3 : 0)}s ease-in-out ${flip ? -4 : 0}s infinite` : 'none',
             pointerEvents: 'none',
           }}
         >
@@ -1206,11 +1207,10 @@ function WarRoomBackdropImpl({ threats, regionState = 'STABLE', dim = true, clas
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          mixBlendMode: 'screen',
           background: 'radial-gradient(ellipse 60% 34% at 54% 34%, rgb(255 214 150 / 0.13) 0%, rgb(224 120 43 / 0.05) 55%, transparent 80%)',
         }}
       />
-      <RoomLayer uid={uid} motion={motion} wide={W >= 900} />
+      <RoomLayer uid={uid} wide={W >= 900} />
       <div
         style={{
           position: 'absolute',

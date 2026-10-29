@@ -52,7 +52,11 @@ export function WarRoomScreen() {
 
   return (
     <ScreenShell labelledBy="wr-title" backdrop={<WarRoomBackdrop threats={threats} regionState={state.regions.southern_marches.state} dim />}>
-      <div className="sticky top-0 z-30 -mx-4 chrome-bar px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      {/* opaque, unblurred HUD: a backdrop-filter here would re-blur the animated table every frame */}
+      <div
+        className="sticky top-0 z-30 -mx-4 chrome-bar px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+        style={{ background: 'var(--elvia-brush), linear-gradient(180deg, #0f1b2d 0%, #0b1424 100%)', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+      >
         <TopBar />
         <ResourceHud resources={state.resources} compact />
       </div>

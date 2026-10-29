@@ -1,25 +1,11 @@
 // Ornate presentation pieces shared by the War Room, the Resolution report, the Passing and the
-// title: engraved letter medallions, category accents, filigree rules, light rays and a dust-mote
-// canvas. Decorative only (aria-hidden); no game logic lives here.
+// title: engraved letter medallions and filigree rules. Decorative only (aria-hidden); no game
+// logic. Category tones live in tones.js; light shafts and motes in src/ui/art/Atmosphere.jsx.
 
-import { memo, useEffect, useRef } from 'react';
-import { mulberry32, useReducedMotion, useUid, watchVisibility } from '../../art/util.js';
+import { memo } from 'react';
+import { useUid } from '../../art/util.js';
 import { cx } from '../../kit/kit.jsx';
-
-// ------------------------------------------------------------------ category accents
-// Every accent is a theme token (theme.css), never a new hue.
-export const CATEGORY_TONE = {
-  diplomacy: { accent: '#f0dc95', deep: '#7d6114', glow: '227 196 99', text: 'text-gold-300', name: 'gold' },
-  military: { accent: '#d9726b', deep: '#7a1f1a', glow: '194 65 58', text: 'text-crimson-300', name: 'crimson' },
-  clandestine: { accent: '#c3c7cc', deep: '#33373d', glow: '154 160 168', text: 'text-iron-200', name: 'iron' },
-  research: { accent: '#ffe9ae', deep: '#7d6114', glow: '255 233 174', text: 'text-lattice-300', name: 'lattice' },
-  economic: { accent: '#f4a35e', deep: '#8a3a1c', glow: '224 120 43', text: 'text-ember-300', name: 'ember' },
-};
-
-export function categoryTone(category) {
-  const first = String(category ?? '').split('+')[0];
-  return CATEGORY_TONE[first] ?? CATEGORY_TONE.diplomacy;
-}
+import { CATEGORY_TONE } from './tones.js';
 
 // ------------------------------------------------------------------ medallion
 const KNURL = (() => {
@@ -124,186 +110,21 @@ export function Filigree({ className, color = '#c9a227', center = true }) {
   );
 }
 
-// ------------------------------------------------------------------ light rays
-/** Soft god-rays fanning from a point (SVG, cheap). Rotates very slowly unless reduced motion. */
-export const LightRays = memo(function LightRays({ className, style, rays = 18, color = '255 233 174', strength = 0.16, spin = true }) {
-  const id = useUid('lr');
-  const reduced = useReducedMotion();
-  const rnd = mulberry32(rays * 13 + 5);
-  const wedges = [];
-  for (let i = 0; i < rays; i += 1) {
-    const a = (i / rays) * Math.PI * 2 + rnd() * 0.12;
-    const w = 0.02 + rnd() * 0.05;
-    const r = 100;
-    const x1 = 100 + Math.cos(a - w) * r;
-    const y1 = 100 + Math.sin(a - w) * r;
-    const x2 = 100 + Math.cos(a + w) * r;
-    const y2 = 100 + Math.sin(a + w) * r;
-    wedges.push({ d: `M100,100L${x1.toFixed(1)},${y1.toFixed(1)}L${x2.toFixed(1)},${y2.toFixed(1)}Z`, o: 0.45 + rnd() * 0.55 });
-  }
-  return (
-    <div className={cx('pointer-events-none', className)} style={style} aria-hidden="true">
-      <svg
-        viewBox="0 0 200 200"
-        width="100%"
-        height="100%"
-        style={{ display: 'block', animation: spin && !reduced ? 'orn-spin 140s linear infinite' : 'none' }}
-        focusable="false"
-      >
-        <defs>
-          <radialGradient id={`${id}-fade`} cx="50%" cy="50%" r="50%">
-            <stop offset="0" stopColor={`rgb(${color})`} stopOpacity={strength * 2.2} />
-            <stop offset="0.2" stopColor={`rgb(${color})`} stopOpacity={strength * 1.2} />
-            <stop offset="0.55" stopColor={`rgb(${color})`} stopOpacity={strength * 0.35} />
-            <stop offset="1" stopColor={`rgb(${color})`} stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <g fill={`url(#${id}-fade)`}>
-          {wedges.map((w, i) => (
-            <path key={i} d={w.d} opacity={w.o} />
-          ))}
-        </g>
-      </svg>
-      <style>{'@keyframes orn-spin{to{transform:rotate(360deg)}}'}</style>
-    </div>
-  );
-});
-
-// ------------------------------------------------------------------ dust motes
-function moteSprite(rgb) {
-  const c = document.createElement('canvas');
-  c.width = 32;
-  c.height = 32;
-  const g = c.getContext('2d');
-  if (!g) return null;
-  const grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-  grd.addColorStop(0, `rgba(${rgb},1)`);
-  grd.addColorStop(0.25, `rgba(${rgb},0.55)`);
-  grd.addColorStop(1, `rgba(${rgb},0)`);
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 32, 32);
-  return c;
-}
 
 /**
- * Dust motes drifting in warm light, on a small canvas that fills its positioned parent.
- * `shaft` confines them to a diagonal band: { top, bottom, width } as fractions of the width
- * (centre x at the top and bottom edges). DPR capped at 2, paused offscreen or hidden,
- * one still frame under reduced motion, and a 0×0 layout never steps the loop.
+ * The rule under a page title: a gilt lozenge and a short double hairline at the title's left edge,
+ * then a single hairline that runs the full width of the title block and fades out.
  */
-export const Motes = memo(function Motes({ count = 36, color = '255,233,174', shaft = null, seed = 11, className, opacity = 1, rise = 1 }) {
-  const ref = useRef(null);
-  const reduced = useReducedMotion();
-  useEffect(() => {
-    const cv = ref.current;
-    if (!cv || typeof window === 'undefined') return undefined;
-    const ctx = cv.getContext('2d');
-    if (!ctx) return undefined;
-    const sprite = moteSprite(color);
-    if (!sprite) return undefined;
-    const rnd = mulberry32(seed);
-    const ps = Array.from({ length: count }, () => ({
-      x: rnd(),
-      y: rnd(),
-      z: 0.35 + rnd() * 0.65, // depth: size, speed, brightness
-      ph: rnd() * Math.PI * 2,
-      tw: 0.6 + rnd() * 1.6,
-    }));
-    let w = 0;
-    let h = 0;
-    let dpr = 1;
-    let raf = 0;
-    let last = 0;
-    let running = false;
-    let t = 0;
-
-    const measure = () => {
-      const r = cv.getBoundingClientRect();
-      const nw = Math.round(r.width);
-      const nh = Math.round(r.height);
-      if (nw < 2 || nh < 2) return false;
-      dpr = Math.min(2, window.devicePixelRatio || 1);
-      if (nw !== w || nh !== h) {
-        w = nw;
-        h = nh;
-        cv.width = Math.round(w * dpr);
-        cv.height = Math.round(h * dpr);
-      }
-      return true;
-    };
-
-    const inShaft = (x, y) => {
-      if (!shaft) return 1;
-      const cxs = shaft.top + (shaft.bottom - shaft.top) * y;
-      const d = Math.abs(x - cxs) / (shaft.width * 0.5);
-      return d >= 1 ? 0 : (1 - d * d) * (0.35 + 0.65 * (1 - y));
-    };
-
-    const draw = () => {
-      if (!w || !h) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-      ctx.globalCompositeOperation = 'lighter';
-      const base = Math.min(1.5, Math.max(1, Math.min(w, h) / 520));
-      for (const p of ps) {
-        const a = inShaft(p.x, p.y) * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * p.tw + p.ph))) * p.z * opacity;
-        if (a < 0.02) continue;
-        const s = base * (1.3 + p.z * 2.6);
-        ctx.globalAlpha = Math.min(1, a);
-        ctx.drawImage(sprite, p.x * w - s, p.y * h - s, s * 2, s * 2);
-      }
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-    };
-
-    const step = (now) => {
-      raf = 0;
-      if (!running) return;
-      const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
-      last = now;
-      if (!measure()) {
-        raf = requestAnimationFrame(step);
-        return;
-      }
-      t += dt;
-      for (const p of ps) {
-        p.y -= dt * 0.012 * rise * (0.4 + p.z);
-        p.x += dt * 0.006 * Math.sin(t * 0.4 + p.ph) * p.z;
-        if (p.y < -0.03) {
-          p.y = 1.03;
-          p.x = rnd();
-        }
-        if (p.x < -0.03) p.x = 1.03;
-        if (p.x > 1.03) p.x = -0.03;
-      }
-      draw();
-      raf = requestAnimationFrame(step);
-    };
-
-    const start = () => {
-      if (running || reduced) return;
-      running = true;
-      last = 0;
-      raf = requestAnimationFrame(step);
-    };
-    const stop = () => {
-      running = false;
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
-    };
-
-    const still = () => {
-      if (measure()) draw();
-    };
-    still();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => (running ? null : still())) : null;
-    ro?.observe(cv);
-    const unwatch = reduced ? () => {} : watchVisibility(cv, (v) => (v ? start() : stop()));
-    return () => {
-      stop();
-      unwatch();
-      ro?.disconnect();
-    };
-  }, [count, color, shaft, seed, reduced, opacity, rise]);
-  return <canvas ref={ref} aria-hidden="true" className={cx('pointer-events-none absolute inset-0 h-full w-full', className)} />;
-});
+export function TitleRule({ className, color = '#c9a227' }) {
+  return (
+    <div className={cx('flex items-center', className)} aria-hidden="true">
+      <svg width="58" height="14" viewBox="0 0 58 14" fill="none" className="shrink-0" focusable="false">
+        <path d="M6.5 1.5 12 7 6.5 12.5 1 7Z" fill={color} stroke="#fbefc2" strokeOpacity="0.55" strokeWidth="0.6" />
+        <path d="M15 7h43" stroke={color} strokeWidth="1" />
+        <path d="M15 10h26" stroke={color} strokeOpacity="0.55" strokeWidth="0.6" />
+        <circle cx="15.5" cy="7" r="1.3" fill="#e3c463" />
+      </svg>
+      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${color}, ${color}55 45%, transparent)` }} />
+    </div>
+  );
+}

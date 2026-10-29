@@ -7,7 +7,8 @@ import { Icon } from '../../kit/icons.jsx';
 import { Button, Sheet, cx } from '../../kit/kit.jsx';
 import { useReducedMotion, reactionWord, ADVISOR_IDS } from './words.js';
 import { CategoryIcon, CostLine, ReactionMark, SealOverlay, SectionHeading } from './shared.jsx';
-import { CATEGORY_TONE, Medallion, categoryTone } from './ornate.jsx';
+import { Medallion } from './ornate.jsx';
+import { CATEGORY_TONE, categoryTone, shortCategoryName } from './tones.js';
 
 function Reactions({ reactions, characters, size = 26, withWords = false }) {
   const ids = ADVISOR_IDS.filter((id) => reactions?.[id]);
@@ -52,7 +53,7 @@ function OrderCard({ order, characters, onOpen, index, selected }) {
       <button
         type="button"
         className={cx(
-          'group relative isolate flex w-full min-h-[5.5rem] items-start gap-3.5 overflow-hidden rounded-[0.9rem] border p-3.5 pr-4 text-left transition duration-200 sm:gap-4 sm:p-4',
+          'group relative isolate flex w-full min-h-[5rem] items-start gap-3 overflow-hidden rounded-[0.9rem] border px-3 py-3 pr-3.5 text-left transition duration-200 sm:gap-4 sm:p-4',
           'shadow-[inset_0_1px_0_rgb(255_244_214/0.08),0_14px_28px_-16px_rgb(0_0_0/0.9),0_2px_5px_rgb(0_0_0/0.45)]',
           'focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-lattice-200 active:translate-y-[2px]',
           'aria-disabled:cursor-not-allowed aria-disabled:opacity-55',
@@ -82,19 +83,29 @@ function OrderCard({ order, characters, onOpen, index, selected }) {
           className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
           style={{ background: `linear-gradient(90deg, rgb(${edge} / 0.95), rgb(${edge} / 0.35) 45%, transparent 85%)` }}
         />
-        {/* dossier tab notch, top right */}
-        <span aria-hidden="true" className="pointer-events-none absolute right-3 top-0 h-2.5 w-10 rounded-b-[4px] border-x border-b border-gold-700/50 bg-navy-950/70" />
         <span className="relative mt-0.5 shrink-0">
-          <Medallion letter={order.id} size={58} tone={danger ? CATEGORY_TONE.military : tone} lit={selected} dim={Boolean(order.locked)} />
+          <Medallion
+            letter={order.id}
+            size={58}
+            tone={danger ? CATEGORY_TONE.military : tone}
+            lit={selected}
+            dim={Boolean(order.locked)}
+            className="size-12 sm:size-[58px]"
+          />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="flex items-start gap-2 pr-11 font-display text-[0.74rem] leading-snug uppercase tracking-[0.2em]" style={{ color: danger ? '#d9726b' : tone.accent }}>
-            <CategoryIcon category={order.category} size={14} />
-            <span>{order.categoryName}</span>
+          {/* category eyebrow: uppercase, tracked, in the category's bright accent */}
+          <span
+            className="flex items-center gap-1.5 font-display text-[0.8rem] font-semibold uppercase leading-snug tracking-[0.16em]"
+            style={{ color: danger ? '#d9726b' : tone.accent, textShadow: '0 1px 0 rgb(0 0 0 / 0.7)' }}
+          >
+            <CategoryIcon category={order.category} size={14} className="shrink-0" />
+            <span className="sm:hidden">{shortCategoryName(order.categoryName)}</span>
+            <span className="hidden sm:inline">{order.categoryName}</span>
           </span>
-          <span className="mt-1 font-display text-[1.14rem] leading-[1.2] text-gold-100 text-engraved sm:text-[1.2rem]">{order.label}</span>
-          <span className="mt-1.5 line-clamp-3 text-[0.98rem] leading-snug text-parchment-200">{order.text}</span>
-          <span id={`order-${order.id}-meta`} className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gold-700/30 pt-2.5">
+          <span className="mt-0.5 font-display text-[1.14rem] leading-[1.2] text-gold-100 text-engraved sm:mt-1 sm:text-[1.2rem]">{order.label}</span>
+          <span className="mt-1 line-clamp-3 text-[0.98rem] leading-snug text-parchment-200 sm:mt-1.5">{order.text}</span>
+          <span id={`order-${order.id}-meta`} className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gold-700/30 pt-2 sm:mt-3 sm:pt-2.5">
             <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <span className="inline-flex min-h-8 items-center rounded-md border border-brass-500/45 bg-[linear-gradient(180deg,rgb(122_95_54/0.38),rgb(11_20_36/0.6))] px-2.5 shadow-[inset_0_1px_0_rgb(255_244_214/0.12)]">
                 <CostLine cost={order.cost} size={15} className="text-[0.98rem] font-semibold text-parchment-50" />

@@ -4,57 +4,65 @@
 import { useState } from 'react';
 import { Button, Sheet, cx } from '../../kit/kit.jsx';
 import { Icon } from '../../kit/icons.jsx';
-import { Sigil } from '../../art/index.js';
+import { Medallion } from '../warroom/ornate.jsx';
+import { WaxSeal } from '../warroom/shared.jsx';
+import { roman } from '../warroom/words.js';
 import { MAX_LEGACIES } from '../../../game/content/legacies.js';
 import { ActionBar } from './ActionBar.jsx';
 import { StepHeader } from './StepHeader.jsx';
 import { LEGACY_PROMPT, NONE_LINE } from './copy.js';
 
+/** A pressed-wax "not earned" mark: a small dull seal and the words, like a clerk's stamp. */
+function NotEarnedStamp() {
+  return (
+    <span className="ml-0.5 inline-flex shrink-0 -rotate-3 items-center gap-1.5 rounded-[0.35rem] border border-crimson-400/55 px-2 py-1 font-display text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-crimson-300 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.35)]">
+      <WaxSeal size={20} className="shrink-0 opacity-80 saturate-50" legend="ELVIA" />
+      Not earned
+    </span>
+  );
+}
+
 function LegacyCard({ legacy, chosen, full, onToggle, index }) {
   const locked = !legacy.earned;
   const disabled = locked || (full && !chosen);
+  const numeral = roman(index + 1);
   const body = (
     <>
-      <span className="flex items-start justify-between gap-3">
-        <span className="flex items-center gap-2.5 font-display text-[1.1rem] leading-tight text-gold-100 text-engraved">
-          <span
-            aria-hidden="true"
-            className={cx(
-              'grid size-9 shrink-0 place-items-center rounded-full border shadow-[inset_0_1px_0_rgb(255_244_214/0.15),0_2px_6px_rgb(0_0_0/0.5)]',
-              locked ? 'border-stone-600/70 text-stone-500' : chosen ? 'border-gold-300 text-gold-200 shadow-[0_0_18px_rgb(227_196_99/0.55)]' : 'border-gold-500/70 text-gold-300',
-            )}
-            style={{ background: locked ? 'radial-gradient(circle at 35% 30%, #2a2f3a, #12151b 75%)' : 'radial-gradient(circle at 35% 30%, #2b4268, #0b1424 75%)' }}
-          >
-            <Sigil name={locked ? 'diamond' : 'star'} size={17} />
-          </span>
-          {legacy.name}
+      <span className="flex items-center gap-3">
+        <Medallion letter={numeral} size={46} lit={chosen} dim={locked} />
+        <span className="flex min-w-0 flex-col items-start gap-1.5">
+          <span className={cx('font-display text-[1.1rem] leading-tight text-engraved', locked ? 'text-parchment-300' : 'text-gold-100')}>{legacy.name}</span>
+          {locked ? (
+            <NotEarnedStamp />
+          ) : chosen ? (
+            <span className="chip chip--gold !min-h-7 !text-[0.78rem]">
+              <Icon name="check" size={13} /> Carried
+            </span>
+          ) : (
+            <span className="chip !min-h-7 !text-[0.78rem]">Earned</span>
+          )}
         </span>
-        {locked ? (
-          <span className="chip chip--iron !min-h-7 shrink-0 !text-[0.75rem]">Not earned</span>
-        ) : chosen ? (
-          <span className="chip chip--gold !min-h-7 shrink-0 !text-[0.75rem]">
-            <Icon name="check" size={13} /> Carried
-          </span>
-        ) : (
-          <span className="chip !min-h-7 shrink-0 !text-[0.75rem]">Earned</span>
-        )}
       </span>
-      <span className="mt-2 block text-[0.98rem] leading-snug text-parchment-100">{legacy.effect}</span>
-      <span className="mt-2 block text-[0.92rem] leading-snug text-ember-200">
+      <span className={cx('mt-3 block text-[0.98rem] leading-snug', locked ? 'text-parchment-300' : 'text-parchment-100')}>{legacy.effect}</span>
+      <span className={cx('mt-2 block text-[0.95rem] leading-snug', locked ? 'text-ember-200/75' : 'text-ember-200')}>
         <span className="font-semibold">The cost: </span>
         {legacy.cost}
       </span>
-      <span className="mt-2 block border-t border-gold-800/40 pt-2 text-[0.88rem] leading-snug text-parchment-300">
+      <span className="mt-2.5 block border-t border-gold-800/40 pt-2 text-[0.95rem] leading-snug text-parchment-300">
         {legacy.earn}
         {legacy.progress ? <span className="block text-parchment-400">{legacy.progress}</span> : null}
       </span>
     </>
   );
   if (locked) {
+    // dimmed, desaturated parchment: the page exists, the deed was never written on it
     return (
       <li
-        className="animate-fade-up rounded-[0.9rem] border border-stone-600/40 p-4 opacity-80"
-        style={{ animationDelay: `${index * 60}ms`, background: 'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.015) 0 6px, transparent 6px 12px), linear-gradient(180deg, #12151b, #0b1018)' }}
+        className="relative animate-fade-up overflow-hidden rounded-[0.9rem] border border-stone-600/45 p-4 shadow-[inset_0_1px_0_rgb(255_244_214/0.04)]"
+        style={{
+          animationDelay: `${index * 60}ms`,
+          background: 'var(--elvia-grain), radial-gradient(110% 80% at 0% 0%, rgb(184 170 140 / 0.07), transparent 60%), linear-gradient(180deg, #1b1a17 0%, #141310 60%, #0f0e0c 100%)',
+        }}
       >
         {body}
       </li>
@@ -68,12 +76,18 @@ function LegacyCard({ legacy, chosen, full, onToggle, index }) {
         disabled={disabled}
         onClick={() => onToggle(legacy.id)}
         className={cx(
-          'relative block h-full w-full overflow-hidden rounded-[0.9rem] border p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55',
-          'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-gold-300 before:via-gold-500/50 before:to-transparent',
+          'relative block h-full w-full overflow-hidden rounded-[0.9rem] border p-4 pl-5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lattice-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55',
+          // a brass edge down the spine of an earned page
+          'before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-gradient-to-b before:from-gold-200 before:via-gold-500 before:to-brass-700',
           chosen
-            ? 'border-gold-400 bg-[radial-gradient(120%_120%_at_0%_0%,rgb(255_233_174/0.2),transparent_60%),linear-gradient(180deg,#24324a,#121b2d)] shadow-[0_0_0_1px_rgb(227_196_99/0.4),0_0_34px_-8px_rgb(227_196_99/0.6)]'
-            : 'border-gold-700/55 bg-[radial-gradient(100%_80%_at_0%_0%,rgb(227_196_99/0.08),transparent_60%),linear-gradient(180deg,#1b2639,#0f1726)] shadow-[inset_0_1px_0_rgb(255_244_214/0.08),0_14px_28px_-16px_rgb(0_0_0/0.9)] hover:border-gold-500/80 before:opacity-40',
+            ? 'border-gold-400 shadow-[0_0_0_1px_rgb(227_196_99/0.4),0_0_34px_-8px_rgb(227_196_99/0.6)]'
+            : 'border-gold-700/60 shadow-[inset_0_1px_0_rgb(255_244_214/0.1),0_14px_28px_-16px_rgb(0_0_0/0.9)] hover:border-gold-500/80',
         )}
+        style={{
+          background: chosen
+            ? 'var(--elvia-grain), radial-gradient(120% 110% at 0% 0%, rgb(255 233 174 / 0.22), transparent 60%), linear-gradient(180deg, #2a2216 0%, #1d1810 60%, #14110c 100%)'
+            : 'var(--elvia-grain), radial-gradient(110% 80% at 0% 0%, rgb(255 233 174 / 0.12), transparent 60%), linear-gradient(180deg, #221c12 0%, #17140f 60%, #0f0d0b 100%)',
+        }}
       >
         <span className="sr-only">{legacy.name}. </span>
         {body}
