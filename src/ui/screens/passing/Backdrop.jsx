@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { cx } from '../../kit/kit.jsx';
 import { ArchitectSymbol, CampfireScene } from '../../art/index.js';
 
@@ -8,17 +9,53 @@ const ACCENT_WASH = {
   gold: 'radial-gradient(90% 60% at 50% 0%, rgb(227 196 99 / 0.08), transparent 70%)',
 };
 
+// The Passing's wide layout (lg and up): a max-w-6xl container with px-8, and step I's two columns
+// at 5fr / 7fr with a 3rem gap. The last fire sits under the middle of the left column.
+function leftColumnCentre(w) {
+  const box = Math.min(w, 1152);
+  const inner = box - 64;
+  const col = ((inner - 48) * 5) / 12;
+  return (w - box) / 2 + 32 + col / 2;
+}
+
+function useLeftColumnCentre(on) {
+  const read = () => (typeof window === 'undefined' ? 0.27 : Math.round((leftColumnCentre(window.innerWidth) / window.innerWidth) * 200) / 200);
+  const [x, setX] = useState(read);
+  useEffect(() => {
+    if (!on) return undefined;
+    const update = () => setX(read());
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [on]);
+  return x;
+}
+
 /** Fixed, decorative backdrop for each step of the Passing. */
 export function PassingBackdrop({ step, accent = 'gold', reduced = false }) {
+  const fireX = useLeftColumnCentre(step === 'campfire');
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-navy-950">
       {step === 'campfire' ? (
         <>
-          {/* The last fire burns low in the middle distance; text and cards sit over a scrim that
-              keeps the sky and the fire's glow alive between them. */}
-          <CampfireScene intensity={0.55} fireY={[0.7, 0.72]} className="absolute inset-0 h-full w-full" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.6)_0%,rgb(7_13_24/0.42)_30%,rgb(7_13_24/0.55)_55%,rgb(7_13_24/0.8)_82%,#070d18_100%)]" />
-          <div className="absolute inset-y-0 left-1/2 hidden w-[56rem] -translate-x-1/2 bg-[radial-gradient(50%_50%_at_50%_35%,rgb(7_13_24/0.4),transparent_100%)] sm:block" />
+          {/* The Last Fire, on a wide screen: a struck camp under frost, the Sovereign alone by a low
+              red-gold fire, set in the empty lower half of the left column so no card ever covers it.
+              On a phone the fire burns in a strip of its own inside the step (CampfireStep). */}
+          <div className="absolute inset-0 bg-[radial-gradient(120%_60%_at_50%_105%,rgb(158_43_37/0.2),transparent_70%),linear-gradient(180deg,#0b1424,#070d18_60%)] lg:hidden" />
+          <CampfireScene
+            intensity={0.55}
+            variant="last"
+            fireX={fireX}
+            fireY={0.9}
+            moon={[0.92, 0.17]}
+            className="hidden lg:block"
+            scrim={
+              <>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_13_24/0.55)_0%,rgb(7_13_24/0.28)_40%,rgb(7_13_24/0)_68%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgb(7_13_24/0)_38%,rgb(7_13_24/0.45)_55%,rgb(7_13_24/0.45)_100%)]" />
+              </>
+            }
+          />
         </>
       ) : null}
 
@@ -45,7 +82,8 @@ export function PassingBackdrop({ step, accent = 'gold', reduced = false }) {
       ) : null}
 
       <div className="absolute inset-0" style={{ background: ACCENT_WASH[accent] ?? ACCENT_WASH.gold }} />
-      <div className="vignette absolute inset-0" />
+      {/* the last fire's scene darkens its own edges; a vignette over it would dim the fire */}
+      <div className={cx('vignette absolute inset-0', step === 'campfire' && 'lg:hidden')} />
     </div>
   );
 }

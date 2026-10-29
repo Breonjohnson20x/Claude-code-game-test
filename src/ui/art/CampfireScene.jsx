@@ -1,21 +1,32 @@
-// <CampfireScene intensity={0..1} fireY={0..1 | [portrait, wide]} className style />
+// <CampfireScene intensity={0..1} fireX fireY band moon variant scrim className style />
 // The night camp on <canvas>, painted like a key-art frame: a deep starry sky with a milky-way band,
-// a low moon and moonlit cloud, layered mountains, mist and treeline; a camp of canvas tents, a
-// cart, a weapon rack and the Elvian banner; the Sovereign and General Mara Voss seated on logs,
-// and Sparky curled by the stones; a real fire (log crib, coal bed, layered additive flame tongues
-// with turbulence, heat glow, embers and smoke that catches the light).
+// moonlit cloud, layered mountains, mist and treeline; a camp of canvas tents, a cart, a weapon
+// rack and the Elvian banner; the Sovereign and General Mara Voss seated on logs, leaning in to the
+// warmth, and Sparky curled by the stones; a real fire (log crib, coal bed, layered flame tongues
+// with turbulence, embers and thin smoke that catches the light at its root).
 //
-// Lighting is two cached layers of the same geometry: a cold, moonlit pass and a warm, fire-lit
-// pass (with long shadows thrown away from the fire), the warm one masked by a radial falloff.
-// Each frame draws cold, then warm at a flickering alpha, then the fire, embers and smoke on top,
-// so the firelight visibly breathes over ground, stones, tents and figures for a few full-screen
-// blits. Figures, Sparky, frame trees and foreground grass are near-silhouettes lit by `litShape`:
-// a crisp rim on the edge facing the light (fire in the warm pass, moon in the cold one). `intensity` (0–1) raises the flames, the light's reach and its strength. `fireY` places
-// the fire as a fraction of the height (a pair picks [portrait, wide] by aspect).
+// Everything that does not move is painted ONCE into two stacked static canvases of the same
+// geometry: a cold, moonlit pass and a warm, fire-lit pass (long shadows thrown away from the fire,
+// a broad bounce of firelight on the ground and the low sky), the warm one masked by a radial
+// falloff. The firelight's flicker is the warm canvas's CSS opacity, animated on the compositor
+// (Web Animations), so it costs no repaint. Only two small canvases redraw, at most 30 times a
+// second: the fire box (pit, flames, the front stones, Sparky breathing) and the air above it
+// (smoke wisps and embers, at DPR 1). The moon is its own little canvas above `scrim` (a node the
+// screen passes to sit between the camp and the live layers), so it stays luminous over any text
+// scrim, and the fire itself is never dimmed by one.
 //
-// devicePixelRatio capped at 2, layers rebuilt on resize (coalesced to one frame), paused offscreen
-// or in a hidden tab, a single still frame under reduced motion, and nothing is drawn or stepped
-// while the box measures 0×0. Fills its positioned parent. Decorative (aria-hidden).
+// Props: `intensity` (0–1) raises the flames, the light's reach and its strength. `fireX`/`fireY`
+// place the fire as fractions of the box (a pair picks [portrait, wide] by aspect). `band` anchors
+// the fire group in a bottom band of `campfireBand(height)` px instead (the campfire screen keeps
+// that band clear of text). `moon` is [x, y] fractions (or a [portrait, wide] pair of them), or
+// false. `zoom` scales the whole camp. `variant="last"` is the Passing's last fire: a struck camp
+// dusted with frost, the Sovereign alone across an empty log, a low red-gold fire, long smoke and
+// a furled banner.
+//
+// devicePixelRatio capped at 2, layers rebuilt on resize (coalesced; small height-only changes such
+// as a phone's URL bar are debounced), paused offscreen or in a hidden tab, a single still frame
+// under reduced motion, and nothing is built or stepped while the box measures 0×0. The camp fades
+// in over 350 ms once built. Fills its positioned parent. Decorative (aria-hidden).
 
 import { memo, useEffect, useRef } from 'react';
 import { C, LIGHT } from './palette.js';
@@ -60,9 +71,10 @@ const K = {
   dirtHot: mix(C.ember500, C.ember300, 0.25),
   grass: mix(N.pineMid, C.stone800, 0.2),
   grassWarm: mix(C.ember600, C.gold700, 0.35),
-  canvasLit: mix(mix(N.canvas, C.navy800, 0.3), C.frost500, 0.12),
-  canvasShade: mix(N.canvasDark, C.navy900, 0.35),
-  canvasWarm: mix(C.parch400, C.ember300, 0.5),
+  // tent canvas in moonlight stays a dark navy shape; only its ridge catches the moon
+  canvasLit: mix(mix(N.canvas, C.navy850, 0.55), C.frost500, 0.05),
+  canvasShade: mix(N.canvasDark, C.navy950, 0.55),
+  canvasWarm: mix(mix(C.parch400, C.ember400, 0.55), C.ink, 0.3),
   canvasWarmDark: mix(C.ember600, N.canvasDark, 0.5),
   wood: mix(N.woodDark, C.navy950, 0.2),
   woodLit: mix(N.wood, C.stone600, 0.25),
@@ -70,7 +82,7 @@ const K = {
   woodWarmDark: mix(C.ember600, C.ink, 0.65),
   figure: mix(C.navy950, C.navy850, 0.35),
   figureMoon: mix(C.navy800, C.frost500, 0.25),
-  figureWarm: mix(mix(C.ember600, C.ink, 0.72), BLACK, 0.35),
+  figureWarm: mix(mix(C.ember600, C.ink, 0.8), BLACK, 0.55),
   figureWarmLit: mix(C.ember500, C.ember300, 0.45),
   stone: mix(N.stoneDark, C.navy900, 0.25),
   stoneMoon: mix(N.stone, C.frost500, 0.2),
@@ -87,15 +99,47 @@ const K = {
 };
 
 // ---- layout ----------------------------------------------------------------------------------
+/**
+ * Height in px of the clear bottom band the fire group sits in when `band` is set. The campfire
+ * screen reserves the same height with CSS: clamp(220px, 30dvh, 280px), or 30dvh when short.
+ */
+function campfireBand(h) {
+  return h < 600 ? h * 0.3 : clamp(h * 0.3, 220, 280);
+}
+
+const DEFAULT_MOON = [
+  [0.83, 0.135],
+  [0.9, 0.16],
+];
+
 /** Fire anchor and scale for a w×h canvas. `fy` is the ground under the fire. */
-function layout(w, h, fireY) {
+function layout(w, h, o) {
   const wide = w > h * 0.9;
-  const frac = Array.isArray(fireY) ? (wide ? fireY[1] : fireY[0]) : fireY;
-  const s = clamp(Math.min(w / 380, h / 600), 0.55, 1.7);
-  const fy = h * clamp(Number(frac) || 0.82, 0.3, 0.95);
-  const fx = w * 0.5;
+  const pick = (v, d) => {
+    const n = Number(Array.isArray(v) ? (wide ? v[1] : v[0]) : v);
+    return Number.isFinite(n) ? n : d;
+  };
+  const fx = w * clamp(pick(o.fireX, 0.5), 0.08, 0.92);
+  let s;
+  let fy;
+  let bandTop = null;
+  if (o.band) {
+    const b = campfireBand(h);
+    s = clamp(Math.min(w / 380, b / 190) * (o.zoom || 1), 0.55, 1.6);
+    fy = h - b * 0.25;
+    bandTop = h - b;
+  } else {
+    s = clamp(Math.min(w / 380, h / 600) * (o.zoom || 1), 0.5, 1.9);
+    fy = h * clamp(pick(o.fireY, 0.82), 0.3, 0.95);
+  }
   const horizon = fy - 150 * s;
-  return { w, h, fx, fy, s, horizon, lx: fx, ly: fy - 34 * s, wide };
+  let moon = null;
+  if (o.moon !== false) {
+    const m = Array.isArray(o.moon) ? (Array.isArray(o.moon[0]) ? (wide ? o.moon[1] : o.moon[0]) : o.moon) : wide ? DEFAULT_MOON[1] : DEFAULT_MOON[0];
+    const r = clamp(10 * s, 9, 16);
+    moon = { x: w * m[0], y: Math.min(h * m[1], horizon - r * 2), r };
+  }
+  return { w, h, fx, fy, s, horizon, lx: fx, ly: fy - 34 * s, wide, moon, bandTop, last: o.variant === 'last' };
 }
 
 // ---- small canvas helpers --------------------------------------------------------------------
@@ -175,14 +219,16 @@ function moonRim(ctx, path, x0, y0, x1, y1, width, a = 0.5) {
  * (the part of the shape its own copy, nudged away from the light, does not cover) over a soft
  * bounce of `bounce` falling across the lit half. (cx,cy) is the shape's centre.
  */
-function litShape(ctx, path, lx, ly, cx, cy, { dark, rimCol, rimW = 1.4, rimA = 1, bounce, bounceA = 0, span = 30 }) {
+function litShape(ctx, path, lx, ly, cx, cy, { dark, rimCol, rimW = 1.4, rimA = 1, bounce, bounceA = 0, span = 30, fade = null, rimHot = null, fill = true }) {
   const dx = lx - cx;
   const dy = ly - cy;
   const d = Math.hypot(dx, dy) || 1;
   const nx = dx / d;
   const ny = dy / d;
-  ctx.fillStyle = dark;
-  ctx.fill(path);
+  if (fill) {
+    ctx.fillStyle = dark;
+    ctx.fill(path);
+  }
   ctx.save();
   ctx.clip(path);
   if (bounce && bounceA > 0) {
@@ -197,9 +243,60 @@ function litShape(ctx, path, lx, ly, cx, cy, { dark, rimCol, rimW = 1.4, rimA = 
   const cut = new Path2D();
   cut.rect(cx - 4000, cy - 4000, 8000, 8000);
   cut.addPath(path, { a: 1, b: 0, c: 0, d: 1, e: -nx * rimW, f: -ny * rimW });
-  ctx.fillStyle = rgba(rimCol, rimA);
+  if (fade) {
+    // a graded rim: hottest (rimHot) on the parts nearest the light, gone by fade[1]
+    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, fade[1]);
+    const f0 = clamp(fade[0] / fade[1], 0, 0.95);
+    g.addColorStop(0, rgba(rimHot || rimCol, rimA));
+    g.addColorStop(f0, rgba(rimHot || rimCol, rimA));
+    g.addColorStop(Math.min(0.99, f0 + (1 - f0) * 0.45), rgba(rimCol, rimA * 0.75));
+    g.addColorStop(1, rgba(rimCol, 0));
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = rgba(rimCol, rimA);
+  }
   ctx.fill(cut, 'evenodd');
   ctx.restore();
+}
+
+/** A limb or drape as a closed outline around a polyline: half-widths per point, round ends. */
+function tube(pts, ws) {
+  const n = pts.length;
+  const Lp = [];
+  const Rp = [];
+  const ang = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0];
+    let dy = b[1] - a[1];
+    const dl = Math.hypot(dx, dy) || 1;
+    dx /= dl;
+    dy /= dl;
+    const [x, y] = pts[i];
+    Lp.push([x - dy * ws[i], y + dx * ws[i]]);
+    Rp.push([x + dy * ws[i], y - dx * ws[i]]);
+    ang.push(Math.atan2(dx, -dy));
+  }
+  const p = new Path2D();
+  p.moveTo(...Lp[0]);
+  for (let i = 1; i < n - 1; i += 1) p.quadraticCurveTo(Lp[i][0], Lp[i][1], (Lp[i][0] + Lp[i + 1][0]) / 2, (Lp[i][1] + Lp[i + 1][1]) / 2);
+  p.lineTo(...Lp[n - 1]);
+  p.arc(pts[n - 1][0], pts[n - 1][1], ws[n - 1], ang[n - 1], ang[n - 1] - Math.PI, true);
+  for (let i = n - 2; i > 0; i -= 1) p.quadraticCurveTo(Rp[i][0], Rp[i][1], (Rp[i][0] + Rp[i - 1][0]) / 2, (Rp[i][1] + Rp[i - 1][1]) / 2);
+  p.lineTo(...Rp[0]);
+  p.arc(pts[0][0], pts[0][1], ws[0], ang[0], ang[0] + Math.PI, true);
+  p.closePath();
+  return p;
+}
+
+/** A Path2D placed at (x,y), rotated by `rot` radians and scaled by k. */
+function placed(path, x, y, rot = 0, k = 1) {
+  const p = new Path2D();
+  const c = Math.cos(rot) * k;
+  const s = Math.sin(rot) * k;
+  p.addPath(path, { a: c, b: s, c: -s, d: c, e: x, f: y });
+  return p;
 }
 
 /** A shadow thrown from (x,y) on the ground directly away from the fire. */
@@ -241,10 +338,6 @@ function contactShadow(ctx, x, y, rx, ry, a = 0.6) {
 }
 
 // ---- the sky (cold layer only) ---------------------------------------------------------------
-function moonPos(L) {
-  return { x: L.w * (L.wide ? 0.87 : 0.8), y: clamp(L.horizon * (L.wide ? 0.32 : 0.42), 40, L.h * 0.4), r: clamp(11 * L.s, 8, 18) };
-}
-
 function paintSky(ctx, L) {
   const { w, h, horizon } = L;
   const g = ctx.createLinearGradient(0, 0, 0, horizon + 40 * L.s);
@@ -256,7 +349,9 @@ function paintSky(ctx, L) {
   ctx.fillRect(0, 0, w, h);
 
   const rnd = mulberry32(4127);
-  const moon = moonPos(L);
+  const moon = L.moon || { x: w * 0.85, y: horizon * 0.3, r: 10 };
+  // the moon's own light on the sky around it (the disc itself is a separate layer above any scrim)
+  softDot(ctx, moon.x, moon.y, moon.r * 18, K.moonGlow, 0.07);
   // The milky way: a soft band from low left to high right, dust lane down its spine.
   const ax = -0.1 * w;
   const ay = horizon * 0.95;
@@ -305,35 +400,6 @@ function paintSky(ctx, L) {
   fade.addColorStop(1, rgba(mix(K.skyLow, K.haze, 0.4), 0.85));
   ctx.fillStyle = fade;
   ctx.fillRect(0, horizon * 0.55, w, horizon * 0.45 + 12);
-
-  // Moon: a soft halo, a disc with faint maria, a thin cloud across it.
-  softDot(ctx, moon.x, moon.y, moon.r * 16, K.moonGlow, 0.12);
-  softDot(ctx, moon.x, moon.y, moon.r * 5, K.moonGlow, 0.32);
-  softDot(ctx, moon.x, moon.y, moon.r * 2.4, C.lattice200, 0.4);
-  ctx.fillStyle = K.moon;
-  ctx.beginPath();
-  ctx.arc(moon.x, moon.y, moon.r, 0, TAU);
-  ctx.fill();
-  ctx.save();
-  ctx.clip();
-  ctx.fillStyle = rgba(C.frost300, 0.45);
-  for (const [dx, dy, rr] of [
-    [-0.3, -0.2, 0.32],
-    [0.25, 0.15, 0.24],
-    [-0.05, 0.42, 0.2],
-    [0.35, -0.38, 0.14],
-  ]) {
-    ctx.beginPath();
-    ctx.arc(moon.x + dx * moon.r, moon.y + dy * moon.r, rr * moon.r, 0, TAU);
-    ctx.fill();
-  }
-  // a whisper of shading on the lower-left limb
-  const limb = ctx.createLinearGradient(moon.x + moon.r, moon.y - moon.r, moon.x - moon.r, moon.y + moon.r);
-  limb.addColorStop(0.45, rgba(C.frost500, 0));
-  limb.addColorStop(1, rgba(C.frost500, 0.45));
-  ctx.fillStyle = limb;
-  ctx.fillRect(moon.x - moon.r, moon.y - moon.r, moon.r * 2, moon.r * 2);
-  ctx.restore();
 
   // Clouds: long low strata, moonlit on their upper edges.
   const banks = [
@@ -535,8 +601,43 @@ function frameTrees(ctx, L, warm) {
     ctx.fillStyle = mix(K.figureWarm, BLACK, 0.4);
     ctx.fill(p);
   } else {
-    litShape(ctx, p, w * 0.5 + 600, horizon - 900, w * 0.5, horizon, { dark: K.pineNear, rimCol: K.figureMoon, rimW: 1.2, rimA: 0.35 });
+    // in the last winter the moonlit tops of the boughs are frost
+    litShape(ctx, p, w * 0.5 + 600, horizon - 900, w * 0.5, horizon, L.last ? { dark: K.pineNear, rimCol: C.frost300, rimW: 2, rimA: 0.42 } : { dark: K.pineNear, rimCol: K.figureMoon, rimW: 1.2, rimA: 0.35 });
   }
+}
+
+/** The moon: a frost halo at 8× and 2.5× its radius, then a bright disc with faint maria. */
+function paintMoon(ctx, R, r) {
+  softDot(ctx, R, R, r * 8, K.moonGlow, 0.16);
+  softDot(ctx, R, R, r * 4, C.frost200, 0.22);
+  softDot(ctx, R, R, r * 2.5, C.lattice200, 0.5);
+  const disc = ctx.createRadialGradient(R - r * 0.25, R - r * 0.3, 0, R, R, r);
+  disc.addColorStop(0, C.lattice100);
+  disc.addColorStop(0.75, C.lattice200);
+  disc.addColorStop(1, mix(C.lattice200, C.frost300, 0.4));
+  ctx.fillStyle = disc;
+  ctx.beginPath();
+  ctx.arc(R, R, r, 0, TAU);
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = rgba(C.frost300, 0.26);
+  for (const [dx, dy, rr] of [
+    [-0.3, -0.18, 0.3],
+    [0.22, 0.18, 0.22],
+    [-0.08, 0.45, 0.17],
+    [0.38, -0.34, 0.12],
+  ]) {
+    ctx.beginPath();
+    ctx.arc(R + dx * r, R + dy * r, rr * r, 0, TAU);
+    ctx.fill();
+  }
+  const limb = ctx.createLinearGradient(R + r, R - r, R - r, R + r);
+  limb.addColorStop(0.5, rgba(C.frost500, 0));
+  limb.addColorStop(1, rgba(C.frost500, 0.3));
+  ctx.fillStyle = limb;
+  ctx.fillRect(R - r, R - r, r * 2, r * 2);
+  ctx.restore();
 }
 
 function groundPath(L) {
@@ -545,8 +646,16 @@ function groundPath(L) {
   return p;
 }
 
+function flatDot(ctx, x, y, r, sy, col, a) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, sy);
+  softDot(ctx, 0, 0, r, col, a);
+  ctx.restore();
+}
+
 function paintGround(ctx, L, warm) {
-  const { w, h, s, horizon, fx, fy } = L;
+  const { w, h, s, horizon, fx, fy, last } = L;
   const top = horizon + 4 * s;
   if (!warm) {
     const g = ctx.createLinearGradient(0, top, 0, h);
@@ -556,22 +665,33 @@ function paintGround(ctx, L, warm) {
     ctx.fillStyle = g;
     ctx.fillRect(0, top, w, h - top);
     // the trodden clearing
-    ctx.save();
-    ctx.translate(fx, fy - 10 * s);
-    ctx.scale(1, 0.28);
-    softDot(ctx, 0, 0, 330 * s, K.dirt, 0.85);
-    ctx.restore();
+    flatDot(ctx, fx, fy - 10 * s, 330 * s, 0.28, K.dirt, 0.85);
+    if (last) {
+      // the last winter: a frost dusting over everything the fire does not reach
+      ctx.fillStyle = rgba(C.frost300, 0.2);
+      ctx.fillRect(0, top, w, h - top);
+      const rnd = mulberry32(919);
+      for (let i = 0; i < 26; i += 1) {
+        const y = top + rnd() ** 0.9 * (h - top);
+        const depth = clamp((y - horizon) / (fy - horizon), 0.25, 1.8);
+        flatDot(ctx, rnd() * w, y, (50 + rnd() * 110) * s * depth, 0.3, C.frost200, 0.16 + rnd() * 0.12);
+      }
+    }
   } else {
     const wg = ctx.createLinearGradient(0, top, 0, top + 70 * s);
     wg.addColorStop(0, rgba(K.dirtWarm, 0));
     wg.addColorStop(1, rgba(K.dirtWarm, 1));
     ctx.fillStyle = wg;
     ctx.fillRect(0, top, w, h - top);
-    ctx.save();
-    ctx.translate(fx, fy - 4 * s);
-    ctx.scale(1, 0.32);
-    softDot(ctx, 0, 0, 200 * s, K.dirtHot, 0.9);
-    ctx.restore();
+    if (last) {
+      // frost lit by the fire, melted back to dark wet earth around the stones
+      ctx.fillStyle = rgba(mix(C.ember300, C.parch300, 0.45), 0.2);
+      ctx.fillRect(0, top, w, h - top);
+      flatDot(ctx, fx, fy, 170 * s, 0.34, mix(K.dirtWarm, BLACK, 0.35), 0.85);
+    }
+    // trampled earth: a broad warm falloff, then the hot ring right round the stones
+    flatDot(ctx, fx, fy - 2 * s, 420 * s, 0.3, mix(K.dirtWarm, C.ember500, 0.35), 0.75);
+    flatDot(ctx, fx, fy - 4 * s, 200 * s, 0.32, K.dirtHot, last ? 0.7 : 0.9);
   }
   // a trodden track that leaves the clearing toward us and the lower left, widening with depth
   ctx.save();
@@ -599,38 +719,114 @@ function paintGround(ctx, L, warm) {
     ctx.restore();
   }
   ctx.restore();
-  // texture: pebbles and tufts, the same scatter in both passes
+  // the ground nearest the lens falls away into shadow
+  const fgTop = Math.max(fy + 30 * s, h - (h - top) * 0.3);
+  const fg = ctx.createLinearGradient(0, fgTop, 0, h);
+  fg.addColorStop(0, rgba(BLACK, 0));
+  fg.addColorStop(1, rgba(BLACK, warm ? 0.5 : 0.42));
+  ctx.fillStyle = fg;
+  ctx.fillRect(0, fgTop, w, h - fgTop);
+
+  // texture: clustered grass clumps of four kinds, pebbles, and rocks and roots by the ring —
+  // the same scatter in both passes, darker toward the camera
   const rnd = mulberry32(2203);
-  const tufts = Math.round(clamp((w * (h - top)) / 1700, 70, 380));
-  for (let i = 0; i < tufts; i += 1) {
-    const y = top + (rnd() ** 1.4) * (h - top);
+  const clusters = Math.round(clamp((w * (h - top)) / 9000, 16, 70));
+  const grass = new Path2D();
+  const grassNear = new Path2D();
+  for (let c = 0; c < clusters; c += 1) {
+    const cy0 = top + rnd() ** 0.75 * (h - top);
+    const cx0 = rnd() * w;
+    const n = 2 + Math.floor(rnd() * 4);
+    for (let j = 0; j < n; j += 1) {
+      const depth = clamp((cy0 - horizon) / (fy - horizon), 0.18, 1.9);
+      const x = cx0 + (rnd() - 0.5) * 34 * s * depth;
+      const y = cy0 + (rnd() - 0.5) * 8 * s * depth;
+      const kind = Math.floor(rnd() * 4);
+      const k = (0.7 + rnd() * 0.8) * s * depth;
+      const lean = (rnd() - 0.5) * 0.8;
+      if (Math.hypot((x - fx) / s, ((y - fy) / s) * 2.6) < 150 && Math.abs(y - fy) < 40 * s) continue;
+      const path = y > fgTop ? grassNear : grass;
+      const blades = kind === 0 ? 9 : kind === 1 ? 4 : kind === 2 ? 6 : 4;
+      for (let b = 0; b < blades; b += 1) {
+        const f = blades > 1 ? b / (blades - 1) - 0.5 : 0;
+        const ht = (kind === 0 ? 5 + rnd() * 3 : kind === 1 ? 12 + rnd() * 9 : kind === 2 ? 8 + rnd() * 4 : 6 + rnd() * 4) * k;
+        const spread = kind === 2 ? 1.6 : kind === 0 ? 0.9 : 0.5;
+        const tipX = x + (f * spread + lean) * ht + (rnd() - 0.5) * 2 * k;
+        const tipY = y - ht * (kind === 3 ? 0.55 : 1) * (1 - Math.abs(f) * 0.3);
+        const bx = x + f * 3 * k;
+        path.moveTo(bx - 0.7 * k, y);
+        if (kind === 3) {
+          // dead stems, bent over at a kink
+          const kx = bx + lean * ht * 0.3;
+          const ky = y - ht * 0.7;
+          path.lineTo(kx, ky);
+          path.lineTo(tipX + ht * 0.3 * Math.sign(lean || 1), tipY + ht * 0.1);
+          path.lineTo(kx + 0.6 * k, ky + 0.4 * k);
+        } else {
+          path.quadraticCurveTo(bx + (tipX - bx) * 0.2, y - ht * 0.55, tipX, tipY);
+        }
+        path.quadraticCurveTo(bx + (tipX - bx) * 0.25 + 0.6 * k, y - ht * 0.5, bx + 0.7 * k, y);
+        path.closePath();
+      }
+    }
+  }
+  ctx.fillStyle = warm ? mix(K.grassWarm, K.dirtWarm, 0.35) : mix(K.grass, K.ground, 0.25);
+  ctx.fill(grass);
+  ctx.fillStyle = warm ? mix(K.grassWarm, BLACK, 0.55) : mix(K.grass, BLACK, 0.5);
+  ctx.fill(grassNear);
+  // pebbles, a scatter of sizes
+  for (let i = 0; i < clusters * 2; i += 1) {
+    const y = top + rnd() ** 1.2 * (h - top);
     const x = rnd() * w;
     const depth = clamp((y - horizon) / (fy - horizon), 0.15, 1.8);
-    const nearFire = Math.hypot((x - fx) / s, ((y - fy) / s) * 2.4) < 70;
-    if (nearFire) continue;
-    const kind = rnd();
-    if (kind < 0.55) {
-      // grass tuft
-      const ht = (3 + rnd() * 5) * s * depth;
-      ctx.strokeStyle = warm ? rgba(K.grassWarm, 0.6) : rgba(K.grass, 0.6);
-      ctx.lineWidth = Math.max(0.6, 0.8 * s * depth);
-      ctx.beginPath();
-      for (let b = -2; b <= 2; b += 1) {
-        ctx.moveTo(x + b * 1.2 * s * depth, y);
-        ctx.quadraticCurveTo(x + b * 1.5 * s * depth, y - ht * 0.6, x + b * 2.4 * s * depth + (rnd() - 0.5) * 2, y - ht);
-      }
-      ctx.stroke();
+    if (Math.hypot((x - fx) / s, ((y - fy) / s) * 2.6) < 60) continue;
+    const r = (0.6 + rnd() ** 2 * 2.6) * s * depth;
+    ctx.fillStyle = warm ? K.woodWarmDark : K.stone;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.4, r * 0.8, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = warm ? rgba(K.stoneWarmLit, 0.3) : rgba(K.stoneMoon, last ? 0.4 : 0.18);
+    ctx.beginPath();
+    ctx.ellipse(x + (warm ? (x < fx ? r * 0.4 : -r * 0.4) : r * 0.3), y - r * 0.35, r * 0.8, r * 0.35, 0, 0, TAU);
+    ctx.fill();
+  }
+  // rocks and roots near the ring, lit on the side that faces the fire
+  const rr = mulberry32(3301);
+  for (let i = 0; i < 7; i += 1) {
+    const a = (i / 7) * TAU + rr() * 0.6;
+    const dist = (66 + rr() * 60) * s;
+    const x = fx + Math.cos(a) * dist * 1.25;
+    const y = fy + 6 * s + Math.sin(a) * dist * 0.3;
+    if (Math.abs(Math.abs(x - fx) - 98 * s) < 30 * s && y < fy + 22 * s) continue; // the seats
+    const r = (3 + rr() * 4) * s;
+    const p = new Path2D();
+    p.moveTo(x - r * 1.3, y);
+    p.bezierCurveTo(x - r * 1.2, y - r * 0.9, x + r * 0.2, y - r * 1.1, x + r * 1.3, y - r * 0.2);
+    p.quadraticCurveTo(x + r * 0.6, y + r * 0.4, x - r * 1.3, y);
+    if (warm) {
+      castShadow(ctx, L, x, y, r * 4, r * 2, 0.5);
+      litShape(ctx, p, L.lx, L.ly + 30 * s, x, y - r * 0.4, { dark: K.stoneWarm, rimCol: K.stoneWarmLit, rimW: r * 0.4, rimA: 0.75, bounce: C.ember400, bounceA: 0.3, span: r * 1.5 });
     } else {
-      // pebble with a lit cap
-      const r = (0.6 + rnd() * 1.3) * s * depth;
-      ctx.fillStyle = warm ? K.woodWarmDark : K.stone;
-      ctx.beginPath();
-      ctx.ellipse(x, y, r * 1.4, r * 0.8, 0, 0, TAU);
-      ctx.fill();
-      ctx.fillStyle = warm ? rgba(K.stoneWarmLit, 0.3) : rgba(K.stoneMoon, 0.18);
-      ctx.beginPath();
-      ctx.ellipse(x + (warm ? (x < fx ? r * 0.4 : -r * 0.4) : r * 0.3), y - r * 0.35, r * 0.8, r * 0.35, 0, 0, TAU);
-      ctx.fill();
+      ctx.fillStyle = K.stone;
+      ctx.fill(p);
+      moonRim(ctx, p, x - r, y - r, x + r, y, 0.8, last ? 0.6 : 0.35);
+    }
+  }
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i += 1) {
+    const side = i % 2 ? 1 : -1;
+    const x0 = fx + side * (120 + rr() * 50) * s;
+    const y0 = fy + (16 + rr() * 14) * s;
+    ctx.strokeStyle = warm ? K.woodWarmDark : K.wood;
+    ctx.lineWidth = (1.6 + rr()) * s;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.bezierCurveTo(x0 + side * 14 * s, y0 - 4 * s, x0 + side * 22 * s, y0 + 5 * s, x0 + side * 40 * s, y0 + 2 * s);
+    ctx.stroke();
+    if (warm) {
+      ctx.strokeStyle = rgba(C.ember300, 0.35);
+      ctx.lineWidth = 0.7 * s;
+      ctx.stroke();
     }
   }
 }
@@ -737,7 +933,7 @@ function tent(ctx, L, x, y, sc, dir, warm, opts = {}) {
   flapR.quadraticCurveTo(14, -H * 0.36, 17, -H * 0.12);
   flapR.quadraticCurveTo(13, -H * 0.06, 12, 0);
   flapR.quadraticCurveTo(7, -H * 0.3, 0, -H * 0.66);
-  ctx.fillStyle = warm ? mix(K.canvasWarm, C.parch200, 0.3) : mix(K.canvasLit, C.frost300, 0.15);
+  ctx.fillStyle = warm ? mix(K.canvasWarm, C.ink, 0.15) : mix(K.canvasLit, C.frost300, 0.15);
   ctx.globalAlpha = warm ? 0.85 : 0.7;
   ctx.fill(flapL);
   ctx.fill(flapR);
@@ -961,293 +1157,885 @@ function woodpile(ctx, L, x, y, sc, warm) {
   ctx.restore();
 }
 
-function seatLog(ctx, L, x, y, sc, dir, warm) {
-  const u = L.s * sc;
-  const { lx, ly } = localFrame(ctx, L, x, y, u, dir);
+
+// ---- the seated figures -------------------------------------------------------------------------
+// Drawn in a local frame: origin on the ground under the seat, +x toward the fire, ~64 units tall.
+// 3/4 seated silhouettes leaning in to the warmth: elbows on knees, hands loose toward the fire
+// (Mara's on the grip of her planted sword), a cloak draped over the log behind, a bowed head with
+// a readable brow, nose and jaw. Bodies stay near-black; only the fire-facing side takes a graded
+// rim (hottest at face, hands and knees) and a soft bounce, with a faint moon rim on the far side.
+
+function poly(pts) {
+  const p = new Path2D();
+  p.moveTo(...pts[0]);
+  for (const q of pts.slice(1)) p.lineTo(...q);
+  p.closePath();
+  return p;
+}
+
+function headPath() {
+  const p = new Path2D();
+  p.moveTo(-3, 4.6);
+  p.bezierCurveTo(-6, 2, -6.2, -3.6, -2.2, -5.6);
+  p.bezierCurveTo(1, -6.8, 4.4, -5.2, 5, -2.6);
+  p.lineTo(5.4, -1.1); // brow
+  p.lineTo(5.1, -0.3);
+  p.lineTo(7.0, 1.9); // nose
+  p.lineTo(5.5, 2.5);
+  p.lineTo(5.8, 3.1); // lips
+  p.lineTo(5.3, 3.6);
+  p.lineTo(5.6, 4.2);
+  p.bezierCurveTo(5.7, 5.3, 5.0, 6.0, 3.8, 6.1); // chin
+  p.bezierCurveTo(2.0, 6.1, 0.6, 5.0, 0.0, 3.4); // jaw
+  p.lineTo(-0.8, 5.6);
+  p.closePath();
+  return p;
+}
+
+function hairPath(sov) {
+  const p = new Path2D();
+  p.moveTo(-2.4, -5.9);
+  p.bezierCurveTo(1.5, -7.4, 4.8, -5.6, 5.3, -2.9);
+  p.lineTo(3.4, -3.3);
+  p.bezierCurveTo(1.2, -3.6, 0, -1.6, -0.9, 0.8);
+  if (sov) {
+    // long hair to the shoulders
+    p.bezierCurveTo(-1.6, 3.6, -2.8, 7, -4.4, 9.4);
+    p.bezierCurveTo(-7.4, 7.8, -7, 0.6, -6.1, -2.8);
+  } else {
+    // cropped and tied back in a short tail
+    p.bezierCurveTo(-1.6, 2.4, -2.8, 3.2, -4.2, 3.4);
+    p.bezierCurveTo(-6.4, 3.8, -8.4, 5.2, -9.4, 6.8);
+    p.bezierCurveTo(-9.8, 4.6, -8, 3, -6.6, 2.2);
+    p.bezierCurveTo(-6.6, 0.4, -6.4, -1.6, -6.1, -2.8);
+  }
+  p.closePath();
+  return p;
+}
+
+function crownPath() {
+  // a circlet just above the brow with three small points
+  const p = new Path2D();
+  p.moveTo(-5.7, -2.2);
+  p.lineTo(-2.6, -3.0);
+  p.lineTo(-2.0, -5.6);
+  p.lineTo(-1.1, -3.2);
+  p.lineTo(0.6, -3.5);
+  p.lineTo(1.2, -6.3);
+  p.lineTo(2.0, -3.7);
+  p.lineTo(3.4, -4.0);
+  p.lineTo(4.1, -6.2);
+  p.lineTo(4.6, -4.1);
+  p.lineTo(5.1, -4.2);
+  p.lineTo(5.2, -3.0);
+  p.lineTo(-5.4, -1.0);
+  p.closePath();
+  return p;
+}
+
+const HEAD_AT = [15.6, -56];
+const HEAD_ROT = 0.2;
+const HEAD_K = 0.92;
+
+function figureParts(kind) {
+  const sov = kind === 'sovereign';
+  const head = (p) => placed(p, HEAD_AT[0], HEAD_AT[1], HEAD_ROT, HEAD_K);
+  const P = {};
+  P.cloak = sov
+    ? (() => {
+        const p = new Path2D();
+        p.moveTo(6, -50);
+        p.bezierCurveTo(-2, -53.5, -9, -50.5, -12, -44);
+        p.bezierCurveTo(-16, -34, -20, -20, -26, -6);
+        p.bezierCurveTo(-28, -2, -31, 0, -35, 0.4);
+        p.lineTo(-6, 0.4);
+        p.bezierCurveTo(-6, -4, -5, -9, -3, -12);
+        p.bezierCurveTo(-1, -22, 1, -36, 6, -50);
+        p.closePath();
+        return p;
+      })()
+    : (() => {
+        const p = new Path2D();
+        p.moveTo(6, -50);
+        p.bezierCurveTo(-2, -53, -8, -50.5, -11, -44);
+        p.bezierCurveTo(-14, -35, -17, -23, -21, -11);
+        p.bezierCurveTo(-22, -8, -23.5, -5.5, -25, -4.5);
+        p.lineTo(-6, -6);
+        p.bezierCurveTo(-4, -14, 0, -34, 6, -50);
+        p.closePath();
+        return p;
+      })();
+  P.farLeg = tube(
+    [
+      [-2, -13],
+      [24, -21.5],
+      [28, -3.2],
+    ],
+    [6, 4.2, 3.2],
+  );
+  P.farBoot = poly([
+    [23.5, -5],
+    [29.5, -5.6],
+    [35, -2],
+    [35.4, 0],
+    [23, 0],
+  ]);
+  P.farArm = tube(
+    [
+      [11, -44],
+      [24, -25],
+      [31.5, sov ? -30.5 : -33],
+    ],
+    [3.6, 3.0, 2.3],
+  );
+  P.torso = tube(
+    [
+      [-3, -13],
+      [1, -29],
+      [7.5, -44],
+    ],
+    [8.4, 8.6, 7.2],
+  );
+  P.neck = tube(
+    [
+      [9, -46],
+      [13.4, -51.5],
+    ],
+    [2.8, 2.5],
+  );
+  P.head = head(headPath());
+  P.hair = head(hairPath(sov));
+  P.nearLeg = tube(
+    [
+      [-1, -12],
+      [22, -20],
+      [25.5, -2.6],
+    ],
+    [6.6, 4.5, 3.4],
+  );
+  P.nearBoot = poly([
+    [20.6, -4.6],
+    [26.8, -5.6],
+    [33, -1.9],
+    [33.4, 0.2],
+    [20, 0.2],
+  ]);
+  if (sov) {
+    P.nearArm = tube(
+      [
+        [5, -45],
+        [19, -24],
+        [29.5, -28.5],
+      ],
+      [4, 3.2, 2.5],
+    );
+    P.hands = new Path2D();
+    P.hands.ellipse(31.4, -29.4, 3.8, 3, -0.35, 0, TAU);
+    P.hands.ellipse(33.4, -31.2, 1.6, 1.1, -0.9, 0, TAU);
+    // a fur mantle across the shoulders
+    const m = new Path2D();
+    m.moveTo(-9, -44);
+    for (let i = 0; i <= 12; i += 1) {
+      const a = Math.PI * (1.08 + i * 0.07);
+      m.lineTo(3 + Math.cos(a) * 12.5 + (i % 2 ? 0.8 : -0.4), -46.5 + Math.sin(a) * 6.2 + (i % 2 ? -1.1 : 0.6));
+    }
+    m.bezierCurveTo(15, -44, 12, -41.5, 9, -41);
+    m.bezierCurveTo(3, -40, -4, -40.5, -9, -44);
+    m.closePath();
+    P.mantle = m;
+    P.crown = head(crownPath());
+  } else {
+    P.nearArm = tube(
+      [
+        [5, -45],
+        [18, -25],
+        [31, -32.5],
+      ],
+      [4, 3.2, 2.5],
+    );
+    P.hands = new Path2D();
+    P.hands.ellipse(33.4, -32.6, 3, 2.7, -0.2, 0, TAU);
+    // the sword, planted point-down before her: blade, guard, grip and pommel
+    P.blade = poly([
+      [34.3, -28],
+      [35.9, -28],
+      [36.1, -2.5],
+      [35.3, 0.6],
+      [34.6, -2.5],
+    ]);
+    P.guard = poly([
+      [31, -29.6],
+      [39.2, -28.8],
+      [39.1, -27.6],
+      [31, -28.2],
+    ]);
+    P.grip = tube(
+      [
+        [35, -29],
+        [34.4, -36],
+      ],
+      [0.8, 0.8],
+    );
+    // a pauldron on the near shoulder, and the lame beneath it
+    const pd = new Path2D();
+    pd.moveTo(-0.5, -46.4);
+    pd.bezierCurveTo(0.5, -52.8, 9.8, -54, 13, -47.6);
+    pd.bezierCurveTo(9.4, -45.2, 3.6, -44.6, -0.5, -46.4);
+    pd.closePath();
+    pd.moveTo(1.2, -44.2);
+    pd.bezierCurveTo(4, -45.8, 9.2, -45.8, 12.4, -44.6);
+    pd.lineTo(11.8, -42.2);
+    pd.bezierCurveTo(8.8, -43.3, 4.6, -43.3, 1.9, -42);
+    pd.closePath();
+    P.pauldron = pd;
+  }
+  return P;
+}
+
+let FIGS = null;
+const figs = () => (FIGS ||= { sovereign: figureParts('sovereign'), mara: figureParts('mara') });
+
+function seatLog(ctx, lx, ly, warm) {
   const log = new Path2D();
   log.moveTo(-30, -9);
-  log.quadraticCurveTo(-4, -13, 20, -10);
-  log.lineTo(22, 1);
-  log.quadraticCurveTo(-4, 4, -30, 2);
+  log.quadraticCurveTo(-4, -13.5, 18, -10.5);
+  log.lineTo(20, -0.5);
+  log.quadraticCurveTo(-4, 1.5, -30, 0);
   log.closePath();
-  if (warm) warmFill(ctx, log, lx, ly, 0, -4, 30, K.woodWarmDark, K.woodWarm, 1);
+  if (warm) warmFill(ctx, log, lx, ly, 0, -5, 30, K.woodWarmDark, K.woodWarm, 1);
   else {
     ctx.fillStyle = K.wood;
     ctx.fill(log);
   }
-  // the cut end facing the fire, with rings
   const end = new Path2D();
-  end.ellipse(21, -4.5, 3.6, 6, 0, 0, TAU);
+  end.ellipse(19, -5.5, 3.4, 5.4, 0, 0, TAU);
   ctx.fillStyle = warm ? mix(C.ember500, C.parch400, 0.3) : K.woodLit;
   ctx.fill(end);
   ctx.strokeStyle = rgba(BLACK, 0.4);
   ctx.lineWidth = 0.5;
   ctx.beginPath();
-  ctx.ellipse(21, -4.5, 1.8, 3, 0, 0, TAU);
+  ctx.ellipse(19, -5.5, 1.7, 2.8, 0, 0, TAU);
+  ctx.moveTo(-24, -6.5);
+  ctx.quadraticCurveTo(-4, -8.5, 14, -6.5);
   ctx.stroke();
-  ctx.strokeStyle = rgba(BLACK, 0.35);
-  ctx.beginPath();
-  ctx.moveTo(-24, -6);
-  ctx.quadraticCurveTo(-4, -8, 14, -6);
-  ctx.stroke();
-  ctx.restore();
 }
 
-// A seated, cloaked figure facing +x (the fire), in local units (~80 tall).
-function figurePaths(kind) {
-  const sov = kind === 'sovereign';
-  // the cloak: from the nape over the shoulders, falling behind the log and pooling on the ground
-  const cloak = new Path2D();
-  cloak.moveTo(-1, -61);
-  cloak.bezierCurveTo(-10, -61, -17, -55, -19, -45);
-  cloak.bezierCurveTo(-22, -28, sov ? -28 : -25, -8, sov ? -40 : -30, 14);
-  cloak.lineTo(sov ? -50 : -36, 14.5);
-  cloak.bezierCurveTo(sov ? -44 : -32, 11, sov ? -40 : -30, 12, -2, 14);
-  cloak.bezierCurveTo(4, 4, 7, -8, 9, -22);
-  cloak.bezierCurveTo(10, -40, 8, -55, -1, -61);
-  cloak.closePath();
-
-  // torso leaning to the warmth, forearms on the knees, hands open to the fire, shin and boot
-  const body = new Path2D();
-  body.moveTo(1, -60);
-  body.bezierCurveTo(7, -59, 11, -55, 12.5, -50);
-  body.bezierCurveTo(14, -44, 16, -38, 19, -33);
-  body.bezierCurveTo(23, -30, 30, -28.5, 37, -28.5);
-  body.bezierCurveTo(41, -28.5, 43.5, -26, 41.5, -23.5);
-  body.bezierCurveTo(39, -22, 36, -22, 33, -21.5);
-  body.bezierCurveTo(36, -18, 37, -13, 36, -7);
-  body.bezierCurveTo(35, 0, 35, 5, 36, 9.5);
-  body.bezierCurveTo(40, 9.5, 44, 11, 44.5, 14);
-  body.lineTo(27.5, 14);
-  body.bezierCurveTo(28, 6, 27, -2, 25, -8);
-  body.bezierCurveTo(18, -8, 8, -6, 0, -4);
-  body.bezierCurveTo(-6, -4, -9, -14, -9, -28);
-  body.bezierCurveTo(-9, -44, -6, -56, 1, -60);
-  body.closePath();
-
-  // the near arm, drawn over the body so the fire picks it out: shoulder, elbow, open hand
-  const arm = new Path2D();
-  arm.moveTo(-3, -53);
-  arm.bezierCurveTo(4, -56, 10, -50, 12, -42);
-  arm.bezierCurveTo(14, -35, 18, -31, 24, -30);
-  arm.bezierCurveTo(30, -30, 36, -31, 40, -30.5);
-  arm.bezierCurveTo(43.5, -30, 44, -26, 41, -25.5);
-  arm.bezierCurveTo(35, -25, 28, -24.5, 22, -24.5);
-  arm.bezierCurveTo(15, -25, 9, -29, 5, -36);
-  arm.bezierCurveTo(1, -42, -3, -47, -3, -53);
-  arm.closePath();
-
-  // a profile: brow, nose, lips, chin, the line of the jaw into the neck
-  const head = new Path2D();
-  head.moveTo(2, -77);
-  head.bezierCurveTo(8, -77, 11, -73, 11, -69);
-  head.lineTo(13.2, -65.6);
-  head.lineTo(11.2, -64.6);
-  head.bezierCurveTo(11.8, -63.2, 11.2, -61.8, 10.2, -61.3);
-  head.bezierCurveTo(9.8, -59.6, 8.2, -58.6, 6, -58.6);
-  head.bezierCurveTo(4.4, -58.6, 3.4, -58, 2.6, -55.5);
-  head.lineTo(-1.5, -55.5);
-  head.bezierCurveTo(-4, -60, -6, -63, -6, -69);
-  head.bezierCurveTo(-6, -74, -3, -77, 2, -77);
-  head.closePath();
-
-  const extra = new Path2D();
-  const hair = new Path2D();
-  if (sov) {
-    // a fur mantle across the shoulders
-    extra.moveTo(-15, -50);
-    for (let i = 0; i <= 10; i += 1) {
-      const a = Math.PI * (1.02 + i * 0.096);
-      extra.lineTo(Math.cos(a) * 16 + 0.5, -55 + Math.sin(a) * 7.5 + (i % 2 ? 1.8 : -1.2));
-    }
-    extra.lineTo(13, -50);
-    extra.bezierCurveTo(6, -45, -6, -44, -15, -50);
-    extra.closePath();
-    // long hair falling to the shoulders behind the circlet
-    hair.moveTo(-6.5, -68);
-    hair.bezierCurveTo(-7, -77, 4, -80, 10.5, -73);
-    hair.bezierCurveTo(5, -75, 0, -73.5, -1, -67);
-    hair.bezierCurveTo(-2, -61, -4, -56, -7, -52);
-    hair.bezierCurveTo(-11, -55, -9, -62, -6.5, -68);
-    hair.closePath();
-  } else {
-    // a pauldron, and the sword riding behind the hip, scabbard tip on the ground
-    extra.ellipse(-2, -52, 10, 5.5, -0.3, Math.PI, TAU);
-    extra.closePath();
-    extra.moveTo(-6, -20);
-    extra.lineTo(-38, 8);
-    extra.lineTo(-36.5, 10);
-    extra.lineTo(-4.5, -18);
-    extra.closePath();
-    extra.moveTo(-4, -23.5);
-    extra.lineTo(-10, -15);
-    extra.lineTo(-8.5, -14);
-    extra.lineTo(-2.5, -22.5);
-    extra.closePath();
-    // cropped and swept back, tied at the nape
-    hair.moveTo(-6, -66);
-    hair.bezierCurveTo(-6, -77, 6, -79.5, 11.2, -71);
-    hair.bezierCurveTo(5, -73, 0.5, -72, -0.5, -66.5);
-    hair.bezierCurveTo(-2, -64, -5, -62.5, -8, -60);
-    hair.bezierCurveTo(-10.5, -58, -12.5, -59, -11, -61.5);
-    hair.bezierCurveTo(-9, -63, -7, -63.5, -6, -66);
-    hair.closePath();
-  }
-  return { cloak, body, arm, head, extra, hair, sov };
-}
-
-function figure(ctx, L, x, y, sc, dir, kind, warm) {
+function figure(ctx, L, x, y, sc, dir, kind, warm, opts = {}) {
   const u = L.s * sc;
-  if (warm) castShadow(ctx, L, x, y + 8 * u, 46 * u, 34 * u, 0.6);
-  contactShadow(ctx, x, y + 10 * u, 34 * u, 6 * u, 0.6);
-  seatLog(ctx, L, x, y + 10 * u, sc, dir, warm);
+  if (warm) castShadow(ctx, L, x - dir * 4 * u, y, 92 * u, 46 * u, 0.6);
+  contactShadow(ctx, x - dir * 4 * u, y, 40 * u, 7 * u, 0.6);
   const { lx, ly } = localFrame(ctx, L, x, y, u, dir);
-  const P = figurePaths(kind);
-  if (warm) {
-    // near-silhouettes: a dark body, a hot crescent on the fire side, a soft bounce on the front
-    const dark = K.figureWarm;
-    const o = { dark, rimCol: C.ember300, rimW: 1.25, bounce: C.ember500, bounceA: 0.42, span: 34 };
-    litShape(ctx, P.cloak, lx, ly, 2, -26, { ...o, rimCol: C.ember400, rimW: 1, bounceA: 0.2 });
-    litShape(ctx, P.body, lx, ly, 14, -30, o);
-    litShape(ctx, P.extra, lx, ly, 0, -44, { ...o, rimCol: C.ember400, rimW: 0.8, bounceA: 0.3, span: 16 });
-    litShape(ctx, P.arm, lx, ly, 20, -36, { ...o, rimCol: C.ember200, rimW: 1.1, bounceA: 0.5, span: 22 });
-    litShape(ctx, P.head, lx, ly, 3, -67, { ...o, rimCol: C.lattice300, rimW: 1.2, bounce: C.ember400, bounceA: 0.5, span: 9 });
-    litShape(ctx, P.hair, lx, ly, -1, -68, { ...o, dark: mix(dark, BLACK, 0.4), rimCol: C.ember400, rimW: 0.8, bounceA: 0.2, span: 10 });
-  } else {
-    // moonlight from the upper right of the screen, mapped into this mirrored local frame
-    const mx = dir * 600;
-    const o = { dark: K.figure, rimCol: K.figureMoon, rimW: 1, rimA: 0.75 };
-    litShape(ctx, P.cloak, mx, -800, 2, -26, o);
-    litShape(ctx, P.body, mx, -800, 14, -30, o);
-    litShape(ctx, P.extra, mx, -800, 0, -44, o);
-    litShape(ctx, P.arm, mx, -800, 20, -36, o);
-    litShape(ctx, P.head, mx, -800, 3, -67, o);
-    litShape(ctx, P.hair, mx, -800, -1, -68, { ...o, dark: mix(K.figure, BLACK, 0.4) });
+  seatLog(ctx, lx, ly, warm);
+  if (opts.empty) {
+    ctx.restore();
+    return;
   }
-  // the cloak's fold lines, picked out faintly
-  ctx.strokeStyle = warm ? rgba(BLACK, 0.45) : rgba(BLACK, 0.5);
-  ctx.lineWidth = 0.9;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-9, -48);
-  ctx.quadraticCurveTo(-15, -20, -22, 11);
-  ctx.moveTo(-2, -44);
-  ctx.quadraticCurveTo(-5, -18, -10, 10);
-  ctx.stroke();
-  if (P.sov) {
-    // a thin gold circlet that the fire finds
-    ctx.strokeStyle = warm ? C.gold300 : C.gold700;
-    ctx.lineWidth = 1.2;
+  const P = figs()[kind];
+  const sov = kind === 'sovereign';
+  // moonlight from the upper right of the screen, mapped into this mirrored frame
+  const mx = dir * 600;
+  const my = -800;
+  const dh = Math.hypot(lx - 31, ly + 30);
+  const far = [dh, dh + 60];
+  const cloakCol = sov ? mix(K.figureWarm, C.crimson600, 0.18) : mix(K.figureWarm, C.navy800, 0.3);
+  const parts = [
+    // [path, centre, light options]
+    [P.cloak, -10, -26, { dark: cloakCol, rimA: 0.75, rimW: 1.4, bounceA: 0.12, span: 24 }, true],
+    [P.farLeg, 18, -16, { dark: mix(K.figureWarm, BLACK, 0.35), rimA: 0.5, rimW: 1.2, bounceA: 0.15, span: 14 }],
+    [P.farBoot, 29, -2.5, { dark: mix(K.figureWarm, BLACK, 0.35), rimA: 0.5, rimW: 1, bounceA: 0.2, span: 6 }],
+    [P.farArm, 22, -32, { dark: mix(K.figureWarm, BLACK, 0.35), rimA: 0.6, rimW: 1.2, bounceA: 0.2, span: 10 }],
+    [P.torso, 3, -29, { rimW: 1.6, bounceA: 0.14, span: 16 }, true],
+    [P.neck, 11, -48.5, { rimW: 1.2, bounceA: 0.4, span: 4 }],
+    [P.mantle, 3, -46, { dark: mix(K.figureWarm, C.parch400, 0.08), rimCol: C.ember200, rimW: 1.2, bounceA: 0.3, span: 10 }],
+    [P.pauldron, 6, -47, { dark: mix(K.figureWarm, C.iron500, 0.25), rimCol: C.brass300, rimHot: C.lattice300, rimW: 1.1, bounceA: 0.35, span: 8 }],
+    [P.head, HEAD_AT[0], HEAD_AT[1], { rimW: 1.5, rimHot: C.lattice300, bounce: C.ember400, bounceA: 0.62, span: 8 }, true],
+    [P.hair, HEAD_AT[0] - 2, HEAD_AT[1] - 2, { dark: mix(K.figureWarm, BLACK, 0.4), rimCol: C.ember400, rimW: 1, bounceA: 0.15, span: 6 }, true],
+    [P.nearLeg, 14, -15, { rimW: 1.8, bounceA: 0.45, span: 14 }],
+    [P.nearBoot, 27, -2.5, { rimW: 1.2, bounceA: 0.35, span: 6 }],
+    [P.blade, 35.2, -14, { dark: mix(C.iron700, BLACK, 0.3), rimCol: C.iron200, rimHot: C.lattice200, rimW: 0.7, bounceA: 0.25, span: 4 }],
+    [P.guard, 35, -28.6, { dark: C.brass700, rimCol: C.gold300, rimW: 0.7, bounceA: 0.3, span: 4 }],
+    [P.nearArm, 18, -32, { rimW: 1.7, bounceA: 0.22, span: 12 }],
+    [P.grip, 34.7, -32.5, { dark: mix(C.ink, BLACK, 0.3), rimCol: C.ember300, rimW: 0.6, bounceA: 0.2, span: 3 }],
+    [P.hands, sov ? 31.6 : 33.4, sov ? -29.6 : -32.6, { rimW: 1.4, rimHot: C.lattice300, bounce: C.ember400, bounceA: 0.6, span: 5 }],
+  ];
+  for (const [path, cx, cy, o, moonSide] of parts) {
+    if (!path) continue;
+    if (warm) {
+      litShape(ctx, path, lx, ly, cx, cy, {
+        dark: K.figureWarm,
+        rimCol: C.ember300,
+        rimHot: C.gold300,
+        bounce: C.ember500,
+        fade: far,
+        ...o,
+      });
+      if (moonSide) litShape(ctx, path, mx, my, cx, cy, { fill: false, rimCol: C.frost300, rimW: 0.9, rimA: 0.16 });
+    } else {
+      litShape(ctx, path, mx, my, cx, cy, { dark: o.dark && path !== P.head ? mix(o.dark, K.figure, 0.6) : K.figure, rimCol: K.figureMoon, rimW: 0.9, rimA: moonSide ? 0.5 : 0.25 });
+    }
+  }
+  if (P.crown) {
+    ctx.fillStyle = warm ? C.gold400 : C.gold700;
+    ctx.fill(P.crown);
+    if (warm) litShape(ctx, P.crown, lx, ly, HEAD_AT[0], HEAD_AT[1] - 4, { fill: false, rimCol: C.lattice200, rimW: 0.8, rimA: 1 });
+  }
+  if (!sov) {
+    // the pommel catches the fire
+    ctx.fillStyle = warm ? C.gold400 : C.gold700;
     ctx.beginPath();
-    ctx.moveTo(-5.5, -70);
-    ctx.quadraticCurveTo(3, -72.5, 10.5, -71);
-    ctx.stroke();
-    ctx.fillStyle = warm ? C.lattice300 : C.gold600;
-    ctx.beginPath();
-    ctx.moveTo(4, -72);
-    ctx.lineTo(5, -75.5);
-    ctx.lineTo(6, -72);
+    ctx.arc(34.3, -37.4, 1.7, 0, TAU);
     ctx.fill();
-  } else if (warm) {
-    // the sword's brass pommel glints
-    ctx.fillStyle = C.gold400;
+  }
+  if (warm) {
+    // glints: the crown's fire-side point, the pommel, the sword's edge
+    ctx.fillStyle = rgba(C.lattice100, 0.95);
     ctx.beginPath();
-    ctx.arc(-6.5, -21.5, 1.6, 0, TAU);
+    if (sov) {
+      const c = Math.cos(HEAD_ROT) * HEAD_K;
+      const sn = Math.sin(HEAD_ROT) * HEAD_K;
+      const gx = 4.1;
+      const gy = -5.8;
+      ctx.arc(HEAD_AT[0] + gx * c - gy * sn, HEAD_AT[1] + gx * sn + gy * c, 0.75, 0, TAU);
+    } else {
+      ctx.arc(34.9, -37.9, 0.6, 0, TAU);
+    }
     ctx.fill();
+    if (!sov) {
+      ctx.strokeStyle = rgba(C.lattice200, 0.55);
+      ctx.lineWidth = 0.45;
+      ctx.beginPath();
+      ctx.moveTo(35.85, -27.4);
+      ctx.lineTo(36, -3);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
 
-function sparky(ctx, L, x, y, sc, warm) {
-  // Sparky, the young acid drake, curled like a hound by the stones: chin on his forepaws, ears
-  // swept back, a folded wing on his back, his tail wrapped round, one sleepy eye on the fire.
-  const u = L.s * sc;
-  contactShadow(ctx, x - 4 * u, y + 1 * u, 30 * u, 5 * u, 0.75);
-  const { lx, ly } = localFrame(ctx, L, x, y, u, -1);
-  const tail = new Path2D();
-  tail.moveTo(-22, -1);
-  tail.bezierCurveTo(-20, 4, 0, 5, 12, 2.5);
-  tail.bezierCurveTo(15, 2, 17, 3.5, 13.5, 4.8);
-  tail.bezierCurveTo(0, 7.5, -18, 6.5, -25, 0);
-  tail.closePath();
+// ---- Sparky ---------------------------------------------------------------------------------------
+// The young acid drake curled like a hound by the stones (local frame, +x toward the fire): a wedge
+// head resting on crossed forepaws, two horns swept back like his portrait's, an ear-fin, a folded
+// wing along his back with its wrist claw up, small spines down the neck, and the tail wrapped round
+// the front of him to end by his snout. One sleepy acid-green eye is the only green in the scene.
+let SPARKY = null;
+function sparkyParts() {
+  if (SPARKY) return SPARKY;
+  // a round, curled mound with the haunch tucked under
   const body = new Path2D();
-  body.moveTo(-22, 0);
-  body.bezierCurveTo(-29, -6, -26, -17, -14, -19.5);
-  body.bezierCurveTo(-4, -22, 8, -21, 14, -14);
-  body.bezierCurveTo(16, -10, 17, -5, 16, -2);
-  body.bezierCurveTo(8, 1, -10, 1.5, -22, 0);
+  body.moveTo(-20, 0);
+  body.bezierCurveTo(-24.5, -10, -16, -20.5, -5, -20.5);
+  body.bezierCurveTo(4, -20.5, 9, -15, 10, -9);
+  body.bezierCurveTo(11, -5, 13, -2, 14.5, 0);
   body.closePath();
+  body.ellipse(-13.5, -5.5, 8.4, 6, 0, 0, TAU);
+  // a foreleg folded forward to the paws
+  body.addPath(
+    tube(
+      [
+        [5, -9],
+        [10, -4],
+        [15.5, -1.6],
+      ],
+      [3.6, 2.9, 2.4],
+    ),
+  );
+  // the neck arching down to the head
+  const neck = tube(
+    [
+      [5, -13],
+      [10.5, -11],
+      [14, -7],
+    ],
+    [5, 4.2, 3.8],
+  );
+  // a short, rounded wedge of a head resting on the paws
   const head = new Path2D();
-  head.moveTo(11, -11);
-  head.bezierCurveTo(14, -17.5, 23, -18, 27, -13);
-  head.bezierCurveTo(31, -12, 35, -9.5, 36.5, -7);
-  head.bezierCurveTo(37.5, -5, 35.5, -3.5, 32, -3.5);
-  head.bezierCurveTo(26, -3, 18, -3, 12, -5);
+  head.moveTo(12, -5);
+  head.bezierCurveTo(12, -11, 18, -12.6, 21.5, -10.6);
+  head.bezierCurveTo(24, -9.2, 26.6, -7.3, 27.9, -5.7);
+  head.bezierCurveTo(28.9, -4.4, 28.3, -2.6, 26.6, -2.4);
+  head.lineTo(15, -2.2);
+  head.bezierCurveTo(12.8, -2.2, 12, -3.4, 12, -5);
   head.closePath();
-  // ears like a hound's, horned at the tips
-  head.moveTo(17, -15.5);
-  head.lineTo(9.5, -22);
-  head.lineTo(21, -16.5);
-  head.closePath();
-  head.moveTo(21.5, -16.5);
-  head.lineTo(15.5, -23.5);
-  head.lineTo(24.5, -16);
-  head.closePath();
-  const paws = new Path2D();
-  paws.moveTo(13, -3);
-  paws.bezierCurveTo(22, -4, 30, -3, 35.5, -1.8);
-  paws.bezierCurveTo(37, -0.8, 36, 0.6, 33.5, 0.6);
-  paws.lineTo(13, 0.6);
-  paws.closePath();
+  const horns = new Path2D();
+  horns.moveTo(15.4, -10.2);
+  horns.quadraticCurveTo(11, -12.2, 7.4, -17.6);
+  horns.quadraticCurveTo(12.8, -14.4, 18.4, -11.2);
+  horns.closePath();
+  horns.moveTo(18.2, -11.2);
+  horns.quadraticCurveTo(15, -14.6, 13.6, -20);
+  horns.quadraticCurveTo(17.2, -15.4, 20.8, -10.8);
+  horns.closePath();
+  const fin = poly([
+    [14.6, -6.6],
+    [9.4, -9.4],
+    [11.2, -6.6],
+    [9.4, -5.2],
+    [14, -4.8],
+  ]);
   const wing = new Path2D();
-  wing.moveTo(-13, -18);
-  wing.bezierCurveTo(-7, -28, 6, -27, 10.5, -17);
-  wing.lineTo(5.5, -16);
-  wing.lineTo(1.5, -19.5);
-  wing.lineTo(-2.5, -16.5);
-  wing.lineTo(-7, -19);
+  wing.moveTo(-15.5, -13.5);
+  wing.bezierCurveTo(-11.5, -21, -2.4, -23.6, 3.6, -20.6);
+  wing.lineTo(6.8, -23.8); // the wrist claw
+  wing.lineTo(6, -19.2);
+  wing.bezierCurveTo(3.6, -16.4, -0.2, -15.4, -2.8, -15.4);
+  wing.lineTo(-5.2, -13.2);
+  wing.lineTo(-7.6, -15);
+  wing.lineTo(-10, -12.8);
+  wing.lineTo(-12.4, -14.4);
   wing.closePath();
-  const parts = [
-    [tail, -6, 3],
-    [body, -4, -10],
-    [wing, -1, -21],
-    [paws, 24, -2],
-    [head, 24, -10],
-  ];
-  if (warm) {
-    const dark = mix(mix(C.ink, C.acid600, 0.1), BLACK, 0.2);
-    for (const [p, cx, cy] of parts) {
-      const soft = p === tail || p === wing;
-      litShape(ctx, p, lx, ly, cx, cy, { dark, rimCol: C.ember200, rimW: 1, rimA: soft ? 0.4 : 1, bounce: C.ember500, bounceA: 0.45, span: 18 });
-    }
-  } else {
-    const dark = mix(C.acid600, BLACK, 0.86);
-    for (const [p, cx, cy] of parts) litShape(ctx, p, -600, -800, cx, cy, { dark, rimCol: K.figureMoon, rimW: 0.8, rimA: 0.6 });
+  const spines = new Path2D();
+  for (const [x, y, a] of [
+    [7.6, -14.4, -0.55],
+    [10.8, -12.2, -0.9],
+    [-19.2, -11, 0.75],
+    [-21.6, -7.6, 1.15],
+  ]) {
+    spines.moveTo(x - Math.cos(a) * 1.5, y - Math.sin(a) * 1.5);
+    spines.lineTo(x + Math.sin(a) * 3, y - Math.cos(a) * 3);
+    spines.lineTo(x + Math.cos(a) * 1.5, y + Math.sin(a) * 1.5);
+    spines.closePath();
   }
-  // wing ribs and a ridge of small spines down the back
-  ctx.strokeStyle = rgba(BLACK, 0.5);
-  ctx.lineWidth = 0.6;
-  ctx.lineCap = 'round';
+  // the tail: round the back of him and along the front, its spade tip under his chin
+  const tail = tube(
+    [
+      [-19.5, -3],
+      [-25.4, 0],
+      [-22, 4],
+      [-8, 5.3],
+      [6, 5],
+      [15, 3.8],
+    ],
+    [3.4, 3.1, 2.7, 2.2, 1.7, 1],
+  );
+  tail.moveTo(14.4, 3.8);
+  tail.lineTo(18.4, 1.9);
+  tail.lineTo(21, 3.8);
+  tail.lineTo(18, 5.6);
+  tail.closePath();
+  // crossed forepaws under the chin
+  const paws = new Path2D();
+  paws.ellipse(19.5, -1.1, 5.4, 2.1, 0, 0, TAU);
+  paws.ellipse(23.4, 0.2, 5, 1.9, 0.04, 0, TAU);
+  SPARKY = { body, neck, head, horns, fin, wing, spines, tail, paws };
+  return SPARKY;
+}
+
+/** A scratch canvas the size of `ctx`'s, drawing in the same transform. */
+function scratch(ctx) {
+  const cv = document.createElement('canvas');
+  cv.width = ctx.canvas.width;
+  cv.height = ctx.canvas.height;
+  const c = cv.getContext('2d');
+  c.setTransform(ctx.getTransform());
+  return c;
+}
+
+/** Lay scratch canvas `c` over `ctx` pixel for pixel. */
+function blit(ctx, c) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(c.canvas, 0, 0);
+  ctx.restore();
+}
+
+function fillParts(c, parts, style, dx = 0, dy = 0) {
+  c.save();
+  c.translate(dx, dy);
+  c.fillStyle = style;
+  for (const p of parts) c.fill(p);
+  c.restore();
+}
+
+/**
+ * A crisp rim of light on the side of a silhouette (the union of `parts`) that faces (lx, ly): the
+ * silhouette minus itself nudged away from the light, so the inner edges where parts overlap get
+ * none. `style` is a colour or gradient.
+ */
+function silhouetteRim(ctx, parts, lx, ly, cx, cy, w, style) {
+  const d = Math.hypot(lx - cx, ly - cy) || 1;
+  const c = scratch(ctx);
+  fillParts(c, parts, style);
+  c.globalCompositeOperation = 'destination-out';
+  fillParts(c, parts, '#000', (-(lx - cx) / d) * w, (-(ly - cy) / d) * w);
+  blit(ctx, c);
+}
+
+/** Sparky into `ctx` at (x, y) on the ground, facing `dir` (−1: the fire is to his left). */
+function sparky(ctx, L, x, y, sc, dir, warm) {
+  const u = L.s * sc;
+  const { lx, ly } = localFrame(ctx, L, x, y, u, dir);
+  const S = sparkyParts();
+  const parts = [S.body, S.neck, S.head, S.fin, S.wing, S.spines, S.tail, S.paws];
+  // dark olive scales falling to navy at the belly, painted as one silhouette on a scratch canvas
+  const fill = ctx.createLinearGradient(0, -24, 0, 6);
+  fill.addColorStop(0, mix(mix(C.acid600, C.navy950, 0.7), BLACK, 0.15));
+  fill.addColorStop(0.5, mix(C.acid600, C.navy950, 0.84));
+  fill.addColorStop(1, mix(C.navy950, BLACK, 0.5));
+  const c = scratch(ctx);
+  fillParts(c, parts, fill);
+  c.globalCompositeOperation = 'source-atop';
+  const dh = Math.hypot(lx - 22, ly + 5);
+  if (warm) {
+    // the fire's warmth across his near flank and face
+    const bg = c.createRadialGradient(lx, ly, Math.max(0, dh - 10), lx, ly, dh + 44);
+    bg.addColorStop(0, rgba(C.ember500, 0.5));
+    bg.addColorStop(1, rgba(C.ember500, 0));
+    c.fillStyle = bg;
+    c.fillRect(-32, -28, 68, 38);
+  }
+  // the folded wing: a shade lighter, its leading bone and fold lines
+  const wg = c.createLinearGradient(-14, -24, 2, -14);
+  wg.addColorStop(0, rgba(mix(C.acid600, C.navy800, 0.6), 0.5));
+  wg.addColorStop(1, rgba(C.navy950, 0));
+  c.fillStyle = wg;
+  c.fill(S.wing);
+  c.strokeStyle = rgba(BLACK, 0.6);
+  c.lineWidth = 0.7;
+  c.stroke(S.wing);
+  c.beginPath();
+  c.moveTo(3.4, -21.4);
+  c.quadraticCurveTo(-3, -18, -8.4, -15.4);
+  c.moveTo(3.4, -21.4);
+  c.quadraticCurveTo(-6, -19.5, -13.6, -14.8);
+  c.stroke();
+  // the tail lies in front of him and the head over his paws: dark seams where they overlap
+  c.strokeStyle = rgba(BLACK, 0.7);
+  c.lineWidth = 0.9;
+  c.beginPath();
+  c.moveTo(-24.6, 1.4);
+  c.quadraticCurveTo(-18, 3, -8, 3.2);
+  c.lineTo(6, 3);
+  c.lineTo(14, 2.4);
+  c.moveTo(12.6, -2.3);
+  c.lineTo(27, -2.5);
+  c.moveTo(17.6, 0.2);
+  c.quadraticCurveTo(20, -0.3, 22, 0.2);
+  c.stroke();
+  c.beginPath();
+  c.arc(-13.5, -5.5, 6.6, -2.7, -0.35);
+  c.moveTo(4.2, -11.2);
+  c.quadraticCurveTo(7.4, -6, 13, -3.2);
+  c.strokeStyle = rgba(BLACK, 0.55);
+  c.lineWidth = 0.7;
+  c.stroke();
+  // belly scales: a few soft bands
+  c.strokeStyle = rgba(BLACK, 0.32);
+  c.lineWidth = 0.5;
+  c.beginPath();
+  for (let i = 0; i < 3; i += 1) {
+    const bx = -5 + i * 3.6;
+    c.moveTo(bx, -1.5);
+    c.quadraticCurveTo(bx + 1.6, -4.5, bx + 0.6, -7.5);
+  }
+  c.stroke();
+  blit(ctx, c);
+  // the horns are pale bone at the tips, like his portrait's
+  ctx.fillStyle = mix(C.navy900, C.stone700, 0.4);
+  ctx.fill(S.horns);
+  ctx.save();
+  ctx.clip(S.horns);
+  const hg = ctx.createLinearGradient(17, -10, 9, -20);
+  hg.addColorStop(0, rgba(C.parch400, 0));
+  hg.addColorStop(1, rgba(warm ? C.parch200 : C.frost300, warm ? 0.85 : 0.4));
+  ctx.fillStyle = hg;
+  ctx.fillRect(6, -24, 18, 15);
+  ctx.restore();
+  // rim light: a warm crescent on the fire side (hot at the face and paws), a faint moon edge above
+  if (warm) {
+    const rg = ctx.createRadialGradient(lx, ly, Math.max(0, dh - 20), lx, ly, dh + 50);
+    rg.addColorStop(0, rgba(C.lattice300, 1));
+    rg.addColorStop(0.35, rgba(C.ember200, 0.95));
+    rg.addColorStop(0.75, rgba(C.ember300, 0.55));
+    rg.addColorStop(1, rgba(C.ember400, 0.1));
+    silhouetteRim(ctx, parts, lx, ly, 2, -8, 1.3, rg);
+    silhouetteRim(ctx, [S.horns], lx, ly, 13, -14, 0.8, rgba(C.lattice300, 0.9));
+  }
+  silhouetteRim(ctx, parts, dir * 600, -800, 0, -8, 0.7, rgba(C.frost300, 0.3));
+  // a nostril, and one sleepy eye: a sliver of acid green with a soft glow
+  ctx.fillStyle = rgba(BLACK, 0.8);
   ctx.beginPath();
-  ctx.moveTo(1.5, -19.5);
-  ctx.lineTo(-1, -25.5);
-  ctx.moveTo(-2.5, -16.5);
-  ctx.lineTo(-5, -24);
+  ctx.ellipse(26.6, -4.6, 0.6, 0.4, -0.3, 0, TAU);
+  ctx.fill();
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  softDot(ctx, 19.6, -7, 6, C.acid400, warm ? 0.42 : 0.26);
+  ctx.restore();
+  ctx.fillStyle = C.acid300;
+  ctx.beginPath();
+  ctx.moveTo(17.2, -7);
+  ctx.quadraticCurveTo(19.6, -9.6, 22.2, -7.4);
+  ctx.quadraticCurveTo(19.8, -5.6, 17.2, -7);
+  ctx.fill();
+  ctx.fillStyle = rgba(BLACK, 0.85);
+  ctx.beginPath();
+  ctx.ellipse(19.9, -7.3, 0.55, 1.15, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = rgba(C.lattice100, 0.95);
+  ctx.beginPath();
+  ctx.arc(20.5, -8, 0.42, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---- the Elvian banner (static: painted into both layers) ---------------------------------------
+/** The banner on its pole, base at (x, y), scaled by k. `furled` wraps the cloth round the pole. */
+function banner(ctx, L, x, y, k, warm, furled) {
+  const s = L.s * k;
+  const top = -230;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  if (warm) {
+    ctx.restore();
+    castShadow(ctx, L, x, y, 60 * L.s, 14 * L.s, 0.45);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+  }
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = warm ? K.woodWarmDark : K.wood;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, top - 8);
+  if (!furled) {
+    ctx.moveTo(-2, top);
+    ctx.lineTo(40, top);
+  }
   ctx.stroke();
-  // one sleepy eye, a sliver of acid green, and a faint glow where the fire meets the scales
-  ctx.strokeStyle = rgba(C.acid300, warm ? 0.95 : 0.7);
+  // the fire-facing edge of the pole
+  const side = L.fx < x ? -1 : 1;
+  ctx.strokeStyle = warm ? rgba(C.ember300, 0.7) : rgba(C.frost300, 0.3);
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(25, -11);
-  ctx.quadraticCurveTo(26.8, -10, 28.6, -11);
+  ctx.moveTo(side * 1.2, 0);
+  ctx.lineTo(side * 1.2, warm ? -120 : top);
   ctx.stroke();
-  if (warm) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    softDot(ctx, 27, -10.5, 4, C.acid400, 0.25);
+  // finial: a small gilt four-point star
+  const star = (cx, cy, r, w = 0.28) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx + r * w, cy - r * w);
+    ctx.lineTo(cx + r * 0.8, cy);
+    ctx.lineTo(cx + r * w, cy + r * w);
+    ctx.lineTo(cx, cy + r);
+    ctx.lineTo(cx - r * w, cy + r * w);
+    ctx.lineTo(cx - r * 0.8, cy);
+    ctx.lineTo(cx - r * w, cy - r * w);
+    ctx.closePath();
+    ctx.fill();
+  };
+  ctx.fillStyle = warm ? C.gold400 : C.gold600;
+  star(0, top - 14, 6);
+  if (furled) {
+    // the reign's banner, furled and corded: the era is written
+    const wrap = new Path2D();
+    wrap.moveTo(-1.5, top + 4);
+    wrap.bezierCurveTo(6, top + 8, 7, top + 40, 4, top + 92);
+    wrap.bezierCurveTo(2, top + 100, -2, top + 100, -3.5, top + 92);
+    wrap.bezierCurveTo(-5, top + 50, -5, top + 14, -1.5, top + 4);
+    wrap.closePath();
+    const g = ctx.createLinearGradient(-5, 0, 7, 0);
+    g.addColorStop(0, C.navy800);
+    g.addColorStop(1, warm ? mix(C.navy600, C.ember400, 0.35) : C.navy700);
+    ctx.fillStyle = g;
+    ctx.fill(wrap);
+    ctx.strokeStyle = warm ? C.gold400 : C.gold700;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (const v of [22, 52, 80]) {
+      ctx.moveTo(-4.5, top + v + 2);
+      ctx.lineTo(6, top + v - 2);
+    }
+    ctx.stroke();
     ctx.restore();
+    return;
   }
+  // the cloth hangs in a still night: a gentle S of folds and a swallowtail
+  const bw = 34;
+  const bl = 92;
+  const x0 = 3;
+  const ripple = (v) => Math.sin(1.2 - v * 4.2) * 3.2 * v + Math.sin(0.8 - v * 7) * 1.2 * v;
+  const left = [];
+  const right = [];
+  const n = 10;
+  for (let i = 0; i <= n; i += 1) {
+    const v = i / n;
+    left.push([x0 + ripple(v), top + v * bl]);
+    right.push([x0 + bw + ripple(v) * 1.15, top + v * bl + Math.sin(2.2 - v * 4.2) * 1.2]);
+  }
+  const cloth = new Path2D();
+  cloth.moveTo(...left[0]);
+  for (const p of left.slice(1)) cloth.lineTo(...p);
+  const [lbx, lby] = left[n];
+  const [rbx, rby] = right[n];
+  cloth.lineTo((lbx + rbx) / 2, lby - 16);
+  cloth.lineTo(rbx, rby + 6);
+  for (const p of right.slice(0, n).reverse()) cloth.lineTo(...p);
+  cloth.closePath();
+  const g = ctx.createLinearGradient(x0, top, x0 + bw, top);
+  g.addColorStop(0, C.navy800);
+  g.addColorStop(0.6, C.navy700);
+  g.addColorStop(1, mix(C.navy700, C.frost500, 0.18));
+  ctx.fillStyle = g;
+  ctx.fill(cloth);
+  ctx.save();
+  ctx.clip(cloth);
+  for (let i = 0; i < n; i += 1) {
+    const v = i / n;
+    const d = Math.cos(1.2 - v * 4.2);
+    ctx.fillStyle = d > 0 ? rgba(C.frost300, 0.06 * d) : rgba(BLACK, -0.25 * d);
+    ctx.fillRect(x0 - 8, top + v * bl, bw + 20, bl / n + 1);
+  }
+  if (warm) {
+    const wg = ctx.createLinearGradient(0, top + bl, 0, top);
+    wg.addColorStop(0, rgba(C.ember400, 0.42));
+    wg.addColorStop(1, rgba(C.ember400, 0));
+    ctx.fillStyle = wg;
+    ctx.fillRect(x0 - 8, top, bw + 20, bl + 10);
+  }
+  ctx.strokeStyle = rgba(warm ? C.gold400 : C.gold600, 0.85);
+  ctx.lineWidth = 1.4;
+  ctx.stroke(cloth);
+  const mid = left[4];
+  ctx.fillStyle = warm ? C.gold400 : C.gold600;
+  star(mid[0] + bw * 0.5, mid[1] - 2, 10, 0.22);
+  ctx.strokeStyle = rgba(warm ? C.gold400 : C.gold600, 0.7);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(mid[0] + bw * 0.5, mid[1] - 2, 12.5, -1.2, 4.4);
+  ctx.stroke();
   ctx.restore();
+  ctx.restore();
+}
+
+/** A struck tent: the canvas down in a heap, its pole laid across. */
+function struckTent(ctx, L, x, y, sc, warm) {
+  const u = L.s * sc;
+  if (warm) castShadow(ctx, L, x, y, 50 * u, 50 * u, 0.5);
+  contactShadow(ctx, x, y - 2 * u, 46 * u, 8 * u, 0.6);
+  const { lx, ly } = localFrame(ctx, L, x, y, u, 1);
+  const heap = new Path2D();
+  heap.moveTo(-40, 0);
+  heap.bezierCurveTo(-34, -14, -16, -20, -2, -16);
+  heap.bezierCurveTo(10, -22, 30, -16, 38, 0);
+  heap.closePath();
+  if (warm) warmFill(ctx, heap, lx, ly, 0, -10, 40, K.canvasWarmDark, K.canvasWarm, 0.85);
+  else {
+    const g = ctx.createLinearGradient(20, -20, -20, 0);
+    g.addColorStop(0, K.canvasLit);
+    g.addColorStop(1, K.canvasShade);
+    ctx.fillStyle = g;
+    ctx.fill(heap);
+    moonRim(ctx, heap, -40, -22, 38, 0, 1, L.last ? 0.6 : 0.35);
+  }
+  ctx.strokeStyle = rgba(BLACK, 0.35);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(-20, -12);
+  ctx.quadraticCurveTo(-10, -6, -14, 0);
+  ctx.moveTo(12, -15);
+  ctx.quadraticCurveTo(18, -8, 14, 0);
+  ctx.stroke();
+  ctx.strokeStyle = warm ? K.woodWarm : K.woodLit;
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-46, -3);
+  ctx.lineTo(44, -12);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ---- the static layers ----------------------------------------------------------------------------
+function paintCamp(ctx, L, warm) {
+  const s = L.s;
+  // On a tall phone screen the camp gathers in closer so the tents still frame the fire.
+  const spread = L.wide ? 1 : 0.74;
+  const F = (dx, dy) => [L.fx + (Math.abs(dx) > 130 ? dx * spread : dx) * s, L.fy + dy * s];
+  frameTrees(ctx, L, warm);
+  // the banner: beside the camp and clear of any text column
+  let bx;
+  let by;
+  let bk = 1;
+  if (L.last) {
+    // furled and short, out past the Sovereign's shoulder, below the words on every layout
+    bx = L.fx + 200 * s;
+    by = L.fy - 40 * s;
+    bk = 0.55;
+  } else if (L.wide) {
+    by = L.fy - 52 * s;
+    const outside = L.fx + 380;
+    bx = L.bandTop != null && outside < L.w - 50 * s ? outside : L.fx + 206 * s;
+    if (L.bandTop != null && bx !== outside) bk = clamp((by - L.bandTop - 10) / (244 * s), 0.4, 1);
+  } else {
+    bx = L.fx + 158 * s;
+    by = L.fy - 78 * s;
+    if (L.bandTop != null) bk = clamp((by - L.bandTop - 10) / (244 * s), 0.4, 1);
+  }
+  bx = Math.min(bx, L.w - 46 * s * bk);
+  const items = L.last
+    ? [
+        { y: -112, draw: () => tent(ctx, L, ...F(-520, -112), 0.62, 1, warm) },
+        { y: -104, draw: () => tent(ctx, L, ...F(540, -104), 0.66, -1, warm, { pennant: C.crimson600 }) },
+        { y: -78, draw: () => cart(ctx, L, ...F(-330, -78), 0.95, warm) },
+        { y: -66, draw: () => struckTent(ctx, L, ...F(-235, -62), 1.05, warm) },
+        { y: -56, draw: () => struckTent(ctx, L, ...F(280, -54), 0.95, warm) },
+        // (on a wide screen the words sit right above it, so the furled banner stays in the phone strip)
+        L.wide ? null : { y: -60, draw: () => banner(ctx, L, bx, by, bk, warm, true) },
+        { y: 20, draw: () => woodpile(ctx, L, ...F(L.wide ? -170 : -150, L.wide ? 22 : 30), 0.8, warm) },
+        { y: 12, draw: () => figure(ctx, L, ...F(-98, 12), 1.1, 1, 'mara', warm, { empty: true }) },
+        { y: 14, draw: () => figure(ctx, L, ...F(100, 14), 1.14, -1, 'sovereign', warm) },
+      ]
+    : [
+        { y: -112, draw: () => tent(ctx, L, ...F(-520, -112), 0.62, 1, warm) },
+        { y: -104, draw: () => tent(ctx, L, ...F(540, -104), 0.66, -1, warm, { pennant: C.crimson600 }) },
+        { y: -96, draw: () => tent(ctx, L, ...F(390, -96), 0.82, -1, warm) },
+        { y: -78, draw: () => cart(ctx, L, ...F(-400, -78), 0.95, warm) },
+        { y: -66, draw: () => tent(ctx, L, ...F(-262, -66), 1.12, 1, warm, { lantern: true }) },
+        { y: -58, draw: () => tent(ctx, L, ...F(262, -60), 1.05, -1, warm, { pennant: C.ember600 }) },
+        { y: by - L.fy > -60 * s ? -50 : -70, draw: () => banner(ctx, L, bx, by, bk, warm, false) },
+        L.wide ? { y: -40, draw: () => weaponRack(ctx, L, ...F(158, -40), 0.92, warm) } : null,
+        { y: 20, draw: () => woodpile(ctx, L, ...F(L.wide ? -170 : -150, L.wide ? 22 : 30), 1, warm) },
+        { y: 12, draw: () => figure(ctx, L, ...F(-98, 12), 1.1, 1, 'mara', warm) },
+        { y: 14, draw: () => figure(ctx, L, ...F(100, 14), 1.14, -1, 'sovereign', warm) },
+      ];
+  // back to front
+  const list = items.filter(Boolean).sort((a, b) => a.y - b.y);
+  for (const it of list) it.draw();
+  // Sparky's shadow on the ground (he himself breathes in the live fire layer)
+  const sp = sparkyAt(L);
+  if (warm) castShadow(ctx, L, sp.x, sp.y, 70 * s, 34 * s, 0.6);
+  contactShadow(ctx, sp.x, sp.y + 1 * s, 36 * s, 5 * s, 0.7);
+  foreground(ctx, L, warm);
+}
+
+const sparkyAt = (L) => ({ x: L.fx + 66 * L.s, y: L.fy + 21 * L.s, sc: 1.08 });
+/** Tall grass close to the lens along the bottom edge, thick at the corners, open in the middle. */
+function foreground(ctx, L, warm) {
+  const { w, h, s, fx } = L;
+  const rnd = mulberry32(8821);
+  const blades = new Path2D();
+  const n = Math.round(clamp(w / (5 * s), 60, 320));
+  for (let i = 0; i < n; i += 1) {
+    const x = rnd() * w;
+    const edge = Math.abs(x - fx) / (w * 0.5); // 0 centre … 1 corners
+    if (rnd() > 0.2 + edge * edge * 0.95) continue;
+    const ht = (14 + rnd() * 40) * s * (0.45 + edge * 0.9);
+    const lean = (rnd() - 0.5) * ht * 0.6 + (x < fx ? -1 : 1) * ht * 0.12;
+    const bw = (1.3 + rnd() * 1.6) * s;
+    const by = h + 2;
+    blades.moveTo(x - bw, by);
+    blades.quadraticCurveTo(x + lean * 0.3, by - ht * 0.6, x + lean, by - ht);
+    blades.quadraticCurveTo(x + lean * 0.3 + bw * 0.4, by - ht * 0.55, x + bw, by);
+    blades.closePath();
+  }
+  if (warm) {
+    litShape(ctx, blades, L.lx, L.ly, fx, h, { dark: mix(K.figureWarm, BLACK, 0.3), rimCol: C.ember400, rimW: 0.9, rimA: 0.7 });
+  } else {
+    litShape(ctx, blades, fx + 600, h - 900, fx, h, { dark: mix(K.groundDeep, BLACK, 0.4), rimCol: L.last ? C.frost300 : K.figureMoon, rimW: L.last ? 1.1 : 0.7, rimA: L.last ? 0.5 : 0.35 });
+  }
 }
 
 // Stones of the fire ring: back half drawn behind the fire, front half in front of it.
@@ -1339,6 +2127,7 @@ function buildPit(L, dpr) {
     [38, 9, -34, -1, 7],
   ];
   for (const [x0, y0, x1, y1, wd] of logs) {
+    const across = Math.abs(y1 - y0) < 20;
     const g = ctx.createLinearGradient(x0, y0, x1, y1);
     g.addColorStop(0, mix(C.ink, C.ember600, 0.25));
     g.addColorStop(0.55, mix(C.ink, BLACK, 0.3));
@@ -1351,12 +2140,13 @@ function buildPit(L, dpr) {
     ctx.lineTo(x1, y1);
     ctx.stroke();
     // glowing cracks along the char
-    const n = 4;
+    // (only low on the leaning logs: higher up, inside the flame, they would read as a lattice)
+    const n = across ? 4 : 2;
     ctx.strokeStyle = rgba(C.ember300, 0.85);
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     for (let i = 0; i < n; i += 1) {
-      const t = 0.35 + (i / n) * 0.6;
+      const t = across ? 0.35 + (i / n) * 0.6 : 0.12 + i * 0.14;
       const cx = x0 + (x1 - x0) * t;
       const cy = y0 + (y1 - y0) * t;
       const nx = -(y1 - y0);
@@ -1375,228 +2165,6 @@ function buildPit(L, dpr) {
     ctx.stroke();
   }
   return { cv, ox, oy, W, H };
-}
-
-// ---- cached layers ---------------------------------------------------------------------------
-function paintCamp(ctx, L, warm) {
-  const s = L.s;
-  // On a tall phone screen the camp gathers in closer so the tents still frame the fire.
-  const spread = L.wide ? 1 : 0.74;
-  const F = (dx, dy) => [L.fx + (Math.abs(dx) > 130 ? dx * spread : dx) * s, L.fy + dy * s];
-  frameTrees(ctx, L, warm);
-  const items = [
-    { y: -112, draw: () => tent(ctx, L, ...F(-520, -112), 0.62, 1, warm) },
-    { y: -104, draw: () => tent(ctx, L, ...F(540, -104), 0.66, -1, warm, { pennant: C.crimson600 }) },
-    { y: -96, draw: () => tent(ctx, L, ...F(390, -96), 0.82, -1, warm) },
-    { y: -78, draw: () => cart(ctx, L, ...F(-400, -78), 0.95, warm) },
-    { y: -66, draw: () => tent(ctx, L, ...F(-262, -66), 1.12, 1, warm, { lantern: true }) },
-    { y: -58, draw: () => tent(ctx, L, ...F(262, -60), 1.05, -1, warm, { pennant: C.ember600 }) },
-    { y: -40, draw: () => weaponRack(ctx, L, ...F(L.wide ? 158 : 150, L.wide ? -40 : -70), L.wide ? 0.92 : 0.8, warm) },
-    { y: 20, draw: () => woodpile(ctx, L, ...F(L.wide ? -170 : -150, L.wide ? 22 : 30), 1, warm) },
-    { y: 4, draw: () => figure(ctx, L, ...F(-96, -2), 1.12, 1, 'mara', warm) },
-    { y: 10, draw: () => figure(ctx, L, ...F(100, 2), 1.16, -1, 'sovereign', warm) },
-  ];
-  // back to front
-  items.sort((a, b) => a.y - b.y);
-  for (const it of items) it.draw();
-  foreground(ctx, L, warm);
-}
-
-/** Tall grass close to the lens along the bottom edge, thick at the corners, open in the middle. */
-function foreground(ctx, L, warm) {
-  const { w, h, s, fx } = L;
-  const rnd = mulberry32(8821);
-  const blades = new Path2D();
-  const n = Math.round(clamp(w / (5 * s), 60, 320));
-  for (let i = 0; i < n; i += 1) {
-    const x = rnd() * w;
-    const edge = Math.abs(x - fx) / (w * 0.5); // 0 centre … 1 corners
-    if (rnd() > 0.2 + edge * edge * 0.95) continue;
-    const ht = (14 + rnd() * 40) * s * (0.45 + edge * 0.9);
-    const lean = (rnd() - 0.5) * ht * 0.6 + (x < fx ? -1 : 1) * ht * 0.12;
-    const bw = (1.3 + rnd() * 1.6) * s;
-    const by = h + 2;
-    blades.moveTo(x - bw, by);
-    blades.quadraticCurveTo(x + lean * 0.3, by - ht * 0.6, x + lean, by - ht);
-    blades.quadraticCurveTo(x + lean * 0.3 + bw * 0.4, by - ht * 0.55, x + bw, by);
-    blades.closePath();
-  }
-  if (warm) {
-    litShape(ctx, blades, L.lx, L.ly, fx, h, { dark: mix(K.figureWarm, BLACK, 0.3), rimCol: C.ember400, rimW: 0.9, rimA: 0.7 });
-  } else {
-    litShape(ctx, blades, fx + 600, h - 900, fx, h, { dark: mix(K.groundDeep, BLACK, 0.4), rimCol: K.figureMoon, rimW: 0.7, rimA: 0.35 });
-  }
-}
-
-function buildLayers(L, dpr, intensity) {
-  const { w, h, s } = L;
-  const reach = (300 + 120 * intensity) * s;
-  const stones = ringStones();
-  // cold: sky, terrain, camp in moonlight
-  const cold = layer(w, h, dpr);
-  paintSky(cold.ctx, L);
-  paintTerrain(cold.ctx, L);
-  paintGround(cold.ctx, L, false);
-  paintCamp(cold.ctx, L, false);
-  for (const st of stones) if (!st.front) stone(cold.ctx, L, st, false);
-  // warm: the same camp lit by the fire, masked by its falloff
-  const warmL = layer(w, h, dpr);
-  const wc = warmL.ctx;
-  wc.save();
-  wc.clip(groundPath(L));
-  paintGround(wc, L, true);
-  wc.restore();
-  paintCamp(wc, L, true);
-  for (const st of stones) if (!st.front) stone(wc, L, st, true);
-  wc.globalCompositeOperation = 'destination-in';
-  wc.save();
-  wc.translate(L.lx, L.ly);
-  wc.scale(1, 0.62);
-  const m = wc.createRadialGradient(0, 0, 0, 0, 0, reach);
-  m.addColorStop(0, 'rgba(0,0,0,1)');
-  m.addColorStop(0.22, 'rgba(0,0,0,0.92)');
-  m.addColorStop(0.5, 'rgba(0,0,0,0.5)');
-  m.addColorStop(0.78, 'rgba(0,0,0,0.16)');
-  m.addColorStop(1, 'rgba(0,0,0,0)');
-  wc.fillStyle = m;
-  wc.fillRect(-reach, -reach, reach * 2, reach * 2);
-  wc.restore();
-  // fill everything outside the mask's box (transparent)
-  wc.globalCompositeOperation = 'destination-out';
-  wc.save();
-  wc.beginPath();
-  wc.rect(0, 0, w, h);
-  wc.rect(L.lx - reach, L.ly - reach * 0.62, reach * 2, reach * 1.24);
-  wc.fill('evenodd');
-  wc.restore();
-  wc.globalCompositeOperation = 'source-over';
-
-  // foreground: the front of the ring and Sparky, in a small box around the fire
-  const box = { x: L.fx - 100 * s, y: L.fy - 40 * s, w: 200 * s, h: 82 * s };
-  const fgCold = layer(box.w, box.h, dpr);
-  const fgWarm = layer(box.w, box.h, dpr);
-  const sub = { ...L, fx: L.fx - box.x, fy: L.fy - box.y, lx: L.lx - box.x, ly: L.ly - box.y };
-  for (const [c, warm] of [
-    [fgCold.ctx, false],
-    [fgWarm.ctx, true],
-  ]) {
-    for (const st of stones) if (st.front) stone(c, sub, st, warm);
-    sparky(c, sub, sub.fx + 60 * s, sub.fy + 27 * s, 1.15, warm);
-  }
-  return { cold: cold.cv, warm: warmL.cv, fgCold: fgCold.cv, fgWarm: fgWarm.cv, box, pit: buildPit(L, dpr), reach };
-}
-
-// ---- per-frame: banner, fire, embers, smoke ---------------------------------------------------
-function flickerAt(t) {
-  return 0.84 + 0.08 * Math.sin(t * 7.3) * Math.sin(t * 3.1 + 1) + 0.05 * Math.sin(t * 13.7 + 0.4) + 0.03 * Math.sin(t * 23.1 + 2);
-}
-
-function banner(ctx, L, t, warmA) {
-  const s = L.s;
-  const px = Math.min(L.fx + (L.wide ? 206 : 178) * s, L.w - 52 * s);
-  const py = L.fy - (L.wide ? 52 : 84) * s;
-  const top = py - 230 * s;
-  // pole and crossbar
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = K.wood;
-  ctx.lineWidth = 3 * s;
-  ctx.beginPath();
-  ctx.moveTo(px, py);
-  ctx.lineTo(px, top - 8 * s);
-  ctx.moveTo(px - 2 * s, top);
-  ctx.lineTo(px + 40 * s, top);
-  ctx.stroke();
-  ctx.strokeStyle = rgba(C.ember300, 0.55 * warmA);
-  ctx.lineWidth = 1 * s;
-  ctx.beginPath();
-  ctx.moveTo(px - 1.2 * s, py);
-  ctx.lineTo(px - 1.2 * s, py - 110 * s);
-  ctx.stroke();
-  // finial: a small gilt four-point star
-  ctx.fillStyle = C.gold400;
-  ctx.beginPath();
-  const fy = top - 14 * s;
-  const r = 6 * s;
-  ctx.moveTo(px, fy - r);
-  ctx.lineTo(px + r * 0.28, fy - r * 0.28);
-  ctx.lineTo(px + r, fy);
-  ctx.lineTo(px + r * 0.28, fy + r * 0.28);
-  ctx.lineTo(px, fy + r);
-  ctx.lineTo(px - r * 0.28, fy + r * 0.28);
-  ctx.lineTo(px - r, fy);
-  ctx.lineTo(px - r * 0.28, fy - r * 0.28);
-  ctx.closePath();
-  ctx.fill();
-  // the cloth, rippling: left and right edges, a swallowtail
-  const bw = 34 * s;
-  const bl = 92 * s;
-  const x0 = px + 3 * s;
-  const ripple = (v) => Math.sin(t * 1.7 - v * 4.2) * 3.2 * s * v + Math.sin(t * 2.9 - v * 7) * 1.2 * s * v;
-  const left = [];
-  const right = [];
-  const n = 10;
-  for (let i = 0; i <= n; i += 1) {
-    const v = i / n;
-    const y = top + v * bl;
-    left.push([x0 + ripple(v), y]);
-    right.push([x0 + bw + ripple(v) * 1.15, y + Math.sin(t * 1.7 - v * 4.2 + 1) * 1.2 * s]);
-  }
-  const cloth = new Path2D();
-  cloth.moveTo(...left[0]);
-  for (const p of left.slice(1)) cloth.lineTo(...p);
-  const [lbx, lby] = left[n];
-  const [rbx, rby] = right[n];
-  cloth.lineTo((lbx + rbx) / 2, lby - 16 * s);
-  cloth.lineTo(rbx, rby + 6 * s);
-  for (const p of right.slice(0, n).reverse()) cloth.lineTo(...p);
-  cloth.closePath();
-  const g = ctx.createLinearGradient(x0, top, x0 + bw, top);
-  g.addColorStop(0, C.navy800);
-  g.addColorStop(0.6, C.navy700);
-  g.addColorStop(1, mix(C.navy700, C.frost500, 0.25));
-  ctx.fillStyle = g;
-  ctx.fill(cloth);
-  // shading in the folds
-  ctx.save();
-  ctx.clip(cloth);
-  for (let i = 0; i < n; i += 1) {
-    const v = i / n;
-    const d = Math.cos(t * 1.7 - v * 4.2);
-    ctx.fillStyle = d > 0 ? rgba(C.frost300, 0.06 * d) : rgba(BLACK, -0.25 * d);
-    ctx.fillRect(x0 - 8 * s, top + v * bl, bw + 20 * s, bl / n + 1);
-  }
-  // firelight washing the lower cloth
-  const wg = ctx.createLinearGradient(0, top + bl, 0, top);
-  wg.addColorStop(0, rgba(C.ember400, 0.38 * warmA));
-  wg.addColorStop(1, rgba(C.ember400, 0));
-  ctx.fillStyle = wg;
-  ctx.fillRect(x0 - 8 * s, top, bw + 20 * s, bl + 10 * s);
-  // the device: a gold border and the four-point star of Elvia
-  ctx.strokeStyle = rgba(C.gold500, 0.85);
-  ctx.lineWidth = 1.4 * s;
-  ctx.stroke(cloth);
-  const mid = left[4];
-  const cx = mid[0] + bw * 0.5 + ripple(0.4) * 0.1;
-  const cy = mid[1] - 2 * s;
-  const sr = 10 * s;
-  ctx.fillStyle = C.gold400;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - sr);
-  ctx.lineTo(cx + sr * 0.22, cy - sr * 0.22);
-  ctx.lineTo(cx + sr * 0.8, cy);
-  ctx.lineTo(cx + sr * 0.22, cy + sr * 0.22);
-  ctx.lineTo(cx, cy + sr);
-  ctx.lineTo(cx - sr * 0.22, cy + sr * 0.22);
-  ctx.lineTo(cx - sr * 0.8, cy);
-  ctx.lineTo(cx - sr * 0.22, cy - sr * 0.22);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = rgba(C.gold400, 0.7);
-  ctx.lineWidth = 1 * s;
-  ctx.beginPath();
-  ctx.arc(cx, cy, sr * 1.25, -1.2, 4.4);
-  ctx.stroke();
-  ctx.restore();
 }
 
 const TONGUES = [
@@ -1669,34 +2237,162 @@ function tongue(ctx, bx, by, w, h, t, T, s) {
   return left[n];
 }
 
-function drawFire(ctx, L, layers, t, k, flick) {
+
+function sizeCanvas(cv, w, h, dpr) {
+  cv.width = Math.max(1, Math.round(w * dpr));
+  cv.height = Math.max(1, Math.round(h * dpr));
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return ctx;
+}
+
+/** Darken toward the frame edges so the fire is the value peak of the picture. */
+function edgeDark(ctx, L, a) {
+  const { w, h, fx, fy, s } = L;
+  const cy = fy - 50 * s;
+  const R = Math.hypot(Math.max(fx, w - fx), Math.max(cy, h - cy));
+  const g = ctx.createRadialGradient(fx, cy, Math.min(w, h) * 0.28, fx, cy, R);
+  g.addColorStop(0, rgba(BLACK, 0));
+  g.addColorStop(0.55, rgba(BLACK, a * 0.45));
+  g.addColorStop(1, rgba(BLACK, a));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+}
+
+/** A small cached sprite painted in world coordinates offset to its own box. */
+function sprite(L, x, y, w, h, dpr, draw) {
+  const { cv, ctx } = layer(w, h, dpr);
+  draw(ctx, { ...L, fx: L.fx - x, fy: L.fy - y, lx: L.lx - x, ly: L.ly - y });
+  return { cv, x, y, w, h };
+}
+
+/** Paint the cold and warm static layers into their canvases; return the live layer's sprites. */
+function paintStatic(coldCv, warmCv, L, dpr, intensity) {
+  const { w, h, s } = L;
+  const stones = ringStones();
+  // cold: sky, terrain, camp in moonlight, dark at the edges
+  const cc = sizeCanvas(coldCv, w, h, dpr);
+  paintSky(cc, L);
+  paintTerrain(cc, L);
+  paintGround(cc, L, false);
+  paintCamp(cc, L, false);
+  for (const st of stones) if (!st.front) stone(cc, L, st, false);
+  edgeDark(cc, L, 0.55);
+  // warm: the same camp lit by the fire, masked by its falloff
+  const wc = sizeCanvas(warmCv, w, h, dpr);
+  wc.save();
+  wc.clip(groundPath(L));
+  paintGround(wc, L, true);
+  wc.restore();
+  // firelight bounced onto the ground and the low air behind the figures, and the heat glow over
+  // the flames: low-frequency light that breathes with this layer's flicker. It sits behind the
+  // camp, so the figures stay dark shapes against it, lit only on their fire-facing edges.
+  wc.globalCompositeOperation = 'lighter';
+  const hot = L.last ? mix(C.ember500, C.crimson500, 0.4) : C.ember500;
+  flatDot(wc, L.fx, L.fy + 4 * s, 440 * s, 0.3, mix(hot, C.gold600, 0.25), L.last ? 0.24 : 0.32);
+  flatDot(wc, L.fx, L.fy - 70 * s, 300 * s, 0.55, hot, L.last ? 0.1 : 0.14);
+  flatDot(wc, L.fx, L.fy - 50 * s, 130 * s, 1.2, hot, 0.3);
+  wc.globalCompositeOperation = 'source-over';
+  paintCamp(wc, L, true);
+  for (const st of stones) if (!st.front) stone(wc, L, st, true);
+  const reach = (560 + 200 * intensity) * s * (L.last ? 0.62 : 1);
+  wc.globalCompositeOperation = 'destination-in';
+  wc.save();
+  wc.translate(L.lx, L.ly);
+  wc.scale(1, 0.62);
+  const m = wc.createRadialGradient(0, 0, 0, 0, 0, reach);
+  m.addColorStop(0, 'rgba(0,0,0,1)');
+  m.addColorStop(0.2, 'rgba(0,0,0,0.95)');
+  m.addColorStop(0.45, 'rgba(0,0,0,0.6)');
+  m.addColorStop(0.75, 'rgba(0,0,0,0.18)');
+  m.addColorStop(1, 'rgba(0,0,0,0)');
+  wc.fillStyle = m;
+  wc.fillRect(-reach, -reach, reach * 2, reach * 2);
+  wc.restore();
+  // clear everything outside the mask's box
+  wc.globalCompositeOperation = 'destination-out';
+  wc.beginPath();
+  wc.rect(0, 0, w, h);
+  wc.rect(L.lx - reach, L.ly - reach * 0.62, reach * 2, reach * 1.24);
+  wc.fill('evenodd');
+
+  // sprites for the live fire box: the front of the ring, and Sparky
+  const stonesSp = sprite(L, L.fx - 60 * s, L.fy - 16 * s, 120 * s, 38 * s, dpr, (c, sub) => {
+    for (const st of stones) if (st.front) stone(c, sub, st, false);
+    c.globalAlpha = 0.92;
+    for (const st of stones) if (st.front) stone(c, sub, st, true);
+    c.globalAlpha = 1;
+  });
+  const sp = sparkyAt(L);
+  const u = s * sp.sc;
+  const spX = sp.x - 38 * u;
+  const spY = sp.y - 27 * u;
+  const sparkySp = sprite(L, spX, spY, 70 * u, 36 * u, dpr, (c, sub) => sparky(c, sub, sp.x - spX, sp.y - spY, sp.sc, -1, true));
+  sparkySp.ax = sp.x;
+  sparkySp.ay = sp.y;
+  return {
+    fireBox: { x: L.fx - 112 * s, y: L.fy - 160 * s, w: 224 * s, h: 200 * s },
+    airBox: { x: L.fx - 160 * s, y: L.fy - (L.last ? 660 : 560) * s, w: 420 * s, h: (L.last ? 640 : 540) * s },
+    stones: stonesSp,
+    sparky: sparkySp,
+    pit: buildPit(L, dpr),
+  };
+}
+
+// ---- the live layer: fire, smoke and embers -------------------------------------------------------
+function flickerAt(t) {
+  return 0.84 + 0.08 * Math.sin(t * 7.3) * Math.sin(t * 3.1 + 1) + 0.05 * Math.sin(t * 13.7 + 0.4) + 0.03 * Math.sin(t * 23.1 + 2);
+}
+
+// The last fire burns low and red-gold.
+const FLAME_COLS_LAST = [
+  [
+    [0, C.crimson600, 0.0],
+    [0.08, C.crimson500, 0.6],
+    [0.45, C.crimson600, 0.32],
+    [1, C.crimson600, 0],
+  ],
+  [
+    [0, C.ember500, 0.0],
+    [0.1, C.ember400, 0.85],
+    [0.5, C.crimson400, 0.55],
+    [1, C.crimson500, 0],
+  ],
+  [
+    [0, C.lattice300, 0.0],
+    [0.1, C.gold300, 0.92],
+    [0.45, C.ember300, 0.7],
+    [1, C.ember400, 0],
+  ],
+];
+
+function drawFire(ctx, L, S, t, k, flick) {
   const { fx, fy, s } = L;
-  const pit = layers.pit;
-  // heat glow under and around the flames
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.save();
-  ctx.translate(fx, fy - 46 * s * k);
-  ctx.scale(1, 1.25);
-  softDot(ctx, 0, 0, 120 * s * k, C.ember500, 0.3 * flick);
-  ctx.restore();
-  ctx.globalCompositeOperation = 'source-over';
+  const pit = S.pit;
+  const cols = L.last ? FLAME_COLS_LAST : FLAME_COLS;
+  const hk = L.last ? 0.72 : 1;
   ctx.drawImage(pit.cv, fx - pit.ox, fy - pit.oy, pit.W, pit.H);
-  // the coal bed breathing
+  // the body of the flame hides the crib's upper logs (their glowing cracks would read as a lattice)
+  ctx.save();
+  ctx.translate(fx, fy - 20 * s * hk);
+  ctx.scale(1, 1.5);
+  softDot(ctx, 0, 0, 24 * s * (0.8 + 0.2 * k), L.last ? C.crimson500 : C.ember500, 0.85);
+  ctx.restore();
   ctx.globalCompositeOperation = 'lighter';
+  // the coal bed breathing
   ctx.save();
   ctx.translate(fx, fy);
   ctx.scale(1, 0.34);
   softDot(ctx, 0, 0, 34 * s, C.ember400, 0.35 + 0.25 * Math.sin(t * 2.1) * Math.sin(t * 1.3 + 1));
   ctx.restore();
-  // flame tongues
   for (const T of TONGUES) {
     const cyc = Math.sin(t * T.r + T.p) * 0.22 + Math.sin(t * T.r * 2.37 + T.p * 1.3) * 0.1;
-    const h = T.h * s * k * (0.82 + cyc) * (0.9 + 0.12 * flick);
+    const h = T.h * s * k * hk * (0.82 + cyc) * (0.9 + 0.12 * flick);
     const w = T.w * s * (0.9 + 0.1 * k);
     const bx = fx + T.x * s;
     const by = fy - 4 * s;
     const g = ctx.createLinearGradient(0, by, 0, by - h);
-    for (const [o, col, a] of FLAME_COLS[T.l]) g.addColorStop(o, rgba(col, a));
+    for (const [o, col, a] of cols[T.l]) g.addColorStop(o, rgba(col, a));
     ctx.fillStyle = g;
     const tip = tongue(ctx, bx, by, w, h, t, T, s);
     ctx.fill();
@@ -1706,7 +2402,7 @@ function drawFire(ctx, L, layers, t, k, flick) {
       if (ph < 0.42) {
         const q = ph / 0.42;
         const lx = tip[0] + Math.sin(t * 3 + T.p) * 3 * s;
-        const ly = tip[1] - q * 26 * s * k;
+        const ly = tip[1] - q * 26 * s * k * hk;
         const r = (1 - q) * w * 0.4;
         const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, r * 2.2);
         lg.addColorStop(0, rgba(T.l ? C.ember300 : C.ember400, 0.7 * (1 - q)));
@@ -1718,11 +2414,11 @@ function drawFire(ctx, L, layers, t, k, flick) {
       }
     }
   }
-  // white-hot heart
+  // the white-hot heart (gold in the last fire)
   ctx.save();
   ctx.translate(fx, fy - 12 * s);
   ctx.scale(1.6, 1);
-  softDot(ctx, 0, 0, 16 * s * k, C.lattice100, 0.55 * flick);
+  softDot(ctx, 0, 0, 16 * s * k * hk, L.last ? C.gold300 : C.lattice100, 0.55 * flick);
   ctx.restore();
   ctx.globalCompositeOperation = 'source-over';
 }
@@ -1744,7 +2440,7 @@ function makeEmbers(seed, n) {
 
 function emberPos(e, L, life, t, k) {
   const s = L.s;
-  const y = L.fy - 30 * s - life * 330 * s * k * e.rise;
+  const y = L.fy - 30 * s - life * (L.last ? 260 : 330) * s * k * e.rise;
   const x = L.fx + e.x * 22 * s + Math.sin(t * e.f + e.phase + life * 4) * e.amp * s * life + e.drift * life * life * 140 * s;
   return [x, y];
 }
@@ -1776,147 +2472,201 @@ function drawEmbers(ctx, L, list, t, k, count) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
-const SMOKE = Array.from({ length: 11 }, (_, i) => ({ t: i / 11, x: ((i * 37) % 11) / 11 - 0.5, sz: 0.8 + ((i * 53) % 7) / 10 }));
+// Smoke: a few thin ribbons with a wave travelling up them, widening and fading as they climb;
+// cool grey, catching the fire's colour only at the root.
+const WISPS = [
+  { x: -4, p: 0.0, sp: 1, amp: 14, drift: 1.0, len: 1 },
+  { x: 7, p: 2.1, sp: 0.8, amp: 20, drift: 1.35, len: 0.85 },
+  { x: -11, p: 4.2, sp: 1.15, amp: 11, drift: 0.6, len: 0.7 },
+  { x: 2, p: 5.3, sp: 0.9, amp: 24, drift: 1.7, len: 0.95 },
+];
+const SMOKE_COOL = mix(C.stone500, C.navy600, 0.35);
 
 function drawSmoke(ctx, L, t, k, flick) {
   const s = L.s;
-  for (const p of SMOKE) {
-    const life = (p.t + t * 0.045) % 1;
-    const y = L.fy - (95 * k + life * 380) * s;
-    const x = L.fx + p.x * 20 * s + Math.sin(t * 0.5 + p.t * 9) * 12 * s * life + life * life * 150 * s;
-    const r = (16 + life * 90) * s * p.sz;
-    const a = Math.sin(Math.PI * Math.min(1, life * 1.4)) * 0.36 * (1 - life * 0.55);
-    if (a <= 0.003) continue;
-    // lit from below: the low smoke takes the fire's colour, the high smoke the night's
-    const warmth = clamp(1 - life * 2.2, 0, 1) * flick;
-    const col = mix(mix(C.stone500, C.navy600, 0.4), C.ember400, warmth * 0.65);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(1.25, 1);
-    softDot(ctx, 0, 0, r, col, a);
-    ctx.restore();
+  const H = (L.last ? 560 : 400) * s;
+  const y0 = L.fy - (L.last ? 58 : 80) * k * s;
+  const segs = 18;
+  const root = mix(SMOKE_COOL, C.ember400, 0.5 * flick);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const W of WISPS) {
+    const pts = [];
+    for (let i = 0; i <= segs; i += 1) {
+      const v = i / segs;
+      const y = y0 - v * H * W.len;
+      const x = L.fx + W.x * s + Math.sin(v * 5.2 - t * 0.9 * W.sp + W.p) * W.amp * s * (0.15 + v) + v * v * W.drift * 110 * s + Math.sin(t * 0.3 + W.p) * 6 * s * v;
+      pts.push([x, y]);
+    }
+    for (const [a, b, wd, al] of [
+      [0, 5, 2, 0.14],
+      [5, 11, 5, 0.085],
+      [11, 18, 10, 0.05],
+    ]) {
+      const breath = 0.7 + 0.3 * Math.sin(t * 0.7 + W.p + a * 0.4);
+      ctx.beginPath();
+      ctx.moveTo(...pts[a]);
+      for (let i = a + 1; i <= b; i += 1) ctx.lineTo(...pts[i]);
+      const col = a === 0 ? root : SMOKE_COOL;
+      ctx.strokeStyle = rgba(col, al * 0.4 * breath);
+      ctx.lineWidth = wd * 2.6 * s;
+      ctx.stroke();
+      ctx.strokeStyle = rgba(col, al * breath);
+      ctx.lineWidth = wd * s;
+      ctx.stroke();
+    }
   }
 }
 
-function twinkles(ctx, L, list, t) {
-  ctx.globalCompositeOperation = 'lighter';
-  for (const st of list) {
-    const tw = 0.5 + 0.5 * Math.sin(t * st.f + st.p);
-    const x = st.x * L.w;
-    const y = st.y * L.horizon * 0.9;
-    const r = st.r * (0.6 + 0.6 * tw);
-    ctx.fillStyle = rgba(C.lattice200, 0.35 + 0.5 * tw);
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.55, 0, TAU);
-    ctx.fill();
-    // four-point glint
-    ctx.strokeStyle = rgba(C.lattice200, 0.22 * tw);
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(x - r * 3.4, y);
-    ctx.lineTo(x + r * 3.4, y);
-    ctx.moveTo(x, y - r * 3.4);
-    ctx.lineTo(x, y + r * 3.4);
-    ctx.stroke();
-  }
-  ctx.globalCompositeOperation = 'source-over';
-}
-
-function makeTwinkles(seed) {
-  const rnd = mulberry32(seed);
-  return Array.from({ length: 16 }, () => ({ x: rnd(), y: rnd(), r: 0.9 + rnd() * 1.1, f: 0.8 + rnd() * 1.8, p: rnd() * TAU }));
-}
-
-function drawFrame(ctx, L, layers, emberList, twinkleList, t, intensity) {
-  const k = 0.72 + 0.5 * intensity;
+function drawLive(R, t) {
+  const { L, S, dpr } = R;
+  const k = 0.72 + 0.5 * R.level;
   const flick = flickerAt(t);
-  const warmA = clamp((0.62 + 0.38 * intensity) * flick, 0, 1);
-  ctx.globalAlpha = 1;
-  ctx.drawImage(layers.cold, 0, 0, L.w, L.h);
-  twinkles(ctx, L, twinkleList, t);
-  ctx.globalAlpha = warmA;
-  ctx.drawImage(layers.warm, 0, 0, L.w, L.h);
-  ctx.globalAlpha = 1;
-  // a broad wash of firelight in the air
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.save();
-  ctx.translate(L.lx, L.ly);
-  ctx.scale(1, 0.75);
-  softDot(ctx, 0, 0, layers.reach * 0.55, C.ember500, 0.12 * flick * (0.6 + 0.4 * intensity));
-  ctx.restore();
-  ctx.globalCompositeOperation = 'source-over';
-  banner(ctx, L, t, warmA);
-  drawSmoke(ctx, L, t, k, flick);
-  drawFire(ctx, L, layers, t, k, flick);
-  const b = layers.box;
-  ctx.drawImage(layers.fgCold, b.x, b.y, b.w, b.h);
-  ctx.globalAlpha = Math.min(1, warmA * 1.1);
-  ctx.drawImage(layers.fgWarm, b.x, b.y, b.w, b.h);
-  ctx.globalAlpha = 1;
-  drawEmbers(ctx, L, emberList, t, k, Math.round(emberList.length * (0.55 + 0.45 * intensity)));
+  const fc = R.fireCtx;
+  const fb = S.fireBox;
+  fc.setTransform(dpr, 0, 0, dpr, -fb.x * dpr, -fb.y * dpr);
+  fc.clearRect(fb.x, fb.y, fb.w, fb.h);
+  drawFire(fc, L, S, t, k, flick);
+  const st = S.stones;
+  fc.drawImage(st.cv, st.x, st.y, st.w, st.h);
+  // Sparky breathes: a slow rise and fall, every 3.6 s
+  const sp = S.sparky;
+  const br = 0.028 * Math.sin((t / 3.6) * TAU);
+  fc.save();
+  fc.translate(sp.ax, sp.ay);
+  fc.scale(1 + br * 0.3, 1 + br);
+  fc.drawImage(sp.cv, sp.x - sp.ax, sp.y - sp.ay, sp.w, sp.h);
+  fc.restore();
+  const ac = R.airCtx;
+  const ab = S.airBox;
+  ac.setTransform(1, 0, 0, 1, -ab.x, -ab.y);
+  ac.clearRect(ab.x, ab.y, ab.w, ab.h);
+  drawSmoke(ac, L, t, k, flick);
+  drawEmbers(ac, L, R.embers, t, k, Math.round(R.embers.length * (L.last ? 0.4 : 0.55 + 0.45 * R.level)));
 }
 
-function CampfireSceneImpl({ intensity = 0.7, fireY = 0.82, className = '', style }) {
+function placeCanvas(cv, box, dpr) {
+  cv.width = Math.max(1, Math.round(box.w * dpr));
+  cv.height = Math.max(1, Math.round(box.h * dpr));
+  cv.style.left = `${box.x}px`;
+  cv.style.top = `${box.y}px`;
+  cv.style.width = `${box.w}px`;
+  cv.style.height = `${box.h}px`;
+  return cv.getContext('2d');
+}
+
+const FLICKER_MS = 4800;
+
+function CampfireSceneImpl({ intensity = 0.7, fireX = 0.5, fireY = 0.82, band = false, moon, zoom = 1, variant = 'camp', scrim = null, className = '', style }) {
   const wrap = useRef(null);
-  const canvas = useRef(null);
+  const stage = useRef(null);
+  const coldRef = useRef(null);
+  const warmRef = useRef(null);
+  const moonRef = useRef(null);
+  const airRef = useRef(null);
+  const fireRef = useRef(null);
   const reduced = useReducedMotion();
   const level = clamp(Number(intensity) || 0, 0, 1);
+  const fx0 = Array.isArray(fireX) ? Number(fireX[0]) : Number(fireX);
+  const fx1 = Array.isArray(fireX) ? Number(fireX[1]) : fx0;
   const fy0 = Array.isArray(fireY) ? Number(fireY[0]) : Number(fireY);
   const fy1 = Array.isArray(fireY) ? Number(fireY[1]) : fy0;
+  const moonKey = JSON.stringify(moon ?? null);
+  const z = Number(zoom) || 1;
 
   useEffect(() => {
     const el = wrap.current;
-    const cv = canvas.current;
-    if (!el || !cv) return undefined;
-    const ctx = cv.getContext('2d');
-    if (!ctx) return undefined;
-    const emberList = makeEmbers(11, 60);
-    const twinkleList = makeTwinkles(23);
-    let L = null;
-    let layers = null;
+    const st = stage.current;
+    const coldCv = coldRef.current;
+    const warmCv = warmRef.current;
+    const moonCv = moonRef.current;
+    const airCv = airRef.current;
+    const fireCv = fireRef.current;
+    if (!el || !st || !coldCv || !warmCv || !moonCv || !airCv || !fireCv) return undefined;
+    if (!coldCv.getContext('2d')) return undefined;
+    const opts = { fireX: [fx0, fx1], fireY: [fy0, fy1], band, moon: JSON.parse(moonKey) ?? undefined, zoom: z, variant };
+    const embers = makeEmbers(11, 60);
+    const warmBase = clamp(0.75 + 0.3 * level, 0, 1);
+    const warmOp = (t) => clamp(warmBase * (0.86 + 0.6 * (flickerAt(t) - 0.84)), 0, 1);
+    let R = null;
     let raf = 0;
     let pending = 0;
+    let debounce = 0;
     let visible = true;
     let start = 0;
+    let lastDraw = -1e9;
+    let anim = null;
 
     const build = () => {
       pending = 0;
       const r = el.getBoundingClientRect();
       // Screens swap through zero-size layouts: never build, paint or step at 0×0.
       if (!(r.width >= 2 && r.height >= 2)) {
-        L = null;
-        layers = null;
+        R = null;
         return;
       }
       const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
       const w = Math.round(r.width);
       const h = Math.round(r.height);
-      cv.width = Math.round(w * dpr);
-      cv.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      L = layout(w, h, [fy0, fy1]);
-      layers = buildLayers(L, dpr, level);
+      const L = layout(w, h, opts);
+      const S = paintStatic(coldCv, warmCv, L, dpr, level);
+      if (L.moon) {
+        const MR = L.moon.r * 8;
+        const mc = placeCanvas(moonCv, { x: L.moon.x - MR, y: L.moon.y - MR, w: MR * 2, h: MR * 2 }, dpr);
+        mc.setTransform(dpr, 0, 0, dpr, 0, 0);
+        paintMoon(mc, MR, L.moon.r);
+        moonCv.style.display = '';
+      } else {
+        moonCv.style.display = 'none';
+      }
+      R = { L, S, dpr, w, h, level, embers, fireCtx: placeCanvas(fireCv, S.fireBox, dpr), airCtx: placeCanvas(airCv, S.airBox, 1) };
+      st.style.opacity = '1';
     };
-    const paint = (ms) => {
-      if (!L || !layers) return;
-      drawFrame(ctx, L, layers, emberList, twinkleList, reduced ? STILL_T : ms / 1000, level);
+    const paint = (t) => {
+      if (R) drawLive(R, t);
     };
     const loop = (ms) => {
-      if (!start) start = ms - 1200;
-      paint(ms - start);
       raf = visible && !reduced ? requestAnimationFrame(loop) : 0;
+      if (!start) start = ms - 1200;
+      // the fire is drawn at most 30 times a second; the light's flicker runs on the compositor
+      if (ms - lastDraw < 31) return;
+      lastDraw = ms;
+      paint((ms - start) / 1000);
     };
 
-    build();
-    paint(STILL_T * 1000);
+    // the firelight's flicker: the warm layer's opacity, animated off the main thread
+    if (reduced || typeof warmCv.animate !== 'function') {
+      warmCv.style.opacity = String(warmOp(STILL_T));
+    } else {
+      const frames = [];
+      const n = 48;
+      for (let i = 0; i <= n; i += 1) frames.push({ opacity: warmOp(((i % n) / n) * (FLICKER_MS / 1000)) });
+      anim = warmCv.animate(frames, { duration: FLICKER_MS, iterations: Infinity, easing: 'linear' });
+    }
+    st.style.transition = reduced ? 'none' : 'opacity 350ms ease-out';
+
+    // Build after the first paint so the screen's own text shows at once; then the camp fades in.
+    pending = requestAnimationFrame(() => {
+      build();
+      paint(STILL_T);
+    });
     const ro =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => {
             if (pending) return;
-            pending = requestAnimationFrame(() => {
-              build();
-              if (!raf) paint(STILL_T * 1000);
-            });
+            const r = el.getBoundingClientRect();
+            const rebuild = () => {
+              debounce = 0;
+              pending = requestAnimationFrame(() => {
+                build();
+                if (!raf) paint(STILL_T);
+              });
+            };
+            // a phone's URL bar sliding: same width, a small height change — rebuild once it settles
+            if (R && Math.round(r.width) === R.w && Math.abs(r.height - R.h) < R.h * 0.15) {
+              clearTimeout(debounce);
+              debounce = setTimeout(rebuild, 250);
+            } else rebuild();
           })
         : null;
     ro?.observe(el);
@@ -1927,18 +2677,31 @@ function CampfireSceneImpl({ intensity = 0.7, fireY = 0.82, className = '', styl
         cancelAnimationFrame(raf);
         raf = 0;
       }
+      if (anim) {
+        if (v) anim.play();
+        else anim.pause();
+      }
     });
     return () => {
       ro?.disconnect();
       stopWatch();
+      clearTimeout(debounce);
+      anim?.cancel();
       if (raf) cancelAnimationFrame(raf);
       if (pending) cancelAnimationFrame(pending);
     };
-  }, [level, reduced, fy0, fy1]);
+  }, [level, reduced, fx0, fx1, fy0, fy1, band, moonKey, z, variant]);
 
   return (
-    <div ref={wrap} aria-hidden="true" className={`absolute inset-0 ${className}`} style={style}>
-      <canvas ref={canvas} className="block h-full w-full" />
+    <div ref={wrap} aria-hidden="true" className={`absolute inset-0 overflow-hidden ${className}`} style={style}>
+      <div ref={stage} className="absolute inset-0" style={{ opacity: 0 }}>
+        <canvas ref={coldRef} className="absolute inset-0 block h-full w-full" />
+        <canvas ref={warmRef} className="absolute inset-0 block h-full w-full" />
+        {scrim}
+        <canvas ref={moonRef} className="absolute block" />
+        <canvas ref={airRef} className="absolute block" />
+        <canvas ref={fireRef} className="absolute block" />
+      </div>
     </div>
   );
 }

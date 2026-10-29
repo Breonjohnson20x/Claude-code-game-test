@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, cx } from '../../kit/kit.jsx';
-import { Portrait } from '../../art/index.js';
+import { CampfireScene, Portrait } from '../../art/index.js';
+import { smartQuotes } from '../expedition/words.js';
 import { tierChip } from '../../overlays/dossier/words.js';
 import { ActionBar } from './ActionBar.jsx';
 import { StepHeader } from './StepHeader.jsx';
@@ -21,7 +22,7 @@ function Farewell({ f, index }) {
             <span className="font-display text-[1.02rem] leading-snug text-gold-200">{f.name}</span>
             <span className={cx(tierChip(f.tier), '!min-h-7 !text-[0.78rem]')}>{f.tier}</span>
           </figcaption>
-          <blockquote className="mt-2 font-serif text-[1.18rem] leading-relaxed text-parchment-100">{f.line}</blockquote>
+          <blockquote className="mt-2 font-serif text-[1.18rem] leading-relaxed text-parchment-100">{smartQuotes(f.line)}</blockquote>
         </div>
         <span className="sr-only">Voice {index + 1}</span>
       </figure>
@@ -47,6 +48,11 @@ export function CampfireStep({ view, tone, reduced, onNext, headingRef }) {
     <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12">
       <div className="lg:sticky lg:top-6 lg:self-start">
         <StepHeader headingRef={headingRef} eyebrow={tone.eyebrow(view.sovereign)} title="The Last Fire" seal={tone.seal} lead={tone.campfire} />
+        {/* On a phone the last fire burns here, in a strip of its own between the words and the
+            voices, so no card ever covers it (wide screens show it in the backdrop). */}
+        <div aria-hidden="true" className="relative -mx-4 mt-5 h-[248px] [mask-image:linear-gradient(180deg,transparent,#000_16%,#000_84%,transparent)] sm:-mx-6 sm:h-[300px] lg:hidden">
+          <CampfireScene intensity={0.55} variant="last" fireY={0.8} zoom={2.2} moon={[0.68, 0.16]} />
+        </div>
         <p className="mt-5 font-display text-[0.95rem] uppercase tracking-[0.2em] text-ember-200 text-glow-ember">Whoever stands with you, speaks</p>
         <ActionBar className="max-lg:hidden" note={<span>Nothing here can be lost by moving on.</span>}>
           <Button icon="forward" onClick={onNext} className="lg:min-w-64">
