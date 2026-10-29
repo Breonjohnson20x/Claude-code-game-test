@@ -35,4 +35,20 @@ describe('RegionScene framing', () => {
       expect(Number.isFinite(w) && Number.isFinite(h)).toBe(true);
     }
   });
+
+  it('zooms a wide card so the focal point sits about 60% across, clear of the right edge', () => {
+    for (const focus of Object.values(FOCUS)) {
+      const [x0, y0, w, h] = cropBox(3, focus, { card: true });
+      expect(w).toBeLessThan(SCENE_W);
+      expect(w / h).toBeCloseTo(3, 1);
+      expect(x0).toBeGreaterThanOrEqual(0);
+      expect(x0 + w).toBeLessThanOrEqual(SCENE_W);
+      expect(y0 + h).toBeLessThanOrEqual(SCENE_H);
+      const at = (focus[0] - x0) / w;
+      expect(at).toBeGreaterThan(0.3);
+      expect(at).toBeLessThan(0.72);
+    }
+    // a portrait box ignores the card option
+    expect(cropBox(1.2, FOCUS.road, { card: true })).toEqual(cropBox(1.2, FOCUS.road));
+  });
 });

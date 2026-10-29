@@ -1,13 +1,19 @@
-// <RegionScene beat regionState timeOfDay monuments className />
+// <RegionScene beat regionState timeOfDay season monuments className label animated card />
 // Cinematic Southern Marches vignette. Wide 400x220 viewBox, sliced to fill
 // whatever box it is given (hero banners, cards, full-bleed backdrops).
+//
+// Motion: a labelled scene (a hero vista people look at) animates by default; an
+// unlabelled, decorative one (a dimmed backdrop under text, a card) renders still
+// unless `animated` is passed explicitly. A full-screen SMIL backdrop under
+// scrims and blurred bars costs a phone a third of its frame budget for drift
+// nobody can see. Reduced motion always wins.
 import { memo, useEffect, useRef, useState } from 'react';
-import { LIGHT } from './palette.js';
+import { C, LIGHT } from './palette.js';
 import { useReducedMotion, useSvgPause, useUid } from './util.js';
-import { FOCUS, SCENE_W as W, SCENE_H as H, cropBox } from './scene/frame.js';
+import { CARD_FOCUS, FOCUS, SCENE_W as W, SCENE_H as H, cropBox } from './scene/frame.js';
 import { SceneDefs } from './scene/parts.jsx';
 import { AtmosDefs } from './scene/atmos.jsx';
-import { tone } from './scene/tone.js';
+import { dayRig, normalizeSeason, seasonal, tone } from './scene/tone.js';
 import { BEATS } from './scene/beats.jsx';
 
 const BEAT_ALIAS = {
@@ -89,26 +95,35 @@ function RegionSceneImpl({
   className = '',
   style,
   label,
-  animated = true,
+  animated,
+  season,
+  card,
   vignette = true,
   fade = true,
 }) {
   const uid = useUid('rs');
   const ref = useRef(null);
   const reduced = useReducedMotion();
-  const motion = Boolean(animated) && !reduced;
+  const decorative = !label;
+  const motion = Boolean(animated ?? !decorative) && !reduced;
   useSvgPause(ref, motion);
   const ar = useAspect(ref);
 
   const b = normalizeBeat(beat);
   const st = normalizeRegionState(regionState);
   const tod = normalizeTimeOfDay(timeOfDay);
-  const L = LIGHT[tod];
-  const T = tone(L, tod);
+  const sea = normalizeSeason(season);
+  const L = seasonal(dayRig(LIGHT[tod], tod), sea);
+  const T0 = tone(L, tod);
+  const T = sea === 'winter' ? { ...T0, grade: C.frost300, gradeOp: T0.gradeOp + 0.05 } : sea === 'autumn' ? { ...T0, grade: C.ember400, gradeOp: T0.gradeOp + 0.03 } : T0;
   const Beat = BEATS[b] || BEATS.road;
   const list = Array.isArray(monuments) ? monuments.filter(Boolean) : [];
-  const aria = label === true ? `View of ${BEAT_LABEL[b]}, ${STATE_LABEL[st]}, at ${tod}.` : label;
-  const [x0, y0, vw, vh] = cropBox(ar, FOCUS[b] || [W / 2, H / 2]);
+  const aria = label === true ? `View of ${BEAT_LABEL[b]}, ${STATE_LABEL[st]}${sea ? ` in ${sea}` : ''}, at ${tod}.` : label;
+  // a short wide unlabelled box is a card: zoom in so the state change reads
+  const isCard = card ?? (decorative && ar != null && ar > 2.05);
+  const [x0, y0, vw, vh] = cropBox(ar, (isCard && CARD_FOCUS[b]) || FOCUS[b] || [W / 2, H / 2], { card: isCard });
+  // still, decorative scenes drop the purely kinetic extras (birds, fine snow)
+  const lite = decorative && !motion;
 
   return (
     <svg
@@ -126,14 +141,15 @@ function RegionSceneImpl({
       data-beat={b}
       data-region-state={st}
       data-time={tod}
+      data-season={sea || undefined}
     >
       <SceneDefs uid={uid} L={L} T={T} />
       <AtmosDefs uid={uid} L={L} T={T} />
       {/* ground under the painting, for frames that overscan past its bottom edge */}
       <rect x="-10" y="200" width="420" height="80" fill={L.fgDeep} />
       {/* key: remount SMIL timelines cleanly when the scene changes */}
-      <g key={`${b}-${st}-${tod}-${motion ? 1 : 0}`}>
-        <Beat uid={uid} L={L} T={T} st={st} tod={tod} motion={motion} monuments={list} />
+      <g key={`${b}-${st}-${tod}-${sea}-${motion ? 1 : 0}`}>
+        <Beat uid={uid} L={L} T={T} st={st} tod={tod} motion={motion} monuments={list} lite={lite} card={isCard} season={sea} />
       </g>
       {vignette && (
         <g pointerEvents="none">

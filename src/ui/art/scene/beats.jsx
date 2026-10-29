@@ -16,7 +16,6 @@ import {
   Torch,
   Banner,
   Pylon,
-  WardLine,
   Barricade,
   Palisade,
   Tent,
@@ -24,15 +23,12 @@ import {
   Crowd,
   Keep,
   Village,
-  Gatehouse,
   Monuments,
   Snowfall,
   Eyes,
-  Warg,
   Column,
   Monolith,
   StandingStone,
-  Walker,
   Depot,
   Fence,
   CampfireMark,
@@ -40,6 +36,7 @@ import {
   Flame,
   Lantern,
 } from './parts.jsx';
+import { CheckpointGate, RoyalParty, Walker, WalkerBeam, WardLanterns, Wolf, WolfPack, mulePath, refugeePath, wolfTones } from './actors.jsx';
 
 // ---------------------------------------------------------------- helpers
 function bez(p0, p1, p2, p3, t) {
@@ -191,6 +188,31 @@ function Boulders({ seed, list, L, color }) {
   );
 }
 
+/** Squared, broken masonry: a lit top, a lit east face, a shadowed west face, moss/frost caps. */
+function Rubble({ seed, x0, x1, y, L, count = 8, size = 3 }) {
+  const rnd = mulberry32(seed);
+  let body = '';
+  let top = '';
+  let east = '';
+  for (let i = 0; i < count; i += 1) {
+    const x = x0 + (x1 - x0) * ((i + 0.2 + rnd() * 0.6) / count);
+    const w = size * (0.7 + rnd() * 0.7);
+    const h = size * (0.45 + rnd() * 0.45);
+    const k = (rnd() - 0.5) * 0.5;
+    const bx = x - w / 2;
+    body += `M${r1(bx)},${r1(y)}L${r1(bx + w * 0.06)},${r1(y - h)}L${r1(bx + w * 0.92)},${r1(y - h - k * h)}L${r1(bx + w)},${r1(y)}Z`;
+    top += `M${r1(bx + w * 0.06)},${r1(y - h)}L${r1(bx + w * 0.92)},${r1(y - h - k * h)}L${r1(bx + w * 0.86)},${r1(y - h * 0.78 - k * h)}L${r1(bx + w * 0.12)},${r1(y - h * 0.8)}Z`;
+    east += `M${r1(bx + w * 0.78)},${r1(y - h * 0.9 - k * h)}L${r1(bx + w * 0.92)},${r1(y - h - k * h)}L${r1(bx + w)},${r1(y)}L${r1(bx + w * 0.8)},${r1(y)}Z`;
+  }
+  return (
+    <g>
+      <path d={body} fill={L.stoneDark} />
+      <path d={east} fill={mix(L.stone, L.rim, 0.25)} opacity="0.9" />
+      <path d={top} fill={L.season === 'winter' ? L.snow : mix(L.stone, L.mid, 0.35)} opacity="0.85" />
+    </g>
+  );
+}
+
 function Grove({ seed, L, T, haze = 0, ...opts }) {
   const g = grove(seed, opts);
   const body = mix(L.near, L.haze, haze);
@@ -219,7 +241,7 @@ function birdsColor(L) {
 }
 
 // ================================================================= ROAD
-export function RoadBeat({ uid, L, T, st, tod, motion, monuments }) {
+export function RoadBeat({ uid, L, T, st, tod, motion, monuments, lite }) {
   const fortified = st === 'FORTIFIED';
   const after = st === 'AFTERMATH';
   const far = { seed: 3, y: 126, amp: 3.5, bumps: [{ x: 300, w: 30, h: 17 }] };
@@ -269,7 +291,7 @@ export function RoadBeat({ uid, L, T, st, tod, motion, monuments }) {
   return (
     <g>
       <SkyDome uid={uid} L={L} T={T} seed={7} clouds={after ? 0.8 : 0.6} horizonY={116} motion={motion} />
-      {!after && <Birds list={[[150, 58, 1], [158, 54, 0.8], [165, 61, 0.9], [173, 56, 0.7], [142, 63, 0.75]]} motion={motion} color={birdsColor(L)} op={0.55} />}
+      {!after && !lite && <Birds list={[[150, 58, 1], [158, 54, 0.8], [165, 61, 0.9], [173, 56, 0.7], [142, 63, 0.75]]} motion={motion} color={birdsColor(L)} op={0.55} />}
       <Range uid={uid} id="a" L={L} T={T} seed={21} y={104} amp={34} snow={0.5} haze={0.75} base={132} op={0.9} />
       <Range uid={uid} id="b" L={L} T={T} seed={22} y={116} amp={16} snow={0.15} haze={0.6} base={134} />
       <FogBand uid={uid} y={98} h={34} />
@@ -296,6 +318,30 @@ export function RoadBeat({ uid, L, T, st, tod, motion, monuments }) {
       <path d={road.edgeR} stroke={mix(L.road, L.rim, 0.35)} strokeWidth="0.7" fill="none" opacity="0.5" />
       <path d={road.ruts} stroke={L.roadDark} strokeWidth="1.3" fill="none" opacity="0.6" />
       <path d={road.crown} stroke={mix(L.road, L.rim, 0.3)} strokeWidth="2.2" fill="none" opacity="0.25" />
+      {fortified && (
+        <g>
+          {/* the Marches walled in: a palisade ringing the keep's hill, ward-lanterns along it,
+              pylons flanking the road where it passes through (reads even on a small card) */}
+          <Palisade x={232} y={keepY + 9} w={60} h={7} L={L} />
+          <Palisade x={310} y={keepY + 9} w={60} h={7} L={L} />
+          <WardLanterns uid={uid} L={L} points={[[234, keepY - 1], [292, keepY - 1]]} gap={19} post={9} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[310, keepY - 1], [368, keepY - 1]]} gap={19} post={9} motion={motion} />
+          <Pylon uid={uid} x={293} y={keepY + 11} s={0.85} L={L} motion={motion} />
+          <Pylon uid={uid} x={309} y={keepY + 11} s={0.85} L={L} motion={motion} />
+          <Crowd list={[[288, keepY + 10, 6.5, 'guard', 1], [314, keepY + 10, 6.5, 'soldier', -1]]} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.6} />
+        </g>
+      )}
+      {after && (
+        <g>
+          {/* the fight reached the walls: a burnt wagon and the dead on the verge below the keep */}
+          <Scorch uid={uid} x={at(0.74)[0] - 10} y={at(0.74)[1]} rx={18} ry={3} />
+          <Cart x={at(0.74)[0] - 16} y={at(0.74)[1] + 1} s={0.9} L={L} broken facing={1} />
+          <Glow uid={uid} x={at(0.74)[0] - 16} y={at(0.74)[1] - 3} r={10} op={0.55} motion={motion} flicker />
+          <Flame x={at(0.74)[0] - 17} y={at(0.74)[1] - 1} h={3.4} motion={motion} />
+          <Smoke uid={uid} x={at(0.74)[0] - 16} y={at(0.74)[1] - 4} s={0.9} motion={motion} rise={80} dur={9.5} />
+          <Smoke uid={uid} x={342} y={ridgeHeightAt(far, 342) - 2} s={0.9} motion={motion} rise={80} dur={10.5} op={0.85} />
+        </g>
+      )}
       <Grass seed={72} from={0} to={400} count={180} baseAt={(x) => (x < 200 ? 200 + (200 - x) * 0.1 : 200)} h={4} spread={30} color={L.fg} lit={T.grassLit} litOp={0.25} width={0.55} />
       {/* milestones */}
       {[0.16, 0.4, 0.64].map((t) => {
@@ -316,7 +362,7 @@ export function RoadBeat({ uid, L, T, st, tod, motion, monuments }) {
           <Cart x={at(0.62)[0]} y={at(0.62)[1]} s={0.85} L={L} ox facing={1} />
           <Barricade x={at(0.52)[0] - 30} y={at(0.52)[1] + 1} w={18} s={0.8} L={L} />
           <Barricade x={at(0.52)[0] + 12} y={at(0.52)[1] + 1} w={18} s={0.8} L={L} />
-          <WardLine points={[[at(0.4)[0] - 70, at(0.4)[1] - 14], [at(0.4)[0], at(0.4)[1] - 18], [at(0.4)[0] + 70, at(0.4)[1] - 12]]} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[at(0.4)[0] - 70, at(0.4)[1] - 14], [at(0.4)[0], at(0.4)[1] - 18], [at(0.4)[0] + 70, at(0.4)[1] - 12]]} motion={motion} />
           <Pylon uid={uid} x={at(0.4)[0] - 70} y={at(0.4)[1] + 2} s={1} L={L} motion={motion} />
           <Pylon uid={uid} x={at(0.4)[0] + 70} y={at(0.4)[1] + 4} s={1} L={L} motion={motion} />
           <Banner uid={uid} x={at(0.3)[0] + 50} y={at(0.3)[1]} h={26} len={12} hgt={5} L={L} motion={motion} />
@@ -346,6 +392,7 @@ export function RoadBeat({ uid, L, T, st, tod, motion, monuments }) {
       <Bloom uid={uid} L={L} T={T} />
       {/* foreground framing */}
       <FirFrame seed={41} from={-26} to={36} count={4} base={228} hMin={92} hMax={134} L={L} />
+      <FirFrame seed={42} from={396} to={432} count={2} base={230} hMin={84} hMax={112} L={L} />
       <Boulders seed={43} list={[[380, 226, 1.8], [398, 228, 1.2], [362, 229, 0.9]]} L={L} />
       <Grass seed={73} from={200} to={410} count={70} baseAt={() => 212} h={7} spread={14} color={L.fgDeep} lit={T.grassLit} litOp={0.3} width={0.7} />
       {after && <AftermathGrade uid={uid} L={L} />}
@@ -355,7 +402,7 @@ export function RoadBeat({ uid, L, T, st, tod, motion, monuments }) {
 }
 
 // ================================================================= CHECKPOINT
-export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
+export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments, lite }) {
   const far = { seed: 12, y: 122, amp: 5 };
   const back = { seed: 16, y: 134, amp: 3, waves: [[1.4, 1], [3.3, 0.4]] };
   const mid = { seed: 14, y: 150, amp: 2.4, waves: [[1.2, 1], [3, 0.3]] };
@@ -375,18 +422,26 @@ export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
     [366, 0.92],
     [394, 0.76],
   ].map(([x, s]) => [x, backAt(x) + 2, s]);
+  // the queue: families walking up to the gate (the leading line), a mule, a cart
   const queue = [];
-  const kinds = ['refugee', 'cloak', 'child', 'refugee', 'cloak', 'refugee', 'child', 'cloak'];
-  const queueN = after ? 4 : 8;
+  const kinds = ['bundle', 'child', 'hood', 'elder', 'bundle', 'hood', 'child', 'bundle', 'hood', 'bundle'];
+  const queueN = after ? 5 : kinds.length;
   for (let i = 0; i < queueN; i += 1) {
-    const t = 0.36 + i * 0.07;
+    const t = 0.3 + i * 0.058;
     const [x, y, w] = at(t);
-    const h = (kinds[i] === 'child' ? 9 : 14) * (1.25 - t * 0.85);
-    queue.push([x - w * 0.18 + ((i * 7) % 5) - 2, y, h, kinds[i], 1]);
+    const h = (kinds[i] === 'child' ? 10 : 15.5) * (1.3 - t * 0.9);
+    queue.push([x - w * 0.16 + ((i * 7) % 5) - 2, y, h, kinds[i], 1]);
   }
+  const [mx, my, mw] = at(0.47);
+  const mule = after ? '' : mulePath(mx - mw * 0.3, my, 0.95 * (1.3 - 0.47 * 0.9), 1);
+  // a mother arguing with the sergeant at the desk
+  const GS = 1.3;
+  if (!after) queue.push([GX + 13 * GS, GY, 13.4, 'mother', 1], [GX + 10.6 * GS, GY, 8, 'child', 1]);
+  const cartAt = at(0.4);
+  const cartS = 1.25;
+  const wheel = [cartAt[0] + 14 - 4.5 * cartS, cartAt[1] - 2.2 * cartS - 2.6 * cartS];
   const guards = [];
-  const [gx0, gy0, gw0] = at(0.92);
-  guards.push([gx0 - gw0 * 0.9 - 4, gy0, 11, 'guard', 1], [gx0 + gw0 * 0.9 + 5, gy0, 11, 'guard', -1]);
+  guards.push([GX - 18 * GS, GY, 11, 'guard', 1]);
   if (fortified) {
     guards.push([at(0.6)[0] + 26, at(0.6)[1], 12, 'soldier', -1], [at(0.48)[0] - 34, at(0.48)[1], 13, 'soldier', 1], [at(0.48)[0] + 40, at(0.48)[1], 13.5, 'soldier', -1]);
     guards.push([at(0.75)[0] + 22, at(0.75)[1], 10, 'officer', -1]);
@@ -401,7 +456,7 @@ export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
   return (
     <g>
       <SkyDome uid={uid} L={L} T={T} seed={9} clouds={after ? 0.85 : 0.55} horizonY={118} motion={motion} />
-      {!after && <Birds list={[[214, 70, 0.9], [221, 66, 0.75], [228, 71, 0.8], [206, 73, 0.7]]} motion={motion} color={birdsColor(L)} op={0.5} dur={60} />}
+      {!after && !lite && <Birds list={[[214, 70, 0.9], [221, 66, 0.75], [228, 71, 0.8], [206, 73, 0.7]]} motion={motion} color={birdsColor(L)} op={0.5} dur={60} />}
       <Range uid={uid} id="a" L={L} T={T} seed={27} y={108} amp={28} snow={0.45} haze={0.8} base={134} op={0.85} />
       <FogBand uid={uid} y={100} h={34} />
       <Land uid={uid} id="far" L={L} T={T} ridge={far} color={L.far} haze={0.4} mist={0.3} rim={0.5} />
@@ -436,20 +491,19 @@ export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
       )}
       {fortified && (
         <>
-          <WardLine points={[[0, GY - 17], [GX - 26, GY - 18], [GX + 26, GY - 18], [400, GY - 17]]} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[0, GY - 17], [GX - 26, GY - 18], [GX + 26, GY - 18], [400, GY - 17]]} motion={motion} />
           <Pylon uid={uid} x={GX - 30} y={GY + 3} s={1} L={L} motion={motion} />
           <Pylon uid={uid} x={GX + 30} y={GY + 3} s={1} L={L} motion={motion} />
         </>
       )}
-      <Gatehouse uid={uid} x={GX} y={GY} s={1} L={L} motion={motion} state={st} />
+      <CheckpointGate uid={uid} x={GX} y={GY} s={GS} L={L} motion={motion} state={st} />
       <path d={road.d} fill={`url(#${uid}-road)`} />
       <path d={road.edgeL} stroke={L.roadDark} strokeWidth="1.3" fill="none" opacity="0.5" />
       <path d={road.edgeR} stroke={mix(L.road, L.rim, 0.35)} strokeWidth="0.6" fill="none" opacity="0.45" />
       <path d={road.ruts} stroke={L.roadDark} strokeWidth="1.2" fill="none" opacity="0.5" />
       <path d={road.crown} stroke={mix(L.road, L.rim, 0.3)} strokeWidth="2" fill="none" opacity="0.22" />
-      <Torch uid={uid} x={GX - 14} y={GY} s={1} L={L} motion={motion} />
-      <Torch uid={uid} x={GX + 14} y={GY} s={1} L={L} motion={motion} />
-      {!after && <Cart x={at(0.5)[0] + 12} y={at(0.5)[1]} s={1.15} L={L} facing={1} />}
+      <Torch uid={uid} x={GX - 26 * GS} y={GY} s={1} L={L} motion={motion} />
+      {!after && <Cart x={cartAt[0] + 14} y={cartAt[1]} s={cartS} L={L} facing={1} />}
       {fortified && (
         <>
           <Barricade x={at(0.42)[0] - 80} y={at(0.42)[1] + 2} w={34} s={1.1} L={L} />
@@ -457,7 +511,15 @@ export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
           <Cart x={at(0.7)[0] + 34} y={at(0.7)[1] + 1} s={0.9} L={L} ox facing={-1} />
         </>
       )}
-      <Crowd list={[...queue, ...guards]} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.7} shadow={L.shade} />
+      {/* the queue: shadows, silhouettes, a rim of key light */}
+      <path d={queue.map(([x, y, h]) => `M${r1(x - h * 0.24)},${r1(y + 0.3)}h${r1(h * 0.56)}`).join('')} stroke={L.shade} strokeWidth="1" opacity="0.35" />
+      <path d={refugeePath(queue) + mule} fill={L.figure} />
+      <path d={refugeePath(queue.map(([x, y, h, k, f]) => [x + Math.max(0.3, h * 0.035), y, h, k, f]))} fill="none" stroke={L.rim} strokeWidth="0.3" opacity={L.rimOp * 0.7} />
+      {mule && <path d={mulePath(mx - mw * 0.3 + 0.4, my, 0.95 * (1.3 - 0.47 * 0.9), 1)} fill="none" stroke={L.rim} strokeWidth="0.3" opacity={L.rimOp * 0.6} />}
+      {/* a girl sitting on the cart wheel */}
+      {!after && <path d={refugeePath([[wheel[0], wheel[1], 5.6, 'child', 1]])} fill={L.figure} />}
+      {!after && <rect x={r1(wheel[0] - 1.2)} y={r1(wheel[1] - 4)} width="2" height="0.8" fill={C.crimson500} opacity="0.85" />}
+      <Crowd list={guards} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.7} shadow={L.shade} />
       {after && (
         <>
           <Cart x={at(0.55)[0] - 18} y={at(0.55)[1] + 1} s={1.2} L={L} broken facing={1} />
@@ -470,6 +532,7 @@ export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
       {tod !== 'night' && <GodRays uid={uid} T={T} x={L.sun.x} y={L.sun.y} a0={104} a1={150} count={6} len={260} op={after ? 0.45 : 0.9} seed={9} motion={motion} />}
       <Bloom uid={uid} L={L} T={T} />
       <Grass seed={74} from={-10} to={170} count={60} baseAt={() => 206} h={7} spread={18} color={L.fgDeep} lit={T.grassLit} litOp={0.3} width={0.7} />
+      <FirFrame seed={45} from={-30} to={22} count={3} base={232} hMin={96} hMax={128} L={L} />
       <Boulders seed={44} list={[[12, 228, 2], [34, 230, 1.1]]} L={L} />
       <FirFrame seed={47} from={392} to={430} count={2} base={230} hMin={100} hMax={124} L={L} />
       {after && <AftermathGrade uid={uid} L={L} />}
@@ -479,15 +542,14 @@ export function CheckpointBeat({ uid, L, T, st, tod, motion, monuments }) {
 }
 
 // ================================================================= WILDS
-export function WildsBeat({ uid, L, T, st, tod, motion }) {
+export function WildsBeat({ uid, L, T, st, tod, motion, lite }) {
   const farG = { seed: 33, y: 134, amp: 3.5 };
   const midG = { seed: 35, y: 154, amp: 5, waves: [[1.4, 1], [3.3, 0.4]] };
   const nearG = { seed: 37, y: 182, amp: 5, waves: [[1.1, 1], [2.4, 0.5]] };
   const fortified = st === 'FORTIFIED';
   const after = st === 'AFTERMATH';
   const day = tod === 'day';
-  const wargFill = day ? mix(C.frost200, L.snowShade, 0.3) : tod === 'dusk' ? mix(L.figure, L.pineMid, 0.25) : mix(L.figure, L.pineMid, 0.2);
-  const wargLine = day ? L.pineMid : null;
+  const wolves = wolfTones(L, tod);
   const eyeList = [
     [168, 143, 0.8, 0.4],
     [204, 147, 0.9, 1.7],
@@ -521,13 +583,11 @@ export function WildsBeat({ uid, L, T, st, tod, motion }) {
       {day && <Firs seed={86} L={L} color={L.pineNear} from={262} to={326} count={5} baseAt={(x) => midAt(x) + 2} hMin={34} hMax={50} snow litOp={0.2} />}
       <Eyes uid={uid} list={eyeList} motion={motion} />
       {/* outcrop + the alpha */}
-      <path d={`M${rockX - 26},${rockY + 10}L${rockX - 16},${rockY - 6}L${rockX + 2},${rockY - 11}L${rockX + 20},${rockY - 5}L${rockX + 30},${rockY + 10}Z`} fill={L.stoneDark} />
+      <path d={`M${rockX - 26},${rockY + 10}L${rockX - 16},${rockY - 6}L${rockX + 2},${rockY - 11}L${rockX + 20},${rockY - 5}L${rockX + 30},${rockY + 10}Z`} fill={mix(L.stoneDark, L.shade, 0.35)} />
       <path d={`M${rockX + 2},${rockY - 11}L${rockX + 20},${rockY - 5}L${rockX + 30},${rockY + 10}L${rockX + 12},${rockY + 2}Z`} fill={L.stone} opacity="0.7" />
       <path d={`M${rockX - 16},${rockY - 6}L${rockX + 2},${rockY - 11}L${rockX + 12},${rockY - 7.5}L${rockX - 12},${rockY - 4}Z`} fill={L.snow} />
       <Glow uid={uid} x={rockX - 4} y={rockY - 26} r={36} op={day ? 0.0 : 0.22} kind="lattice" />
-      <Warg uid={uid} x={rockX} y={rockY - 8} s={1.15} L={L} howl={!day} fill={wargFill} outline={wargLine} motion={motion} breath />
-      {after && <Warg uid={uid} x={124} y={midAt(124) + 3} s={0.6} L={L} fill={wargFill} outline={wargLine} />}
-      {after && <Warg uid={uid} x={256} y={midAt(256) + 4} s={0.55} L={L} fill={wargFill} outline={wargLine} />}
+      <Wolf uid={uid} x={rockX + 2} y={rockY - 8.6} s={0.86} tones={wolves} rimOp={0.55 + L.rimOp * 0.6} motion={motion} breath shadow={L.shade} />
       <Land uid={uid} id="near" L={L} T={T} ridge={nearG} color={L.snow} mist={0} rim={0.9} rimW={1.1} />
       {/* wind-carved drifts in blue shadow */}
       <g fill={mix(L.snowShade, L.sky[1], 0.25)} opacity="0.45">
@@ -538,11 +598,23 @@ export function WildsBeat({ uid, L, T, st, tod, motion }) {
       <path d={trail} stroke={L.snowShade} strokeWidth="9" fill="none" strokeLinecap="round" opacity="0.55" />
       <path d={trail} stroke={mix(L.snowShade, L.shade, 0.25)} strokeWidth="2.4" fill="none" strokeDasharray="1.5 3" opacity="0.5" />
       <Grass seed={91} from={-10} to={410} count={70} baseAt={nearAt} h={3} spread={20} color={mix(L.pineNear, L.snowShade, 0.3)} width={0.4} />
+      {/* the pack, fanned across the path between the forest and the travellers */}
+      <WolfPack
+        uid={uid}
+        tones={wolves}
+        shadow={L.shade}
+        rimOp={0.5 + L.rimOp * 0.6}
+        list={
+          fortified
+            ? [[200, 172, 0.34, 1], [232, 170, 0.32, 1], [262, 173, 0.36, 1]]
+            : [[150, 178, 0.36, 1], [178, 174, 0.33, 1], [204, 183, 0.42, 1], [234, 176, 0.35, 1], [258, 186, 0.46, 1], ...(after ? [[226, 192, 0.5, 1]] : [])]
+        }
+      />
       {fortified && (
         <>
           <Palisade x={60} y={178} w={90} h={11} L={L} />
           <Palisade x={250} y={180} w={110} h={11} L={L} />
-          <WardLine points={[[40, 166], [150, 162], [250, 164], [380, 162]]} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[40, 166], [150, 162], [250, 164], [380, 162]]} motion={motion} />
           <Pylon uid={uid} x={150} y={180} s={1.1} L={L} motion={motion} />
           <Pylon uid={uid} x={250} y={182} s={1.1} L={L} motion={motion} />
           <Torch uid={uid} x={100} y={180} s={1.2} L={L} motion={motion} />
@@ -573,7 +645,7 @@ export function WildsBeat({ uid, L, T, st, tod, motion }) {
       <Bloom uid={uid} L={L} T={T} op={0.8} />
       <FirFrame seed={87} from={-24} to={44} count={3} base={230} hMin={124} hMax={152} L={L} snow color={L.pineNear} />
       <FirFrame seed={89} from={372} to={424} count={2} base={230} hMin={112} hMax={142} L={L} snow color={L.pineNear} />
-      <Snowfall motion={motion} L={L} seed={11} count={44} dur={18} size={0.55} op={0.5} drift={-24} />
+      {!lite && <Snowfall motion={motion} L={L} seed={11} count={44} dur={18} size={0.55} op={0.5} drift={-24} />}
       <Snowfall motion={motion} L={L} seed={12} count={16} dur={9} size={1.1} op={0.75} drift={-30} />
       {after && <AftermathGrade uid={uid} L={L} />}
       <Grade T={T} />
@@ -601,10 +673,21 @@ export function RuinBeat({ uid, L, T, st, tod, motion }) {
       <Firs seed={92} L={L} color={mix(L.pineFar, L.haze, 0.2)} from={-10} to={410} count={56} baseAt={(x) => ridgeHeightAt(far, x) + 1} hMin={6} hMax={13} litOp={0.1} />
       <Mist uid={uid} y={134} op={0.65} seed={12} count={6} rx={70} ry={6} motion={motion} />
       <Land uid={uid} id="mid" L={L} T={T} ridge={mid} color={L.mid} haze={0.1} mist={0.25} rim={0.5} />
+      {/* the sun's shafts fall behind the ruin, so the stones stand solid in front of them */}
+      {tod !== 'night' && <GodRays uid={uid} T={T} x={L.sun.x} y={L.sun.y} a0={110} a1={160} count={6} len={200} op={0.7} seed={17} motion={motion} />}
       <Firs seed={93} L={L} color={L.pineMid} from={304} to={420} count={7} baseAt={(x) => midAt(x) + 2} hMin={28} hMax={50} litOp={0.22} />
       <Firs seed={95} L={L} color={L.pineMid} from={-20} to={64} count={6} baseAt={(x) => midAt(x) + 2} hMin={26} hMax={44} litOp={0.22} />
       {/* the monolith's light reaching the trees */}
       <Glow uid={uid} x={MX} y={PY - 40} r={120} op={0.25 * intensity} kind="lattice" />
+      {/* the stone's light: a shaft rising behind the stones, so they stand solid in front of it */}
+      <defs>
+        <radialGradient id={`${uid}-mono`} gradientUnits="userSpaceOnUse" cx={MX} cy={SY} r="120">
+          <stop offset="0" stopColor={C.lattice200} stopOpacity="0.9" />
+          <stop offset="0.4" stopColor={C.lattice300} stopOpacity="0.3" />
+          <stop offset="1" stopColor={C.gold400} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <GodRays uid={uid} T={{ rayOp: 0.32 }} x={MX} y={SY} a0={236} a1={304} count={6} len={130} op={intensity} seed={41} motion={motion} fill={`url(#${uid}-mono)`} />
       {/* platform + steps */}
       <path d={`M66,${PY}L96,${PY - 10}H306L336,${PY}Z`} fill={L.stoneDark} />
       <path d={`M96,${PY - 10}H306L310,${PY - 8}H92Z`} fill={L.stone} opacity="0.8" />
@@ -638,15 +721,7 @@ export function RuinBeat({ uid, L, T, st, tod, motion }) {
           <Crowd list={[[196, PY - 10, 12, 'officer', -1], [318, PY - 2, 14, 'soldier', -1], [84, PY + 2, 14, 'guard', 1]]} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.6} shadow={L.shade} />
         </g>
       )}
-      {/* the stone's light: a shaft rising, a warm edge on every pillar facing it */}
-      <defs>
-        <radialGradient id={`${uid}-mono`} gradientUnits="userSpaceOnUse" cx={MX} cy={SY} r="120">
-          <stop offset="0" stopColor={C.lattice200} stopOpacity="0.9" />
-          <stop offset="0.4" stopColor={C.lattice300} stopOpacity="0.3" />
-          <stop offset="1" stopColor={C.gold400} stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <GodRays uid={uid} T={{ rayOp: 0.32 }} x={MX} y={SY} a0={236} a1={304} count={6} len={130} op={intensity} seed={41} motion={motion} fill={`url(#${uid}-mono)`} />
+      {/* a warm edge on every pillar facing the stone */}
       <ellipse cx={MX} cy={PY - 9} rx={90} ry={9} fill={`url(#${uid}-mono)`} opacity={0.55 * intensity} />
       <path
         d={[[142, 50], [164, 30], [252, 38], [274, 56], [296, 22]]
@@ -664,7 +739,7 @@ export function RuinBeat({ uid, L, T, st, tod, motion }) {
       <Glow uid={uid} x={MX} y={SY} r={12} op={0.55 * intensity} />
       {fortified && (
         <>
-          <WardLine points={[[150, PY - 26], [MX, PY - 36], [270, PY - 26]]} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[150, PY - 26], [MX, PY - 36], [270, PY - 26]]} motion={motion} />
           <Pylon uid={uid} x={150} y={PY - 9} s={1.05} L={L} motion={motion} />
           <Pylon uid={uid} x={262} y={PY - 9} s={1.05} L={L} motion={motion} />
         </>
@@ -681,17 +756,17 @@ export function RuinBeat({ uid, L, T, st, tod, motion }) {
         </>
       )}
       <Mist uid={uid} y={PY + 2} op={0.45} seed={14} count={5} rx={60} ry={4} motion={motion} dur={64} />
-      {/* fallen drums */}
-      <g>
-        <rect x="106" y="188" width="20" height="9" rx="1.5" fill={`url(#${uid}-cyl)`} transform="rotate(8 116 192)" />
-        <ellipse cx="127" cy="194" rx="2.6" ry="4.6" fill={L.stone} transform="rotate(8 116 192)" />
-        <rect x="282" y="186" width="16" height="8" rx="1.5" fill={`url(#${uid}-cyl)`} transform="rotate(-10 290 190)" />
-      </g>
+      {/* rubble breaking the platform's front edge, fallen blocks half sunk in the turf */}
+      <Rubble seed={56} x0={98} x1={304} y={PY - 9.2} L={L} count={9} size={3.4} />
+      <Rubble seed={57} x0={70} x1={334} y={PY + 0.5} L={L} count={13} size={3.6} />
+      <Rubble seed={59} x0={96} x1={136} y={194} L={L} count={3} size={6.5} />
+      <Rubble seed={61} x0={272} x1={304} y={193} L={L} count={2} size={6} />
       <Land uid={uid} id="fg" L={L} T={T} ridge={{ seed: 47, y: 206, amp: 4 }} color={L.fg} rim={0.6} />
       <Grass seed={75} from={-10} to={410} count={120} baseAt={() => 202} h={6} spread={22} color={L.fgDeep} lit={T.grassLit} litOp={0.35} width={0.6} />
+      <Grass seed={76} from={90} to={310} count={60} baseAt={() => 192} h={4.5} spread={6} color={mix(L.mid, L.fgDeep, 0.5)} lit={T.grassLit} litOp={0.3} width={0.5} />
+      <FirFrame seed={49} from={-30} to={16} count={2} base={232} hMin={96} hMax={124} L={L} />
       <Boulders seed={46} list={[[18, 226, 1.6], [384, 228, 1.9], [400, 222, 1]]} L={L} />
-      <Bloom uid={uid} L={L} T={T} />
-      {tod !== 'night' && <GodRays uid={uid} T={T} x={L.sun.x} y={L.sun.y} a0={110} a1={160} count={6} len={260} op={0.8} seed={17} motion={motion} />}
+      <Bloom uid={uid} L={L} T={T} op={0.6} />
       {after && <AftermathGrade uid={uid} L={L} />}
       <Grade T={T} />
     </g>
@@ -710,7 +785,11 @@ export function ChampionBeat({ uid, L, T, st, tod, motion }) {
   const RT = 162;
   const RB = 186;
   const WX = 236;
-  const WY = 188;
+  const WY = 190;
+  const WL = 177; // the water line on the walker's legs
+  // the royal party on the near bank, inside the phone crop, where the lamp finds them
+  const PARTY = [126, ridgeHeightAt(nearBank, 126) + 7];
+  const PARTY_AIM = [PARTY[0] - 4, PARTY[1] - 10];
   const burning = after || tod === 'night';
   const water = T.water;
   const waterDark = T.waterDark;
@@ -734,6 +813,9 @@ export function ChampionBeat({ uid, L, T, st, tod, motion }) {
       <defs>
         <clipPath id={`${uid}-riverclip`}>
           <path d={river} />
+        </clipPath>
+        <clipPath id={`${uid}-wlclip`}>
+          <rect x={WX - 34} y={WL} width="62" height="40" />
         </clipPath>
         <linearGradient id={`${uid}-water`} gradientUnits="userSpaceOnUse" x1="0" y1={RT} x2="0" y2={RB + 6}>
           <stop offset="0" stopColor={mix(water, L.haze, 0.25)} />
@@ -762,42 +844,47 @@ export function ChampionBeat({ uid, L, T, st, tod, motion }) {
         <rect x="-10" y={RT} width="420" height="4" fill={T.horizon} opacity="0.35" />
         <path d={streaks(L.sun.x, RT + 1, 12, 20, 57)} stroke={T.silver} strokeWidth="0.7" opacity={tod === 'night' ? 0.45 : 0.35} />
         {burning && <path d={streaks(316, RT + 1, 14, 18, 59)} stroke={C.ember300} strokeWidth="0.9" opacity="0.6" />}
-        {!after && <path d={streaks(WX - 20, RT + 4, 6, 16, 61)} stroke={C.ember300} strokeWidth="0.8" opacity="0.55" />}
+        {!after && <path d={streaks(WX - 22, RT + 4, 6, 12, 61)} stroke={C.ember300} strokeWidth="0.8" opacity="0.5" />}
         <path d={ripples} stroke={mix(water, L.rim, 0.5)} strokeWidth="0.5" opacity="0.55" />
         <path d={ripples} stroke={waterDark} strokeWidth="0.5" opacity="0.4" transform="translate(3 1.2)" />
       </g>
-      {/* the walker, knee-deep */}
-      <Walker uid={uid} x={WX} y={WY} s={1} L={L} motion={motion} damaged={after} />
-      <rect x={WX - 46} y={RB - 8} width="92" height="30" fill={`url(#${uid}-water)`} opacity="0.9" clipPath={`url(#${uid}-riverclip)`} />
-      <path d={`M${WX - 26},${RB - 8}h18M${WX + 2},${RB - 8}h16`} stroke={mix(water, L.rim, 0.6)} strokeWidth="0.6" opacity="0.7" />
-      <g fill="none" stroke={mix(water, L.rim, 0.6)} strokeWidth="0.6" opacity="0.8">
-        <ellipse cx={WX - 14} cy={RB - 8.6} rx="7" ry="1.2">
-          {motion && <animate attributeName="rx" values="5;9;5" dur="3s" repeatCount="indefinite" />}
-        </ellipse>
-        <ellipse cx={WX + 10} cy={RB - 8.4} rx="6" ry="1.1">
-          {motion && <animate attributeName="rx" values="7;4;7" dur="3s" repeatCount="indefinite" />}
-        </ellipse>
+      {/* the burning depot lights the water */}
+      {burning && <ellipse cx="318" cy={RT + 7} rx="56" ry="9" fill={`url(#${uid}-warm)`} opacity={0.55} clipPath={`url(#${uid}-riverclip)`} />}
+      {/* the walker, knee-deep: legs vanish under the surface, a broken reflection below */}
+      <g clipPath={`url(#${uid}-riverclip)`} opacity="0.35">
+        <path d={`M${WX - 30},${WL + 1}h52l-4,14h-44Z`} fill={waterDark} />
+        <path d={streaks(WX - 4, WL + 2, 26, 14, 63)} stroke={mix(C.iron500, water, 0.5)} strokeWidth="0.8" />
       </g>
+      <Walker uid={uid} x={WX} y={WY} s={1} L={L} motion={motion} damaged={after} beam={false} ember={burning ? 1 : 0} />
+      <path d={`M-10,${WL}H410V${RB + 40}H-10Z`} fill={`url(#${uid}-water)`} opacity="0.94" clipPath={`url(#${uid}-wlclip)`} />
+      <g clipPath={`url(#${uid}-riverclip)`}>
+        {burning && <path d={streaks(316, WL + 1, 16, 12, 65)} stroke={C.ember300} strokeWidth="0.8" opacity="0.5" />}
+        <path d={streaks(WX - 6, WL + 1, 10, 9, 67)} stroke={mix(water, L.rim, 0.5)} strokeWidth="0.5" opacity="0.5" />
+      </g>
+      <g fill="none" stroke={mix(water, L.rim, 0.65)} strokeWidth="0.6" opacity="0.85">
+        {[WX - 8, WX + 10].map((lx, i) => (
+          <g key={lx}>
+            <ellipse cx={lx} cy={WL + 0.2} rx="6" ry="1.1">
+              {motion && <animate attributeName="rx" values={i ? '7;4.5;7' : '4.5;8;4.5'} dur="3s" repeatCount="indefinite" />}
+            </ellipse>
+            <ellipse cx={lx} cy={WL + 0.8} rx="10" ry="1.6" opacity="0.45" />
+          </g>
+        ))}
+      </g>
+      <path d={`M${WX - 16},${WL}h5M${WX - 2},${WL}h5M${WX + 16},${WL}h5`} stroke={C.lattice200} strokeWidth="0.7" opacity="0.6" />
       {/* near bank: the Elvian line */}
       <Land uid={uid} id="near" L={L} T={T} ridge={nearBank} color={L.near} mist={0} rim={0.7} />
       <Grass seed={77} from={-10} to={410} count={130} baseAt={nearAt} h={4} spread={20} color={L.fg} lit={T.grassLit} litOp={0.3} width={0.5} />
-      {st === 'STABLE' && (
-        <>
-          <Banner uid={uid} x={46} y={204} h={34} len={16} hgt={6.5} L={L} motion={motion} />
-          <Crowd list={[[64, 206, 18, 'soldier', 1], [82, 208, 17, 'officer', 1]]} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.7} shadow={L.shade} />
-          <Torch uid={uid} x={98} y={206} s={1.4} L={L} motion={motion} />
-        </>
-      )}
+      {st === 'STABLE' && <Torch uid={uid} x={98} y={206} s={1.4} L={L} motion={motion} />}
       {fortified && (
         <>
           <Barricade x={10} y={200} w={60} s={1.4} L={L} />
           <Barricade x={110} y={204} w={44} s={1.4} L={L} />
-          <WardLine points={[[0, 182], [84, 174], [170, 180]]} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[0, 182], [84, 174], [170, 180]]} motion={motion} />
           <Pylon uid={uid} x={84} y={196} s={1.4} L={L} motion={motion} />
           <Pylon uid={uid} x={170} y={200} s={1.3} L={L} motion={motion} />
-          <Banner uid={uid} x={40} y={200} h={36} len={16} hgt={6.5} L={L} motion={motion} />
           <Torch uid={uid} x={104} y={204} s={1.5} L={L} motion={motion} />
-          <Crowd list={[[24, 214, 20, 'soldier', 1], [56, 212, 19, 'guard', 1], [96, 216, 20, 'soldier', 1], [140, 216, 19, 'soldier', 1]]} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.7} shadow={L.shade} />
+          <Crowd list={[[24, 214, 20, 'soldier', 1], [104, 216, 20, 'soldier', 1], [140, 216, 19, 'soldier', 1]]} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.7} shadow={L.shade} />
         </>
       )}
       {after && (
@@ -807,12 +894,17 @@ export function ChampionBeat({ uid, L, T, st, tod, motion }) {
           <Smoke uid={uid} x={120} y={192} s={1} motion={motion} rise={80} />
           <Barricade x={20} y={204} w={56} s={1.4} L={L} broken />
           <Debris seed={68} x={150} y={202} w={70} L={L} />
-          <Crowd list={[[52, 214, 19, 'sitting', 1], [76, 216, 18, 'wounded', 1], [100, 218, 20, 'lying', 1]]} fill={L.figure} bandages={[[52, 214 - 19 * 0.62 + 0.6, 4], [76, 216 - 18 * 0.62 + 0.6, 3.8]]} />
+          <Crowd list={[[108, 216, 18, 'sitting', 1], [132, 218, 17, 'wounded', 1], [30, 220, 20, 'lying', 1]]} fill={L.figure} bandages={[[108, 216 - 18 * 0.62 + 0.6, 3.8], [132, 218 - 17 * 0.62 + 0.6, 3.6]]} />
           <BrokenSpears list={[[150, 210, 18, 0.6], [168, 212, 14, -0.5]]} L={L} />
         </>
       )}
+      {/* the royal party on the near bank, caught in the walker's lamp */}
+      {!after && <WalkerBeam uid={uid} x={WX} y={WY} s={1} L={L} motion={motion} to={PARTY_AIM} />}
+      <RoyalParty uid={uid} x={PARTY[0]} y={PARTY[1]} s={1.05} L={L} motion={motion} lit={after ? 0 : 1} torn={after} />
       <Bloom uid={uid} L={L} T={T} />
       {tod !== 'night' && <GodRays uid={uid} T={T} x={L.sun.x} y={L.sun.y} a0={tod === 'dusk' ? 196 : 112} a1={tod === 'dusk' ? 250 : 160} count={6} len={260} op={0.8} seed={19} motion={motion} />}
+      {/* reeds framing the lower left */}
+      <Grass seed={79} from={-12} to={40} count={40} baseAt={() => 230} h={22} spread={6} color={L.fgDeep} lit={T.grassLit} litOp={0.2} width={0.9} />
       <Boulders seed={48} list={[[386, 228, 2], [366, 230, 1.1]]} L={L} />
       <Grass seed={78} from={-10} to={410} count={50} baseAt={() => 216} h={7} spread={10} color={L.fgDeep} lit={T.grassLit} litOp={0.25} width={0.7} />
       {after && <AftermathGrade uid={uid} L={L} />}
@@ -849,12 +941,12 @@ export function CampBeat({ uid, L, T, st, tod, motion }) {
   ];
   if (fortified) tents.push([18, 0.9, false], [128, 0.85, true], [384, 1, true]);
   const fireX = 196;
-  const fireY = crestAt(fireX) + 22;
+  const fireY = crestAt(fireX) + 26;
   const seated = [
-    [fireX - 20, fireY + 2, 16, 'sitting', 1],
-    [fireX + 21, fireY + 3, 15, 'sitting', -1],
+    [fireX - 24, fireY + 2, 19, 'sitting', 1],
+    [fireX + 25, fireY + 3, 18, 'sitting', -1],
   ];
-  if (!after) seated.push([fireX + 8, fireY + 12, 14, 'sitting', -1]);
+  if (!after) seated.push([fireX + 9, fireY + 14, 17, 'sitting', -1]);
   const sentries = [[256, crestAt(256) + 4, 17, 'guard', 1]];
   if (fortified) sentries.push([150, crestAt(150) + 4, 16, 'soldier', -1], [292, crestAt(292) + 5, 16, 'soldier', 1]);
   const riverD = 'M-5,144 C60,136 110,150 170,140 S290,132 405,144';
@@ -864,7 +956,10 @@ export function CampBeat({ uid, L, T, st, tod, motion }) {
       <Range uid={uid} id="a" L={L} T={T} seed={67} y={100} amp={34} snow={0.5} haze={0.65} base={124} op={0.9} />
       <FogBand uid={uid} y={90} h={34} />
       <Land uid={uid} id="far" L={L} T={T} ridge={valleyFar} color={L.far} haze={0.35} mist={0.3} rim={0.5} />
-      <Keep uid={uid} x={352} y={ridgeHeightAt(valleyFar, 352) + 1} s={0.34} L={L} motion={motion} damaged={after} />
+      {/* the distant keep, dropped into the haze so the camp holds the eye */}
+      <g opacity="0.42">
+        <Keep uid={uid} x={352} y={ridgeHeightAt(valleyFar, 352) + 1} s={0.3} L={L} motion={false} damaged={after} />
+      </g>
       <Mist uid={uid} y={120} op={0.55} seed={15} count={6} rx={70} ry={5} motion={motion} />
       <Land uid={uid} id="valley" L={L} T={T} ridge={valley} color={L.mid} haze={0.15} mist={0.2} rim={0.4} />
       {/* patchwork fields, the river and the road through the Marches */}
@@ -881,42 +976,43 @@ export function CampBeat({ uid, L, T, st, tod, motion }) {
         );
       })()}
       <path d={riverD} stroke={mix(L.near, L.shade, 0.3)} strokeWidth="3.4" fill="none" opacity="0.5" />
-      <path d={riverD} stroke={T.water} strokeWidth="1.6" fill="none" opacity="0.85" />
-      <path d={riverD} stroke={T.silver} strokeWidth="0.5" fill="none" opacity={0.35} strokeDasharray="6 14" />
-      <path d="M-5,133 C70,140 150,128 220,135 S330,141 405,132" stroke={L.road} strokeWidth="0.8" fill="none" opacity="0.45" strokeDasharray="5 1.5" />
+      {/* the river and the road are quiet threads in the valley, not lit ribbons */}
+      <path d={riverD} stroke={mix(T.water, L.mid, nightish ? 0.45 : 0.2)} strokeWidth="1.3" fill="none" opacity={nightish ? 0.35 : 0.55} />
+      {!nightish && <path d={riverD} stroke={T.silver} strokeWidth="0.35" fill="none" opacity="0.18" strokeDasharray="6 14" />}
+      <path d="M-5,133 C70,140 150,128 220,135 S330,141 405,132" stroke={L.road} strokeWidth="0.6" fill="none" opacity="0.18" strokeDasharray="5 1.5" />
       <Village uid={uid} list={[[318, 133, 0.55], [326, 134, 0.5], [306, 132.5, 0.6], [62, 132, 0.5]]} L={L} motion={motion} smoke={after ? [] : [2]} damaged={after} />
       {nightish && (
         <g fill={C.lattice300}>
           {lights.map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.7" />
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.5" opacity="0.8" />
           ))}
           {lights.map(([x, y]) => (
-            <circle key={`g${x}-${y}`} cx={x} cy={y} r="3" fill={`url(#${uid}-warm)`} opacity="0.5" />
+            <circle key={`g${x}-${y}`} cx={x} cy={y} r="2.6" fill={`url(#${uid}-warm)`} opacity="0.3" />
           ))}
         </g>
       )}
       {after && <Smoke uid={uid} x={110} y={134} s={0.9} motion={motion} rise={60} drift={-30} op={0.7} />}
       {/* the crest we stand on */}
-      <Land uid={uid} id="crest" L={L} T={T} ridge={crest} color={L.fg} mist={0} rim={0.9} rimW={1} />
+      <Land uid={uid} id="crest" L={L} T={T} ridge={crest} color={L.fg} mist={0} rim={0.4} rimW={0.7} />
       <Grass seed={92} from={-10} to={410} count={140} baseAt={crestAt} h={3.5} spread={26} color={L.fgDeep} lit={T.grassLit} litOp={0.3} width={0.5} />
       {fortified && (
         <>
           <Palisade x={-10} y={crestAt(60) + 6} w={130} h={12} L={L} />
           <Palisade x={270} y={crestAt(330) + 6} w={150} h={12} L={L} />
-          <WardLine points={[[0, crestAt(0) - 8], [140, crestAt(140) - 14], [260, crestAt(260) - 14], [400, crestAt(400) - 8]]} motion={motion} />
+          <WardLanterns uid={uid} L={L} points={[[0, crestAt(0) - 8], [140, crestAt(140) - 14], [260, crestAt(260) - 14], [400, crestAt(400) - 8]]} motion={motion} />
           <Pylon uid={uid} x={140} y={crestAt(140) + 2} s={1.1} L={L} motion={motion} />
           <Pylon uid={uid} x={260} y={crestAt(260) + 2} s={1.1} L={L} motion={motion} />
           <Banner uid={uid} x={232} y={crestAt(232) + 8} h={32} len={15} hgt={6} L={L} motion={motion} />
         </>
       )}
       {tents.map(([x, s, lit]) => (
-        <Tent key={x} uid={uid} x={x} y={crestAt(x) + 12 * s} s={s * 1.5} L={L} lit={lit && nightish} torn={after && x === 86} pennant={x === 312 || x === 52} motion={motion} />
+        <Tent key={x} uid={uid} x={x} y={crestAt(x) + 15 * s} s={s * 2.05} L={L} lit={lit && nightish} torn={after && x === 86} pennant={x === 312 || x === 52} motion={motion} />
       ))}
       <Banner uid={uid} x={118} y={crestAt(118) + 12} h={34} len={15} hgt={6} L={L} motion={motion} torn={after} />
       <Crowd list={sentries} fill={L.figure} rim={L.rim} rimOp={L.rimOp * 0.7} shadow={L.shade} />
       {after ? (
         <>
-          <CampfireMark uid={uid} x={fireX} y={fireY} s={1.2} L={L} motion={motion} big={0.5} />
+          <CampfireMark uid={uid} x={fireX} y={fireY} s={1.7} L={L} motion={motion} big={0.5} />
           <Smoke uid={uid} x={fireX} y={fireY - 6} s={1} motion={motion} rise={90} />
           <Cart x={334} y={crestAt(334) + 34} s={1.6} L={L} broken facing={-1} />
           <Crowd
@@ -926,13 +1022,14 @@ export function CampBeat({ uid, L, T, st, tod, motion }) {
           />
         </>
       ) : (
-        <CampfireMark uid={uid} x={fireX} y={fireY} s={1.2} L={L} motion={motion} big={tod === 'day' ? 0.8 : 1} />
+        <CampfireMark uid={uid} x={fireX} y={fireY} s={1.7} L={L} motion={motion} big={tod === 'day' ? 0.8 : 1} />
       )}
       <Crowd list={seated} fill={L.figure} rim={C.ember300} rimOp={0.3 + 0.5 * L.glow} />
       {!after && fortified && <Cart x={350} y={crestAt(350) + 38} s={1.5} L={L} facing={-1} />}
       <Bloom uid={uid} L={L} T={T} />
       {tod !== 'night' && <GodRays uid={uid} T={T} x={L.sun.x} y={L.sun.y} a0={tod === 'dusk' ? 196 : 112} a1={tod === 'dusk' ? 250 : 160} count={6} len={260} op={0.8} seed={23} motion={motion} />}
       <Grass seed={79} from={-10} to={410} count={60} baseAt={() => 214} h={7} spread={10} color={L.fgDeep} lit={T.grassLit} litOp={0.25} width={0.7} />
+      <FirFrame seed={66} from={392} to={430} count={2} base={232} hMin={92} hMax={120} L={L} />
       {after && <AftermathGrade uid={uid} L={L} />}
       <Grade T={T} />
     </g>

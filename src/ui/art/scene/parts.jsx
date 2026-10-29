@@ -7,8 +7,9 @@ import { mix } from './tone.js';
 
 // ---------------------------------------------------------------- defs
 export function SceneDefs({ uid, L, T }) {
-  const [s0, s1, s2, s3] = L.sky;
-  const stoneLit = mix(L.stone, L.rim, 0.22);
+  const [s0, s1, s2, s3] = (T && T.sky) || L.sky;
+  // the key light warms lit stone toward gold leaf by day, ember at dusk
+  const stoneLit = T && T.tod === 'day' ? mix(L.stone, C.gold200, 0.45) : T && T.tod === 'dusk' ? mix(L.stone, C.ember200, 0.4) : mix(L.stone, L.rim, 0.22);
   return (
     <defs>
       <linearGradient id={`${uid}-sky`} x1="0" y1="0" x2="0" y2="1">
@@ -102,10 +103,11 @@ export function SceneDefs({ uid, L, T }) {
         <stop offset="0.7" stopColor={C.lattice100} stopOpacity="0.12" />
         <stop offset="1" stopColor={C.navy950} stopOpacity="0.32" />
       </linearGradient>
-      <linearGradient id={`${uid}-beamr`} x1="1" y1="0" x2="0" y2="0">
-        <stop offset="0" stopColor={C.lattice100} stopOpacity="0.8" />
-        <stop offset="0.35" stopColor={C.lattice300} stopOpacity="0.3" />
-        <stop offset="1" stopColor={C.lattice300} stopOpacity="0.04" />
+      {/* searchlight cone, drawn along +x from the lamp */}
+      <linearGradient id={`${uid}-beamf`} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stopColor={C.lattice100} stopOpacity="0.85" />
+        <stop offset="0.35" stopColor={C.lattice300} stopOpacity="0.4" />
+        <stop offset="1" stopColor={C.lattice300} stopOpacity="0.22" />
       </linearGradient>
       <linearGradient id={`${uid}-road`} x1="0" y1="1" x2="0" y2="0">
         <stop offset="0" stopColor={mix(L.road, L.roadDark, 0.55)} />
@@ -309,11 +311,12 @@ export function Gonfalon({ x, y, w = 7, h = 16, colors = [C.navy700, C.gold400],
 
 // ---------------------------------------------------------------- magitech ward
 export function Pylon({ uid, x, y, s = 1, motion, L }) {
-  const g = 0.55 + L.glow * 0.4;
+  // a warm ward-light, not a flare: small halo, softer at night
+  const g = 0.45 + L.glow * 0.2;
   return (
     <g>
-      <ellipse cx={x} cy={y} rx={9 * s} ry={2 * s} fill={`url(#${uid}-lattice)`} opacity={0.35 + L.glow * 0.35} />
-      <circle cx={x} cy={y - 14 * s} r={13 * s} fill={`url(#${uid}-lattice)`} opacity={g}>
+      <ellipse cx={x} cy={y} rx={8 * s} ry={1.8 * s} fill={`url(#${uid}-warm)`} opacity={0.25 + L.glow * 0.25} />
+      <circle cx={x} cy={y - 14 * s} r={9 * s} fill={`url(#${uid}-lattice)`} opacity={g}>
         {motion && <animate attributeName="opacity" values={`${g * 0.8};${Math.min(1, g * 1.2)};${g * 0.8}`} dur="3.2s" repeatCount="indefinite" />}
       </circle>
       <path d={`M${x - 3 * s},${y}L${x - 1.7 * s},${y - 10.5 * s}H${x + 1.7 * s}L${x + 3 * s},${y}Z`} fill={`url(#${uid}-stone)`} />
@@ -326,20 +329,6 @@ export function Pylon({ uid, x, y, s = 1, motion, L }) {
       <circle cx={x} cy={y - 14.5 * s} r={4.6 * s} fill="none" stroke={C.lattice300} strokeWidth={0.35 * s} strokeDasharray={`${1.2 * s} ${0.9 * s}`} opacity="0.75">
         {motion && <animateTransform attributeName="transform" type="rotate" values={`0 ${x} ${y - 14.5 * s};360 ${x} ${y - 14.5 * s}`} dur="18s" repeatCount="indefinite" />}
       </circle>
-    </g>
-  );
-}
-
-export function WardLine({ points, motion, op = 1 }) {
-  const pts = points.map((p) => p.map(r1).join(',')).join(' ');
-  return (
-    <g fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={op} pointerEvents="none">
-      <polyline points={pts} stroke={C.lattice300} strokeWidth="5" opacity="0.12" />
-      <polyline points={pts} stroke={C.lattice300} strokeWidth="2.2" opacity="0.22" />
-      <polyline points={pts} stroke={C.lattice200} strokeWidth="0.9" opacity="0.7" />
-      <polyline points={pts} stroke={C.lattice100} strokeWidth="0.7" strokeDasharray="2 5">
-        {motion && <animate attributeName="stroke-dashoffset" values="0;-14" dur="1.6s" repeatCount="indefinite" />}
-      </polyline>
     </g>
   );
 }
@@ -667,65 +656,6 @@ export function Village({ uid, list, L, motion, smoke = [], damaged = false }) {
   );
 }
 
-/** Checkpoint gatehouse: two towers, arch, raised portcullis, barrier pole. Centre x, base y. */
-export function Gatehouse({ uid, x, y, s = 1, L, motion, state }) {
-  const lit = L.glow > 0.4;
-  const torn = state === 'AFTERMATH';
-  const tower = (cx) => (
-    <g>
-      <path d={`M${cx - 7.6 * s},${y}L${cx - 7 * s},${y - 36 * s}H${cx + 7 * s}L${cx + 7.6 * s},${y}Z`} fill={`url(#${uid}-stone)`} />
-      <path d={courses(cx - 7 * s, y - 36 * s, 14 * s, 36 * s, 2.4 * s, Math.round(cx))} stroke={L.stoneDark} strokeWidth={0.22 * s} opacity="0.5" />
-      <rect x={cx + 5.6 * s} y={y - 36 * s} width={1.4 * s} height={36 * s} fill={L.rim} opacity={L.rimOp * 0.45} />
-      {/* corbelled parapet */}
-      <rect x={cx - 8.4 * s} y={y - 39 * s} width={16.8 * s} height={3 * s} fill={L.stone} />
-      <path d={Array.from({ length: 6 }, (_, i) => `M${r1(cx - 7.6 * s + i * 3 * s)},${r1(y - 36 * s)}v${r1(1.4 * s)}`).join('')} stroke={L.stoneDark} strokeWidth={1 * s} />
-      <path d={`M${cx - 9 * s},${y - 39 * s}L${cx},${y - 54 * s}L${cx + 9 * s},${y - 39 * s}Z`} fill={`url(#${uid}-slate)`} />
-      <path d={`M${cx},${y - 54 * s}L${cx + 9 * s},${y - 39 * s}`} stroke={L.rim} strokeWidth={0.35 * s} opacity={L.rimOp * 0.7} />
-      <path d={`M${cx},${y - 54 * s}v${-3 * s}`} stroke={C.gold400} strokeWidth={0.7 * s} />
-      <path d={windowArch(cx, y - 32 * s, 2.2 * s, 4.4 * s) + windowArch(cx - 3.6 * s, y - 20 * s, 1.1 * s, 3 * s) + windowArch(cx + 3.6 * s, y - 20 * s, 1.1 * s, 3 * s)} fill={lit ? L.window : L.shade} opacity={lit ? 1 : 0.75} />
-      {lit && <circle cx={cx} cy={y - 30 * s} r={6 * s} fill={`url(#${uid}-warm)`} opacity={0.45 * L.glow} />}
-    </g>
-  );
-  return (
-    <g>
-      <ellipse cx={x + 4 * s} cy={y + 0.6 * s} rx={34 * s} ry={2.4 * s} fill={L.shade} opacity="0.35" />
-      {/* arch block */}
-      <path d={`M${x - 13 * s},${y - 28 * s}H${x + 13 * s}V${y}H${x + 7 * s}V${y - 12 * s}A${7 * s},${7 * s} 0 0 0 ${x - 7 * s},${y - 12 * s}V${y}H${x - 13 * s}Z`} fill={`url(#${uid}-stone)`} />
-      <path d={courses(x - 13 * s, y - 28 * s, 26 * s, 9 * s, 2.3 * s, 31)} stroke={L.stoneDark} strokeWidth={0.22 * s} opacity="0.5" />
-      <path d={crenels(x - 13 * s, y - 28 * s, 26 * s, 6, 2 * s)} fill={L.stone} />
-      <path d={`M${x - 7 * s},${y}V${y - 12 * s}A${7 * s},${7 * s} 0 0 1 ${x + 7 * s},${y - 12 * s}V${y}Z`} fill={lit ? mix(C.ember600, C.ink, 0.4) : L.shade} opacity="0.95" />
-      {lit && <path d={`M${x - 5 * s},${y}V${y - 11 * s}A${5 * s},${5 * s} 0 0 1 ${x + 5 * s},${y - 11 * s}V${y}Z`} fill={C.ember400} opacity={0.35 + 0.35 * L.glow} />}
-      {/* voussoirs */}
-      <path d={`M${x - 8.4 * s},${y - 12 * s}A${8.4 * s},${8.4 * s} 0 0 1 ${x + 8.4 * s},${y - 12 * s}`} stroke={L.stone} strokeWidth={1.6 * s} fill="none" />
-      <path d={Array.from({ length: 7 }, (_, i) => {
-        const a = Math.PI + (Math.PI * (i + 0.5)) / 7;
-        return `M${r1(x + Math.cos(a) * 7.6 * s)},${r1(y - 12 * s + Math.sin(a) * 7.6 * s)}L${r1(x + Math.cos(a) * 9.2 * s)},${r1(y - 12 * s + Math.sin(a) * 9.2 * s)}`;
-      }).join('')} stroke={L.stoneDark} strokeWidth={0.3 * s} />
-      {lit && <Glow uid={uid} x={x} y={y - 6 * s} r={18 * s} op={0.65 * L.glow} motion={motion} flicker />}
-      {/* raised portcullis */}
-      <path d={Array.from({ length: 6 }, (_, i) => `M${r1(x - 6 * s + i * 2.4 * s)},${r1(y - 18.5 * s)}v${r1(5 * s)}`).join('') + `M${r1(x - 6.4 * s)},${r1(y - 15 * s)}h${r1(12.8 * s)}`} stroke={C.iron700} strokeWidth={0.7 * s} />
-      {tower(x - 19 * s)}
-      {tower(x + 19 * s)}
-      <Gonfalon x={x - 19 * s} y={y - 25 * s} w={6 * s} h={14 * s} torn={torn} motion={motion} L={L} />
-      <Gonfalon x={x + 19 * s} y={y - 25 * s} w={6 * s} h={14 * s} torn={torn} motion={motion} L={L} />
-      <rect x={x - 6 * s} y={y - 26 * s} width={12 * s} height={1.2 * s} fill={C.gold600} opacity="0.85" />
-      <Lantern uid={uid} x={x - 9.5 * s} y={y - 15 * s} s={0.9 * s} L={L} motion={motion} />
-      <Lantern uid={uid} x={x + 9.5 * s} y={y - 15 * s} s={0.9 * s} L={L} motion={motion} />
-      {!torn && <Banner uid={uid} x={x + 19 * s} y={y - 57 * s} h={9 * s} len={10 * s} hgt={4 * s} motion={motion} L={L} />}
-      {/* barrier pole */}
-      {state !== 'AFTERMATH' ? (
-        <g>
-          <rect x={x - 11 * s} y={y - 6 * s} width={1.4 * s} height={6 * s} fill={L.woodDark} />
-          <path d={`M${x - 10.3 * s},${y - 5.4 * s}L${x + 10 * s},${y - 6.6 * s}`} stroke={C.gold500} strokeWidth={1 * s} strokeDasharray={`${2 * s} ${2 * s}`} />
-          <path d={`M${x - 10.3 * s},${y - 5.4 * s}L${x + 10 * s},${y - 6.6 * s}`} stroke={C.navy700} strokeWidth={1 * s} strokeDasharray={`${2 * s} ${2 * s}`} strokeDashoffset={2 * s} />
-        </g>
-      ) : (
-        <path d={`M${x - 10.3 * s},${y - 0.6 * s}L${x + 2 * s},${y - 2.6 * s}`} stroke={C.gold700} strokeWidth={1 * s} />
-      )}
-    </g>
-  );
-}
-
 /** Monument row for the road/checkpoint verges. items: [{id,title}] */
 export function Monuments({ uid, items, x, y, s = 1, L, motion }) {
   const list = (items || []).slice(0, 3);
@@ -827,47 +757,6 @@ export function Eyes({ uid, list, motion }) {
   );
 }
 
-/** Frost warg in profile facing left. Feet at y. */
-export function Warg({ uid, x, y, s = 1, L, howl = false, fill, outline, motion, breath = false }) {
-  const P = (dx, dy) => `${r1(x + dx * s)},${r1(y + dy * s)}`;
-  const head = howl
-    ? `L${P(-15, -16)}L${P(-19, -25)}L${P(-21, -31)}L${P(-19.5, -31.5)}L${P(-17, -27)}L${P(-15.5, -30)}L${P(-14, -26.5)}L${P(-11.5, -24)}`
-    : `L${P(-16, -18)}L${P(-21, -20.5)}L${P(-27, -19.5)}L${P(-27.5, -18)}L${P(-21, -15.5)}L${P(-19, -14)}L${P(-17.5, -23)}L${P(-16, -26)}L${P(-14.5, -22.5)}L${P(-12, -23)}`;
-  const d = `M${P(14, -2)}L${P(16, -12)}Q${P(17, -18)} ${P(10, -19)}L${P(2, -20)}Q${P(-6, -23)} ${P(-10, -22)}${head}Q${P(-9, -14)} ${P(-11, -10)}L${P(-12, -1)}L${P(-13, 0)}L${P(-9.5, 0)}L${P(-8.5, -8)}L${P(-6, -9)}L${P(-5.5, 0)}L${P(-2.5, 0)}L${P(-3, -10)}L${P(5, -10)}L${P(7, -1)}L${P(8, 0)}L${P(11, 0)}L${P(10.5, -6)}L${P(12.5, -1)}L${P(13.5, 0)}L${P(16.5, 0)}Z`;
-  const tail = `M${P(16, -12)}Q${P(24, -12)} ${P(27, -4)}Q${P(22, -7)} ${P(16.5, -7)}Z`;
-  // hackles: a ragged ruff along the neck and shoulders
-  const ruff = `M${P(-12, -21.5)}L${P(-9.6, -24.2)}L${P(-9, -22.6)}L${P(-6.6, -24.6)}L${P(-6, -22.8)}L${P(-3.4, -24.2)}L${P(-3, -22.4)}L${P(-0.4, -23.4)}L${P(0, -21.6)}L${P(2.8, -22.2)}L${P(3, -20.4)}L${P(-4, -20.6)}Z`;
-  const eye = howl ? P(-16.6, -27.4) : P(-17.4, -21.6);
-  const [ex, ey] = eye.split(',').map(Number);
-  const mouth = howl ? [x - 20.5 * s, y - 31 * s] : [x - 27.5 * s, y - 18.5 * s];
-  return (
-    <g>
-      <ellipse cx={x} cy={y + 0.4 * s} rx={17 * s} ry={1.4 * s} fill={L.shade} opacity="0.3" />
-      {outline && <path d={tail + d + ruff} fill="none" stroke={outline} strokeWidth={1.1 * s} strokeLinejoin="round" opacity="0.75" />}
-      <path d={tail} fill={fill || L.figure} />
-      <path d={d} fill={fill || L.figure} />
-      <path d={ruff} fill={fill || L.figure} />
-      <path d={`M${P(-10, -22)}Q${P(0, -23.5)} ${P(10, -19)}Q${P(16, -18)} ${P(16, -12)}Q${P(24, -12)} ${P(27, -4)}`} fill="none" stroke={mix(C.frost100, L.rim, 0.4)} strokeWidth={0.9 * s} opacity={0.4 + L.rimOp * 0.6} />
-      <path d={`M${P(5, -10)}L${P(7, -1)}M${P(12.5, -1)}L${P(10.5, -6)}`} stroke={L.rim} strokeWidth={0.5 * s} opacity={L.rimOp * 0.6} />
-      {uid && <circle cx={ex} cy={ey} r={3.4 * s} fill={`url(#${uid}-lattice)`} opacity="0.7" />}
-      <circle cx={ex} cy={ey} r={0.6 * s} fill={C.lattice200} />
-      {breath && (
-        <ellipse cx={mouth[0] - 3 * s} cy={mouth[1] - 1 * s} rx={3 * s} ry={1.6 * s} fill={C.frost100} opacity="0">
-          {motion ? (
-            <>
-              <animate attributeName="opacity" values="0;0.45;0" dur="3.4s" repeatCount="indefinite" />
-              <animate attributeName="cx" values={`${mouth[0] - 1 * s};${mouth[0] - 7 * s}`} dur="3.4s" repeatCount="indefinite" />
-              <animate attributeName="rx" values={`${1.4 * s};${4.4 * s}`} dur="3.4s" repeatCount="indefinite" />
-            </>
-          ) : (
-            <set attributeName="opacity" to="0.3" />
-          )}
-        </ellipse>
-      )}
-    </g>
-  );
-}
-
 // ---------------------------------------------------------------- ruins
 export function Column({ uid, x, y, h, w = 6, L, broken = 0 }) {
   const top = y - h;
@@ -924,9 +813,14 @@ export function Monolith({ uid, x, y, s = 1, L, motion, intensity = 1 }) {
       <circle cx={x} cy={cy} r={16 * s} fill={`url(#${uid}-lattice)`} opacity={glowOp}>
         {motion && <animate attributeName="opacity" values={`${glowOp * 0.6};${glowOp};${glowOp * 0.6}`} dur="6s" repeatCount="indefinite" />}
       </circle>
-      <g stroke={C.lattice200} fill="none" opacity={Math.min(1, 0.6 + 0.4 * intensity)}>
-        <path d={sym.arc} strokeWidth={1.3 * s} />
-        <path d={sym.star} fill={C.lattice100} stroke="none" />
+      {/* the glyph: a carved rune ring, a gold-leaf arc with a soft bloom, a white-gold star */}
+      <circle cx={x} cy={cy} r={9.6 * s} fill="none" stroke={C.gold600} strokeWidth={0.5 * s} strokeDasharray={`${0.8 * s} ${1.1 * s} ${2 * s} ${1.1 * s}`} opacity={0.55 * Math.min(1, intensity)} />
+      <circle cx={x} cy={cy} r={8 * s} fill={`url(#${uid}-lattice)`} opacity={Math.min(1, 0.7 * intensity)} />
+      <g fill="none" opacity={Math.min(1, 0.65 + 0.35 * intensity)}>
+        <path d={sym.arc} stroke={C.gold400} strokeWidth={3.2 * s} opacity="0.35" />
+        <path d={sym.arc} stroke={C.gold300} strokeWidth={1.4 * s} />
+        <path d={sym.arc} stroke={C.lattice100} strokeWidth={0.45 * s} />
+        <path d={sym.star} fill={C.lattice100} stroke={C.gold300} strokeWidth={0.3 * s} />
       </g>
       <g fill={C.lattice200} pointerEvents="none">
         {motes.map(([mx, my, mr, dur], i) => (
@@ -961,92 +855,6 @@ export function StandingStone({ uid, x, y, w = 8, h = 26, lean = 0, L, seed = 1 
 }
 
 // ---------------------------------------------------------------- Iron Syndicate
-/** Iron Syndicate walker, facing left, with a sweeping searchlight. Feet at y. */
-export function Walker({ uid, x, y, s = 1, L, motion, damaged = false, beam = true }) {
-  const P = (dx, dy) => `${r1(x + dx * s)},${r1(y + dy * s)}`;
-  const tilt = damaged ? 9 : 0;
-  const hull = `M${P(-22, -62)}L${P(-28, -50)}L${P(-24, -36)}L${P(14, -34)}L${P(22, -44)}L${P(20, -60)}L${P(6, -68)}L${P(-14, -68)}Z`;
-  const plate = `M${P(-28, -50)}L${P(-24, -36)}L${P(-6, -35.4)}L${P(-9, -52)}Z`;
-  const visor = `M${P(-25, -54)}L${P(-12, -55)}L${P(-12.5, -51.5)}L${P(-24, -51)}Z`;
-  const legL = damaged
-    ? `M${P(-14, -36)}L${P(-22, -22)}L${P(-34, -10)}L${P(-38, -3)}L${P(-30, 0)}L${P(-26, -6)}L${P(-16, -18)}L${P(-8, -34)}Z`
-    : `M${P(-14, -36)}L${P(-4, -22)}L${P(-16, -6)}L${P(-21, 0)}L${P(-8, 0)}L${P(-8, -5)}L${P(2, -21)}L${P(-6, -36)}Z`;
-  const legR = `M${P(4, -36)}L${P(16, -22)}L${P(8, -6)}L${P(4, 0)}L${P(17, 0)}L${P(16, -6)}L${P(22, -22)}L${P(12, -36)}Z`;
-  const rivets = [[-18, -64], [-6, -65], [6, -64], [16, -56], [18, -46], [-20, -40], [0, -38], [-10, -38], [10, -37]];
-  const bx = x - 30 * s;
-  const by = y - 48 * s;
-  return (
-    <g>
-      {/* searchlight cone, sweeping the near bank */}
-      {beam && !damaged && (
-        <g pointerEvents="none">
-          <g>
-            {motion && <animateTransform attributeName="transform" type="rotate" values={`-5 ${r1(bx)} ${r1(by)};7 ${r1(bx)} ${r1(by)};-5 ${r1(bx)} ${r1(by)}`} dur="11s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" />}
-            <path d={`M${r1(bx)},${r1(by - 1.5 * s)}L${r1(bx - 128 * s)},${r1(by + 22 * s)}L${r1(bx - 116 * s)},${r1(by + 58 * s)}L${r1(bx)},${r1(by + 1.5 * s)}Z`} fill={`url(#${uid}-beamr)`} opacity={0.3 + L.glow * 0.35} />
-            <path d={`M${r1(bx)},${r1(by - 0.6 * s)}L${r1(bx - 120 * s)},${r1(by + 34 * s)}L${r1(bx - 114 * s)},${r1(by + 46 * s)}L${r1(bx)},${r1(by + 0.6 * s)}Z`} fill={`url(#${uid}-beamr)`} opacity={0.35 + L.glow * 0.3} />
-            <ellipse cx={r1(bx - 118 * s)} cy={r1(by + 44 * s)} rx={r1(20 * s)} ry={r1(5 * s)} fill={`url(#${uid}-lattice)`} opacity={0.25 + L.glow * 0.4} />
-          </g>
-        </g>
-      )}
-      <g transform={tilt ? `rotate(${tilt} ${x} ${y})` : undefined}>
-        <path d={legR} fill={C.iron900} />
-        <path d={`M${P(12, -36)}L${P(22, -22)}L${P(16, -6)}L${P(17, 0)}`} stroke={L.rim} strokeWidth={0.5 * s} fill="none" opacity={L.rimOp * 0.5} />
-        {/* cannon arm */}
-        <path d={damaged ? `M${P(14, -54)}L${P(26, -40)}L${P(32, -26)}L${P(28, -24)}L${P(20, -38)}L${P(10, -48)}Z` : `M${P(10, -56)}L${P(-34, -50)}L${P(-34, -46)}L${P(10, -48)}Z`} fill={C.iron700} />
-        {!damaged && <path d={`M${P(10, -56)}L${P(-34, -50)}`} stroke={L.rim} strokeWidth={0.4 * s} opacity={L.rimOp * 0.45} />}
-        {!damaged && <rect x={x - 38 * s} y={y - 50.5 * s} width={5 * s} height={5 * s} fill={C.iron900} />}
-        <path d={hull} fill={`url(#${uid}-iron)`} />
-        {/* plate seams */}
-        <path d={`M${P(-14, -68)}L${P(-18, -36)}M${P(4, -68)}L${P(2, -35)}M${P(-24, -45)}L${P(20, -46)}`} stroke={C.iron900} strokeWidth={0.5 * s} opacity="0.8" />
-        <path d={plate} fill={C.iron500} opacity="0.55" />
-        <path d={`M${P(6, -68)}L${P(20, -60)}L${P(22, -44)}L${P(19, -44)}L${P(17.5, -58)}L${P(5, -65)}Z`} fill={C.brass500} opacity="0.65" />
-        <path d={`M${P(-22, -62)}L${P(-14, -68)}L${P(6, -68)}L${P(20, -60)}L${P(22, -44)}`} fill="none" stroke={L.rim} strokeOpacity={L.rimOp * 0.6} strokeWidth={0.8 * s} />
-        <path d={legL} fill={C.iron700} />
-        {/* knee pistons */}
-        <circle cx={x + (damaged ? -22 : -4) * s} cy={y - 22 * s} r={2.4 * s} fill={C.brass700} />
-        <circle cx={x + 16 * s} cy={y - 22 * s} r={2.4 * s} fill={C.brass700} />
-        <circle cx={x + 16.6 * s} cy={y - 22.6 * s} r={1 * s} fill={C.brass300} opacity="0.6" />
-        <path d={`M${P(-6, -34)}L${P(-4, -24)}M${P(10, -34)}L${P(15, -24)}`} stroke={C.brass500} strokeWidth={1 * s} />
-        {/* smokestacks */}
-        <rect x={x + 4 * s} y={y - 78 * s} width={4 * s} height={12 * s} fill={C.iron900} />
-        <rect x={x + 10 * s} y={y - 75 * s} width={3.4 * s} height={9 * s} fill={C.iron900} />
-        <rect x={x + 3.6 * s} y={y - 78 * s} width={4.8 * s} height={1.4 * s} fill={C.brass500} />
-        <rect x={x + 9.6 * s} y={y - 75 * s} width={4.2 * s} height={1.2 * s} fill={C.brass500} />
-        {rivets.map(([rx, ry], i) => (
-          <circle key={i} cx={x + rx * s} cy={y + ry * s} r={0.65 * s} fill={C.iron300} opacity="0.75" />
-        ))}
-        {/* furnace grille, portholes, visor */}
-        {!damaged && <circle cx={x - 18 * s} cy={y - 53 * s} r={12 * s} fill={`url(#${uid}-warm)`} opacity={0.45 + L.glow * 0.35} />}
-        <path d={visor} fill={damaged ? C.iron900 : C.ember400}>
-          {motion && !damaged && <animate attributeName="opacity" values="0.75;1;0.8;0.75" dur="3.1s" repeatCount="indefinite" />}
-        </path>
-        {!damaged && <path d={`M${P(-24, -53.2)}L${P(-13, -53.8)}`} stroke={C.lattice300} strokeWidth={0.5 * s} />}
-        <rect x={x - 4 * s} y={y - 44 * s} width={10 * s} height={4 * s} fill={damaged ? C.iron900 : C.ember500} opacity="0.85" />
-        <path d={Array.from({ length: 4 }, (_, i) => `M${r1(x + (-3 + i * 2.6) * s)},${r1(y - 44 * s)}v${r1(4 * s)}`).join('')} stroke={C.iron900} strokeWidth={0.5 * s} />
-        {[[2, -58], [10, -58]].map(([px, py]) => (
-          <g key={px}>
-            <circle cx={x + px * s} cy={y + py * s} r={1.7 * s} fill={C.brass700} />
-            <circle cx={x + px * s} cy={y + py * s} r={1.1 * s} fill={damaged ? C.iron900 : C.lattice300} />
-            {!damaged && <circle cx={x + px * s} cy={y + py * s} r={4 * s} fill={`url(#${uid}-warm)`} opacity={0.4 + L.glow * 0.3} />}
-          </g>
-        ))}
-        {/* searchlight housing */}
-        {!damaged && (
-          <g>
-            <path d={`M${P(-31, -51)}L${P(-27, -51)}L${P(-27, -45)}L${P(-31, -45)}Z`} fill={C.brass500} />
-            <circle cx={bx} cy={by} r={2 * s} fill={C.lattice100} />
-            <circle cx={bx} cy={by} r={7 * s} fill={`url(#${uid}-lattice)`} opacity={0.6 + L.glow * 0.3} />
-          </g>
-        )}
-        <Smoke uid={uid} x={x + 6 * s} y={y - 79 * s} s={s * (damaged ? 1.6 : 0.8)} motion={motion} puffs={damaged ? 6 : 4} rise={damaged ? 70 : 45} op={damaged ? 1 : 0.7} />
-        <Smoke uid={uid} x={x + 11.7 * s} y={y - 76 * s} s={s * 0.55} motion={motion} puffs={3} rise={36} dur={7} op={0.55} />
-        {damaged && <Flame x={x - 2 * s} y={y - 66 * s} h={7 * s} motion={motion} />}
-        {damaged && <Glow uid={uid} x={x - 2 * s} y={y - 68 * s} r={16 * s} op={0.7} motion={motion} flicker />}
-      </g>
-    </g>
-  );
-}
-
 export function Depot({ uid, x, y, s = 1, L, motion, damaged = false, burning = false }) {
   const crate = (cx, cy, w) => (
     <g key={`${cx}-${cy}`}>

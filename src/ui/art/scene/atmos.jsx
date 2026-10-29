@@ -88,8 +88,8 @@ export function AtmosDefs({ uid, L, T }) {
         <stop offset="1" stopColor={T.ray} stopOpacity="0" />
       </radialGradient>
       <radialGradient id={`${uid}-mist`} cx="50%" cy="50%" r="50%">
-        <stop offset="0" stopColor={T.fog} stopOpacity="0.9" />
-        <stop offset="0.6" stopColor={T.fog} stopOpacity="0.35" />
+        <stop offset="0" stopColor={T.fog} stopOpacity={0.9 * (T.mistK ?? 1)} />
+        <stop offset="0.6" stopColor={T.fog} stopOpacity={0.35 * (T.mistK ?? 1)} />
         <stop offset="1" stopColor={T.fog} stopOpacity="0" />
       </radialGradient>
       <linearGradient id={`${uid}-fogband`} x1="0" y1="0" x2="0" y2="1">
@@ -119,6 +119,13 @@ export function AtmosDefs({ uid, L, T }) {
         <stop offset="0.6" stopColor={T.cloudBot} stopOpacity="0.4" />
         <stop offset="1" stopColor={T.cloudBot} stopOpacity="0" />
       </radialGradient>
+      {/* dusk cloud bellies: lit from below by the low sun, ember into gold at the very edge */}
+      <linearGradient id={`${uid}-belly`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor={C.ember400} stopOpacity="0" />
+        <stop offset="0.5" stopColor={C.ember400} stopOpacity="0.12" />
+        <stop offset="0.8" stopColor={C.ember300} stopOpacity="0.55" />
+        <stop offset="1" stopColor={C.gold200} stopOpacity="0.9" />
+      </linearGradient>
       {moon && (
         <>
           <radialGradient id={`${uid}-moon`} cx="62%" cy="38%" r="70%">
@@ -126,9 +133,11 @@ export function AtmosDefs({ uid, L, T }) {
             <stop offset="0.6" stopColor={C.frost100} />
             <stop offset="1" stopColor={C.frost300} />
           </radialGradient>
-          <clipPath id={`${uid}-moonclip`}>
-            <circle cx={sun.x} cy={sun.y} r={sun.r} />
-          </clipPath>
+          {/* the crescent is a mask, so the unlit part is truly the sky behind it */}
+          <mask id={`${uid}-moonmask`} maskUnits="userSpaceOnUse" x={sun.x - sun.r * 2} y={sun.y - sun.r * 2} width={sun.r * 4} height={sun.r * 4}>
+            <circle cx={sun.x} cy={sun.y} r={sun.r} fill="#fff" />
+            <circle cx={sun.x - sun.r * 0.95} cy={sun.y - sun.r * 0.18} r={sun.r * 0.98} fill="#000" />
+          </mask>
         </>
       )}
     </defs>
@@ -161,14 +170,27 @@ function stratus(rnd, x, y, w, h) {
   return out;
 }
 
-function Cumulus({ uid, cloud, sunX, dusk, night, op }) {
+function Cumulus({ uid, id, cloud, sunX, dusk, night, op }) {
   const { puffs, base } = cloud;
-  // the sun-facing flank catches the light (at dusk, with the sun below, the belly does)
+  // the sun-facing flank catches the light; at dusk the sun is below the deck, so
+  // the light sits on the belly (shaped from the puffs themselves, clipped to the cloud)
   const dir = Math.sign(sunX - base[0]) || 1;
   let core = '';
   for (const [cx, cy, r] of puffs) core += circlePath(cx, cy + r * 0.06, r * 0.72);
   core += `M${r1(base[0] - base[2])},${r1(base[1])}a${r1(base[2])},${r1(base[3])} 0 1 0 ${r1(base[2] * 2)},0a${r1(base[2])},${r1(base[3])} 0 1 0 ${r1(-base[2] * 2)},0Z`;
-  const litOp = night ? 0.45 : dusk ? 0.95 : 0.85;
+  const litOp = night ? 0.45 : 0.85;
+  const clip = `${uid}-cc-${id}`;
+  // the cloud's bounds, for the belly light
+  let bx0 = base[0] - base[2];
+  let bx1 = base[0] + base[2];
+  let by0 = base[1];
+  let by1 = base[1] + base[3];
+  for (const [cx, cy, r] of puffs) {
+    bx0 = Math.min(bx0, cx - r);
+    bx1 = Math.max(bx1, cx + r);
+    by0 = Math.min(by0, cy - r);
+    by1 = Math.max(by1, cy + r * 0.86);
+  }
   return (
     <g opacity={op}>
       <path d={core} fill={`url(#${uid}-cl)`} />
@@ -177,7 +199,17 @@ function Cumulus({ uid, cloud, sunX, dusk, night, op }) {
       ))}
       <ellipse cx={r1(base[0])} cy={r1(base[1] + base[3] * 0.3)} rx={r1(base[2] * 1.1)} ry={r1(base[3] * 1.2)} fill={`url(#${uid}-puffd)`} opacity={dusk ? 0.3 : 0.65} />
       {dusk ? (
-        <ellipse cx={r1(base[0] + dir * base[2] * 0.12)} cy={r1(base[1] + base[3] * 0.1)} rx={r1(base[2] * 1.05)} ry={r1(base[3] * 1.6)} fill={`url(#${uid}-puffl)`} opacity={litOp} />
+        <>
+          <defs>
+            <clipPath id={clip}>
+              <path d={core} />
+              {puffs.map(([cx, cy, r], i) => (
+                <circle key={i} cx={r1(cx)} cy={r1(cy)} r={r1(r * 0.86)} />
+              ))}
+            </clipPath>
+          </defs>
+          <rect x={r1(bx0)} y={r1(by0)} width={r1(bx1 - bx0)} height={r1(by1 - by0)} fill={`url(#${uid}-belly)`} clipPath={`url(#${clip})`} />
+        </>
       ) : (
         puffs.map(([cx, cy, r], i) => <circle key={`l${i}`} cx={r1(cx + dir * r * 0.3)} cy={r1(cy - r * 0.3)} r={r1(r * 0.9)} fill={`url(#${uid}-puffl)`} opacity={litOp} />)
       )}
@@ -257,15 +289,15 @@ export function SkyDome({ uid, L, T, seed = 7, clouds = 0.6, horizonY = 112, mot
       )}
       {!sunHidden && (
         <g>
-          <circle cx={sun.x} cy={sun.y} r={sun.haloR * (moon ? 1.4 : 2.1)} fill={`url(#${uid}-bloom)`} opacity={moon ? 0.55 : 1} />
+          <circle cx={sun.x} cy={sun.y} r={sun.haloR * (moon ? 1.6 : 2.1)} fill={`url(#${uid}-bloom)`} opacity={moon ? 0.5 : 1} />
           {moon ? (
             <g>
-              <circle cx={sun.x} cy={sun.y} r={sun.r} fill={`url(#${uid}-moon)`} />
-              <g clipPath={`url(#${uid}-moonclip)`}>
-                <ellipse cx={sun.x - sun.r * 0.25} cy={sun.y - sun.r * 0.2} rx={sun.r * 0.36} ry={sun.r * 0.26} fill={C.frost500} opacity="0.28" />
+              {/* earthshine: the dark limb only just visible */}
+              <circle cx={sun.x} cy={sun.y} r={sun.r} fill={C.frost500} opacity="0.07" />
+              <g mask={`url(#${uid}-moonmask)`}>
+                <circle cx={sun.x} cy={sun.y} r={sun.r} fill={`url(#${uid}-moon)`} />
                 <ellipse cx={sun.x + sun.r * 0.3} cy={sun.y + sun.r * 0.3} rx={sun.r * 0.28} ry={sun.r * 0.2} fill={C.frost500} opacity="0.22" />
-                <ellipse cx={sun.x + sun.r * 0.05} cy={sun.y + sun.r * 0.05} rx={sun.r * 0.16} ry={sun.r * 0.12} fill={C.frost500} opacity="0.2" />
-                <circle cx={sun.x - sun.r * 1.05} cy={sun.y - sun.r * 0.12} r={sun.r * 1.02} fill={L.sky[1]} opacity="0.84" />
+                <ellipse cx={sun.x + sun.r * 0.45} cy={sun.y - sun.r * 0.3} rx={sun.r * 0.16} ry={sun.r * 0.12} fill={C.frost500} opacity="0.2" />
               </g>
             </g>
           ) : (
@@ -290,7 +322,7 @@ export function SkyDome({ uid, L, T, seed = 7, clouds = 0.6, horizonY = 112, mot
           </Drift>
           <Drift motion={motion} dx={-16} dur={110}>
             {mid.map((c, i) => (
-              <Cumulus key={i} uid={uid} cloud={c} sunX={sun.x} dusk={dusk} night={moon} op={Math.min(1, L.cloudOp + 0.25)} />
+              <Cumulus key={i} id={i} uid={uid} cloud={c} sunX={sun.x} dusk={dusk} night={moon} op={Math.min(1, L.cloudOp + 0.25)} />
             ))}
           </Drift>
         </g>
@@ -431,30 +463,34 @@ export function Range({ uid, id, L, T, seed = 1, y = 100, amp = 30, snow = 0.42,
   const clip = `${uid}-rg-${id}`;
   const grad = `${uid}-rgf-${id}`;
   const hz = `${uid}-rgh-${id}`;
+  // Ranges are solid rock: distance comes from the haze toward the sky, never from
+  // transparency. `op` < 1 (an older knob) now just means "further away".
+  const hzK = Math.min(0.92, haze * (T.hazeK ?? 1) + (1 - op) * 0.6);
+  const lit = T.rockLit || L.mountain;
   return (
-    <g opacity={op}>
+    <g>
       <defs>
         <clipPath id={clip}>
           <path d={fill} />
         </clipPath>
         <linearGradient id={grad} gradientUnits="userSpaceOnUse" x1="0" y1={y - amp} x2="0" y2={base}>
-          <stop offset="0" stopColor={mix(L.mountain, T.horizon, 0.12)} />
-          <stop offset="1" stopColor={mix(L.mountain, L.haze, haze * 0.6)} />
+          <stop offset="0" stopColor={mix(lit, T.horizon, 0.08)} />
+          <stop offset="1" stopColor={mix(L.mountain, L.haze, hzK * 0.6)} />
         </linearGradient>
         <linearGradient id={hz} gradientUnits="userSpaceOnUse" x1="0" y1={y - amp * 0.35} x2="0" y2={base}>
           <stop offset="0" stopColor={L.haze} stopOpacity="0" />
-          <stop offset="0.55" stopColor={L.haze} stopOpacity={haze * 0.7} />
-          <stop offset="1" stopColor={L.haze} stopOpacity={haze} />
+          <stop offset="0.55" stopColor={L.haze} stopOpacity={hzK * 0.7} />
+          <stop offset="1" stopColor={L.haze} stopOpacity={hzK} />
         </linearGradient>
       </defs>
       <path d={fill} fill={`url(#${grad})`} />
       <g clipPath={`url(#${clip})`}>
         {snow > 0 && <path d={snowD} fill={T.snowLit} />}
-        <path d={shadow} fill={T.shadow} opacity="0.62" />
+        <path d={shadow} fill={T.shadow} opacity={0.78 - hzK * 0.3} />
         {snow > 0 && <path d={gullies} stroke={T.shadow} strokeWidth="0.6" opacity="0.3" fill="none" />}
         <rect x="-14" y={y - amp} width="430" height={base - y + amp + 2} fill={`url(#${hz})`} />
       </g>
-      <path d={top} stroke={`url(#${uid}-rimg)`} strokeWidth="0.7" fill="none" opacity={rim * L.rimOp} />
+      {rim > 1 && <path d={top} stroke={`url(#${uid}-rimg)`} strokeWidth="0.5" fill="none" opacity={(rim - 1) * L.rimOp} />}
     </g>
   );
 }
@@ -464,11 +500,12 @@ export function Range({ uid, id, L, T, seed = 1, y = 100, amp = 30, snow = 0.42,
  * One depth layer of land. `haze` lifts it toward the sky (distance),
  * `mist` pools fog at its foot, `rim` is the light catching its crest.
  */
-export function Land({ uid, id, L, T, ridge, color, haze = 0, mist = 0.2, rim = 0.5, rimW = 0.9, bottom = 262 }) {
+export function Land({ uid, id, L, T, ridge, color, haze: hazeIn = 0, mist = 0.2, rim = 0.5, rimW = 0.9, bottom = 262 }) {
   const { fill, top } = landShapes(ridge, bottom);
   const g = `${uid}-ld-${id}`;
   const topY = (ridge.y ?? 120) - (ridge.amp ?? 8) * 1.4 - Math.max(0, ...(ridge.bumps || []).map((b) => b.h));
   const span = Math.max(20, Math.min(bottom, (ridge.y ?? 120) + 40) - topY);
+  const haze = hazeIn * (T.hazeK ?? 1);
   const lift = mix(color, L.haze, Math.min(0.85, haze));
   return (
     <g>

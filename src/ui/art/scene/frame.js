@@ -21,12 +21,30 @@ export const FOCUS = {
   champion: [222, 138],
   camp: [198, 150],
 };
+// Card crops frame the beat's set piece itself (the keep on the road, where the
+// palisade, wreckage and smoke that show the region state also sit).
+export const CARD_FOCUS = {
+  road: [300, 118],
+};
 const NARROW_ZOOM = 0.86;
 const FOCUS_AT = 0.42;
 const OVERSCAN = 26;
 
-export function cropBox(ar, [fx, fy]) {
+// Card crops (opt-in): a short, wide card (a report or dossier header) would
+// show the whole 400-wide painting as a thin strip with the focus pinned to the
+// right edge. `card` zooms in so the scene holds a readable band and puts the
+// focal point at `cardAt` across, clear of right-hand chips.
+const CARD_W = 290;
+
+export function cropBox(ar, [fx, fy], { card = false, cardAt = 0.6 } = {}) {
   if (!ar || !Number.isFinite(ar) || ar <= 0) return [0, 0, W, H];
+  if (card && ar > W / H) {
+    const w = CARD_W;
+    const h = Math.max(40, w / ar);
+    const x0 = clamp(fx - w * cardAt, 0, W - w);
+    const y0 = clamp(fy - h * 0.48, 0, H - h);
+    return [Math.round(x0 * 10) / 10, Math.round(y0 * 10) / 10, w, Math.round(h * 10) / 10];
+  }
   let w = W;
   let h = H;
   let y0;
