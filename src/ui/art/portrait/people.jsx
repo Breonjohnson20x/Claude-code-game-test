@@ -2,20 +2,24 @@
 // { bg: [inner, outer], glow?, under?, art } for the Portrait frame.
 import { ClothShade, Hair, LG, Lit3, Metal, RG, Rim } from './kit.jsx';
 import { Ear, Face, Neck } from './face.jsx';
-import { exprFor, headPath, shoulders } from './geometry.js';
+import { exprFor, headPath, locks, shoulders } from './geometry.js';
 
 // ------------------------------------------------------------------ Mara Voss
 export function Mara({ uid, mood }) {
-  const f = { cx: 50, cy: 43, rx: 12.2, ry: 15.6 };
-  const x = exprFor(mood, { bi: 0.6 });
-  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.76, 0.7, 0.26);
-  const skin = { deep: '#3e2318', shade: '#7a4b37', base: '#b07a5a', light: '#d9a27e', hi: '#f6cfaa', blood: '#c25a44', bounce: '#8a7488' };
+  // a soldier's face: square jaw with a defined chin, low heavy brows, a steady narrowed
+  // look, weathered cheeks, the left brow cocked and the mouth pulled down at one corner
+  const f = { cx: 50, cy: 43, rx: 11.8, ry: 15.6 };
+  const x = exprFor(mood, { bi: 0.5 });
+  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.82, 0.72, 0.32);
+  const skin = { deep: '#4a2a1c', shade: '#80503a', base: '#b07a5a', light: '#d9a27e', hi: '#f6cfaa', blood: '#c25a44', bounce: '#8a7488' };
   const coat = shoulders(70);
   const hair =
-    'M37.4,44C36.3,36.4 37.4,29.4 43,26.8C48.2,24.6 56.4,24.9 60.8,28.1C63.9,30.4 64.2,35.4 63,41.2L61.9,39.2C61.4,35.2 59.6,32.5 56.5,31.7C52,33.8 46,34.4 41.2,33.3C39.8,35.7 39,39.2 38.8,44Z';
+    'M37.4,44C36.3,36.4 37.4,29.4 43,26.8C48.2,24.6 56.4,24.9 60.8,28.1C63.9,30.4 64.2,35.4 63,41.2L61.9,39.2C61.4,35.2 59.6,32.5 56.5,31.7C55,33.2 53,33.6 51.6,33.2L50.8,34.6L49.6,33.4C46.6,34.4 43.6,34.2 41.2,33.3C39.8,35.7 39,39.2 38.8,44Z';
   return {
     bg: ['#34507a', '#070d18'],
     glow: '#e3c463',
+    focus: 45,
+    halo: 0.5,
     art: (
       <>
         <defs>
@@ -73,7 +77,36 @@ export function Mara({ uid, mood }) {
             head={head}
             skin={skin}
             x={x}
-            o={{ brow: '#3a2418', lip: '#8a4434', lipOp: 0.72, lashW: 1, iris: '#56687a', irisLight: '#b8c6d1', hairShadow: 0.3, lines: (g) => `M${g.cx - 3.6},${g.noseY + 1.4}Q${g.cx - 4.6},${g.mouthY - 0.6} ${g.cx - 4.2},${g.mouthY + 0.8}` }}
+            o={{
+              brow: '#2e1c12',
+              browW: 1.55,
+              browArch: 0.45,
+              browGap: 3.05,
+              browSlope: 0.25,
+              browRaise: [0.7, -0.1],
+              eyeW: 2.6,
+              eyeH: 1.4,
+              eyeSep: 5.1,
+              socket: 0.88,
+              hollow: 0.58,
+              lip: '#8a4434',
+              lipOp: 0.68,
+              upperLip: 0.8,
+              lowerLip: 1.35,
+              mouthW: 3.3,
+              smirk: -0.4,
+              noseAt: 0.38,
+              noseW: 1.05,
+              bridge: 1.3,
+              lashW: 0.95,
+              iris: '#56687a',
+              irisLight: '#b8c6d1',
+              hairShadow: 0.42,
+              crow: true,
+              lines: (g) =>
+                `M${g.cx - 3.6},${g.noseY + 1.4}Q${g.cx - 4.6},${g.mouthY - 0.6} ${g.cx - 4.2},${g.mouthY + 0.8}` +
+                `M${g.cx + 3.4},${g.noseY + 1.6}Q${g.cx + 4.2},${g.mouthY - 0.6} ${g.cx + 3.9},${g.mouthY + 0.6}`,
+            }}
           />
           {/* scar through the left brow and cheek (lit side) */}
           <path d="M57.4,35.6L59.2,41.2M59.9,44.4L61.3,50.6" stroke="#5a2a20" strokeWidth="0.75" strokeLinecap="round" opacity="0.5" />
@@ -90,14 +123,14 @@ export function Mara({ uid, mood }) {
           <Hair
             uid={uid}
             name="l"
-            d="M38.8,32.6C36,38 35.2,46 36.2,52C36.8,56 38.4,58.8 41.4,59.6C40.2,56 39.4,52 39.2,47C39,42 39.6,37 41.2,33.4Z"
+            d="M38.8,32.6C36,38 35.2,46 36,51.6C36.2,54.6 36.8,56.8 37.6,58.4L38.4,56.6L39.4,59.8L40.2,57.4L41.6,59.4C40.2,56 39.4,52 39.2,47C39,42 39.6,37 41.2,33.4Z"
             tones={['#140b06', '#2a1910', '#5a3620', '#8a5a36']}
             fan={{ x: 44, y: 30, a0: Math.PI * 0.5, a1: Math.PI * 0.8, rIn: 2, rOut: 30, n: 8, seed: 12, curl: 1 }}
           />
           <Hair
             uid={uid}
             name="r"
-            d="M61.2,32.6C64,38 64.8,46 63.8,52C63.2,56 61.6,58.8 58.6,59.6C59.8,56 60.6,52 60.8,47C61,42 60.4,37 58.8,33.4Z"
+            d="M61.2,32.6C64,38 64.8,46 64.2,51.4C64,54.4 63.4,56.8 62.6,58.6L61.8,56.8L60.8,59.8L60,57.6L58.4,59.4C59.8,56 60.6,52 60.8,47C61,42 60.4,37 58.8,33.4Z"
             tones={['#2a1910', '#4a2e1c', '#8a5a36', '#c08a5a']}
             fan={{ x: 56, y: 30, a0: Math.PI * 0.2, a1: Math.PI * 0.5, rIn: 2, rOut: 30, n: 8, seed: 14, curl: 1 }}
             sheen="M62.4,38Q63.8,45 62.8,52"
@@ -105,6 +138,10 @@ export function Mara({ uid, mood }) {
           />
           {/* iron at the temples */}
           <path d="M62.4,34.6Q63,37 62.6,39.6M61.8,34Q62.4,36.4 62,38.4M38.4,37.4Q38,40 38.4,42.6" stroke="#b5b6ba" strokeWidth="0.35" strokeLinecap="round" fill="none" opacity="0.5" />
+          {/* flyaways breaking the silhouette, a loose lock over the brow */}
+          <path d="M44.4,26.4Q42.2,25 40.4,25.8M60.8,28.2Q63.6,28.6 64.4,31M37.2,40Q35.6,43 35.8,46.2M64.4,47.4Q65.6,50.4 65,53" stroke="#5a3620" strokeWidth="0.4" strokeLinecap="round" fill="none" opacity="0.75" />
+          <path d="M56.4,25.4Q60,24.2 62.2,25.6M61.2,28.6Q64,29.2 64.8,31.4" stroke="#c08a5a" strokeWidth="0.3" strokeLinecap="round" fill="none" opacity="0.8" />
+          <path d="M47.6,33.2C46.6,35.2 45.2,36.2 43.6,36.6C45,35.4 45.8,34.2 46.4,32.8Z" fill="#3a2418" />
           <Rim uid={uid} d={head} color="#ffd9b0" op={0.6} />
         </g>
       </>
@@ -114,17 +151,25 @@ export function Mara({ uid, mood }) {
 
 // ------------------------------------------------------------------ Elias Vale
 export function Vale({ uid, mood }) {
-  const f = { cx: 50, cy: 42, rx: 11, ry: 16.2 };
-  const x = exprFor(mood, { mouth: 0.6, bi: -0.4 });
-  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.68, 0.7, 0.2);
+  // the inventor: a long narrow face with a pointed chin, wide bright eyes glancing
+  // aside, thin high brows with the right one cocked, a lopsided half smile
+  const f = { cx: 50, cy: 42, rx: 10.6, ry: 16.4 };
+  const x = exprFor(mood, { mouth: 0.5, bi: -0.4 });
+  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.66, 0.72, 0.17);
   const skin = { deep: '#6e4434', shade: '#a57a60', base: '#d9b08f', light: '#f3d1ae', hi: '#fff0d8', blood: '#d9806a', bounce: '#a8908a' };
   const shirt = shoulders(74, 0.92);
-  const back = 'M37,47L31.5,41.5L35.5,39.5L30,31L36,31.8L33,22.5L40,26.5L40.6,17L46,23.6L50.4,15L53.6,23L59.6,16.6L59.8,25.4L67.2,20.6L65,29.6L71.4,30L65.8,36L70,40.4L63.4,42.4Z';
-  const fringe = 'M38.4,36L41.6,29.4L43.8,33.2L46.6,27.6L49.2,32.4L52.4,27.2L54.6,31.8L58.2,28.2L58.6,33.4L61.8,30.8L61.4,37C55.6,33.2 45,33.2 38.4,36Z';
+  // wild hair: a core mass with clumped, tapered locks that curl to the right
+  const back =
+    'M36.6,46C33.4,38 35,28.8 41.6,24.4C46.6,21.2 54.2,21.2 58.8,24.4C65.2,28.8 66.8,38 63.4,46Z' +
+    locks({ x: 50, y: 37, a0: -Math.PI * 1.08, a1: Math.PI * 0.08, n: 9, rIn: 8, rOut: 19.5, w: 0.4, bend: 0.5, seed: 5, jitter: 0.14 });
+  const fringe =
+    'M38.6,36.4C40.4,31.6 45,29.6 50,29.6C55,29.6 59.6,31.6 61.4,36.4C55.6,33.4 45,33.4 38.6,36.4Z' +
+    locks({ x: 50, y: 41, a0: -Math.PI * 0.88, a1: -Math.PI * 0.14, n: 5, rIn: 8, rOut: 13.6, w: 0.3, bend: 0.4, seed: 7, jitter: 0.12 });
   const hairTones = ['#3a170a', '#7a3a18', '#c8742e', '#f4a35e'];
   return {
     bg: ['#6e5530', '#120d08'],
     glow: '#ffd97a',
+    focus: 46,
     art: (
       <>
         <defs>
@@ -134,7 +179,9 @@ export function Vale({ uid, mood }) {
           <RG id={`${uid}-lens`} cx="40%" cy="35%" r="70%" stops={[[0, '#fff4d6'], [0.25, '#f4a35e'], [0.7, '#8a3a1c'], [1, '#2e1408']]} />
         </defs>
         <g transform="translate(0 6.6)">
-          <Hair uid={uid} name="hb" d={back} tones={hairTones} fan={{ x: 50, y: 40, a0: -Math.PI * 1.05, a1: Math.PI * 0.05, rIn: 4, rOut: 24, n: 26, seed: 5, curl: 1.2 }} sheen="M56,20.6Q63,22.6 67,29" />
+          <Hair uid={uid} name="hb" d={back} tones={hairTones} fan={{ x: 50, y: 37, a0: -Math.PI * 1.1, a1: Math.PI * 0.1, rIn: 4, rOut: 24, n: 30, seed: 5, curl: 1.6 }} sheen="M54,20.6Q62,21.6 66.4,28" />
+          {/* a warm rim along the lit locks */}
+          <Rim uid={uid} d={back} color="#ffd9a0" op={0.35} w={0.7} />
         </g>
         <Neck uid={uid} top={56} bottom={78} w={10.8} skin={skin} />
         <path d={shirt} fill={`url(#${uid}-shirt)`} />
@@ -170,9 +217,33 @@ export function Vale({ uid, mood }) {
             head={head}
             skin={skin}
             x={x}
-            o={{ brow: '#7a3a18', browW: 1.2, lip: '#b0604a', lipOp: 0.6, eyeSep: 5.4, eyeW: 2.7, iris: '#4a6a5a', irisLight: '#d4f57a', freckles: '#a0583a', hairShadow: 0.4 }}
+            o={{
+              brow: '#8a4220',
+              browW: 0.95,
+              browArch: 1.5,
+              browGap: 3.9,
+              browRaise: [0, 1.1],
+              eye: 'wide',
+              eyeH: 1.95,
+              eyeW: 2.6,
+              eyeSep: 5,
+              look: 0.55,
+              lip: '#b0604a',
+              lipOp: 0.6,
+              upperLip: 0.8,
+              lowerLip: 1.3,
+              mouthW: 3.1,
+              smirk: 0.8,
+              noseAt: 0.4,
+              noseW: 0.82,
+              bridge: 0.8,
+              iris: '#4a6a5a',
+              irisLight: '#d4f57a',
+              freckles: '#a0583a',
+              hairShadow: 0.4,
+            }}
           />
-          <Hair uid={uid} name="hf" d={fringe} tones={hairTones} fan={{ x: 50, y: 40, a0: -Math.PI * 0.95, a1: -Math.PI * 0.05, rIn: 6, rOut: 13, n: 16, seed: 7, curl: 0.8 }} />
+          <Hair uid={uid} name="hf" d={fringe} tones={hairTones} fan={{ x: 50, y: 40, a0: -Math.PI * 0.95, a1: -Math.PI * 0.05, rIn: 6, rOut: 13, n: 16, seed: 7, curl: 0.8 }} edge="#3a170a" />
           {/* goggles pushed up */}
           <path d="M38.4,32.8C45,29.4 55,29.4 61.8,32.8" stroke="#1b0f07" strokeWidth="2.5" fill="none" />
           <path d="M38.4,32.2C45,28.8 55,28.8 61.8,32.2" stroke="#5e3f26" strokeWidth="0.5" fill="none" />
@@ -198,27 +269,33 @@ export function Vale({ uid, mood }) {
 
 // --------------------------------------------------------------- Cassian Rey
 export function Cassian({ uid, mood }) {
-  const f = { cx: 50, cy: 42.5, rx: 11.8, ry: 16 };
-  const x = exprFor(mood, { bi: 0.4, mouth: -0.2, open: 0.85 });
+  // the spymaster: a lean angular face, narrowed eyes, flat low brows with the lit one
+  // lifted in doubt, thin lips set in a knowing tuck. Split lit, but the shadow half is a
+  // readable mid-dark (about 35% luminance) warmed by the ember bounce, never a black mask.
+  const f = { cx: 50, cy: 42.5, rx: 11.6, ry: 16 };
+  const x = exprFor(mood, { bi: 0.4, mouth: -0.2, open: 0.9 });
   const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.7, 0.68, 0.16);
-  const skin = { deep: '#1a1114', shade: '#3a2622', base: '#a4765b', light: '#d8aa88', hi: '#ffe0c0', blood: '#b0604a', bounce: '#2b4268' };
+  const skin = { deep: '#3e2a24', shade: '#6e4c3c', base: '#a4765b', light: '#d8aa88', hi: '#ffe0c0', blood: '#b0604a', bounce: '#6a6680' };
   const coat = shoulders(71);
   const hair = 'M37.8,41C37,30.6 42,26 50,25.6C58.6,25.3 63.4,30.2 62.3,41L61.3,37.2C60.4,32.8 56.6,30.6 50.6,31.4L48.4,29.9C44.2,31.2 40.4,33.8 38.9,41Z';
   return {
-    bg: ['#22365a', '#03060b'],
-    glow: '#b08d57',
+    bg: ['#3a5684', '#070d18'],
+    glow: '#d6b47a',
+    focus: 42,
+    halo: 0.62,
     art: (
       <>
         <defs>
-          <Lit3 id={`${uid}-coat`} c={['#07080b', '#1c2029', '#434a59']} hard />
+          <Lit3 id={`${uid}-coat`} c={['#11141b', '#262c38', '#4f5868']} hard />
           <Metal id={`${uid}-gold`} />
-          <LG id={`${uid}-sh`} stops={[[0, '#000', 0.62], [0.4, '#000', 0.42], [0.53, '#000', 0]]} />
+          <LG id={`${uid}-sh`} stops={[[0, '#04070d', 0.35], [0.4, '#04070d', 0.12], [0.5, '#04070d', 0]]} />
         </defs>
         <Neck uid={uid} top={52} bottom={74} w={10} skin={skin} />
         <path d={coat} fill={`url(#${uid}-coat)`} />
         <ClothShade uid={uid} name="c" d={coat} neckY={74} folds="M66,82Q70,92 69,104M76,84Q80,94 82,104" />
         {/* tall stand collar to the jaw, brass-edged and stitched */}
         <path d="M38.6,57L37,75C42,78.6 58,78.6 63,75L61.4,57C57.6,60.4 42.4,60.4 38.6,57Z" fill={`url(#${uid}-coat)`} />
+        <path d="M38.6,57L37,75" stroke="#b08d57" strokeWidth="0.5" opacity="0.35" />
         <path d="M38.6,57C42.4,60.4 57.6,60.4 61.4,57" stroke={`url(#${uid}-gold)`} strokeWidth="0.9" fill="none" />
         <path d="M39,59.6C43,62.8 57,62.8 61,59.6" stroke="#7a5f36" strokeWidth="0.3" strokeDasharray="0.7 0.6" fill="none" />
         <path d="M50,60.4V77" stroke="#020305" strokeWidth="1" />
@@ -239,10 +316,36 @@ export function Cassian({ uid, mood }) {
           head={head}
           skin={skin}
           x={x}
-          o={{ hard: true, hideLeft: true, brow: '#14161c', lip: '#7a4434', lipOp: 0.5, iris: '#3b2a1c', eyeW: 2.8, eyeH: 1.4, mouthW: 3, browArch: 0.3, hairShadow: 0.36, foreheadHi: 0.6 }}
+          o={{
+            hard: true,
+            hideLeft: true,
+            brow: '#14161c',
+            browW: 1.5,
+            browArch: 0.2,
+            browGap: 3.1,
+            browSlope: -0.15,
+            browRaise: [0, 0.95],
+            eye: 'narrow',
+            eyeW: 2.8,
+            eyeH: 1.75,
+            lip: '#7a4434',
+            lipOp: 0.5,
+            upperLip: 0.65,
+            lowerLip: 1,
+            mouthW: 2.9,
+            smirk: 0.45,
+            noseAt: 0.4,
+            noseW: 0.88,
+            bridge: 1.25,
+            hollow: 0.62,
+            iris: '#3b2a1c',
+            hairShadow: 0.36,
+            foreheadHi: 0.6,
+            bounceOp: 0.6,
+          }}
         />
         {/* cheekbone plane */}
-        <path d="M55.5,48.5Q59.5,49.5 61,53" stroke="#6e4434" strokeWidth="0.7" fill="none" opacity="0.6" />
+        <path d="M55.5,48.5Q59.5,49.5 61,53" stroke="#6e4434" strokeWidth="0.7" fill="none" opacity="0.3" />
         {/* slicked hair */}
         <Hair
           uid={uid}
@@ -264,110 +367,141 @@ export function Cassian({ uid, mood }) {
 
 // ---------------------------------------------------------------------- Mika
 export function Mika({ uid, mood }) {
-  const f = { cx: 50, cy: 50, rx: 10.2, ry: 11.6 };
-  const x = exprFor(mood, { blush: 0.38, open: 1.05 });
-  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.8, 0.68, 0.4);
+  // a refugee girl: a round face with wide eyes and warm cheeks, deep in a worn wool hood
+  // whose peak has slumped to one side; a broken knit trim, a smudge of road dirt, a patched scarf
+  const f = { cx: 50, cy: 51, rx: 12.4, ry: 13.6 };
+  const x = exprFor(mood, { blush: 0.42, open: 1.05 });
+  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.84, 0.66, 0.42);
   const skin = { deep: '#8a5444', shade: '#b8826a', base: '#e6b597', light: '#f8d6ba', hi: '#fff4e6', blood: '#e0806a', bounce: '#b09aa0' };
-  const cloak = shoulders(74, 0.95);
-  const hood = 'M25.6,63C24.6,45 31,28 45,20.6Q50,16.6 55,20.6C69,28 75.4,45 74.4,63C74,70 70.6,75 66,78.4L34,78.4C29.4,75 26,70 25.6,63Z';
+  const cloak = shoulders(75, 0.95);
+  // the hood: soft shoulders, a peak tipped off-axis, a ragged hem
+  const hood =
+    'M27.6,78C25.6,68 26.6,56 30.6,46C34,37.4 39.6,30.4 46.6,26.6C50.4,24.6 55,23.6 58.6,24.2C61.4,24.6 63,26.4 63,28.6C68.8,34.4 72.4,43.6 72.4,54.4C72.4,64 71,72 68,78L65,76.6L62.6,78.6L59,77.2L41,77.2L37.6,78.8L34.4,76.8L31,78.8Z';
+  const opening = 'M50,35C58.8,34.4 65.6,41.6 65.8,50.8C66,60.6 59.4,68 50.2,68.2C41.2,68.4 34.4,61 34.2,51.2C34,41.8 41,35.4 50,35Z';
   return {
     bg: ['#2b4268', '#070d18'],
     glow: '#f4a35e',
+    zoom: 1.24,
+    focus: 50,
+    halo: 0.5,
     art: (
       <>
         <defs>
           <Lit3 id={`${uid}-cloak`} c={['#140d08', '#3b2716', '#6e4c2c']} />
           <Lit3 id={`${uid}-scarf`} c={['#4a1612', '#8a2f25', '#c85a44']} />
-          <RG id={`${uid}-hollow`} cx="55%" cy="40%" r="60%" stops={[[0, '#3a281c'], [1, '#120c08']]} />
+          <RG id={`${uid}-hollow`} cx="58%" cy="62%" r="62%" stops={[[0, '#4a3424'], [0.7, '#1e140c'], [1, '#0e0905']]} />
+          <RG id={`${uid}-hsd`} stops={[[0, '#2a2016', 0.75], [0.6, '#2a2016', 0.4], [1, '#2a2016', 0]]} />
+          <RG id={`${uid}-hlt`} stops={[[0, '#fff4d6', 0.4], [0.6, '#fff4d6', 0.15], [1, '#fff4d6', 0]]} />
+          <LG id={`${uid}-brim`} x1={0} y1={0} x2={0} y2={1} stops={[[0, '#1a110a', 0.85], [0.5, '#1a110a', 0.35], [1, '#1a110a', 0]]} />
           <clipPath id={`${uid}-hoodc`}>
             <path d={hood} />
           </clipPath>
+          <clipPath id={`${uid}-holc`}>
+            <path d={opening} />
+          </clipPath>
         </defs>
         <path d={cloak} fill={`url(#${uid}-cloak)`} />
-        <ClothShade uid={uid} name="cl" d={cloak} neckY={76} folds="M30,90Q34,97 32,104M70,88Q67,96 69,104" />
-        {/* hood: thick wool with knit ribs */}
+        <ClothShade uid={uid} name="cl" d={cloak} neckY={77} folds="M30,90Q34,97 32,104M70,88Q67,96 69,104" />
+        {/* hood: undyed wool, worn thin */}
         <Hair
           uid={uid}
           name="hd"
           d={hood}
-          tones={['#2e2418', '#8a7a5a', '#c2b287', '#e8dfc8']}
-          fan={{ x: 50, y: 52, a0: -Math.PI * 1.15, a1: Math.PI * 0.15, rIn: 17, rOut: 30, n: 26, seed: 21, curl: 0.6, jitter: 0.1 }}
-          sheen="M60,24.4Q70,30 71,44"
-          sheenW={2.4}
+          tones={['#2e2418', '#6a5c44', '#9a8a66', '#c8b994']}
+          fan={{ x: 52, y: 54, a0: -Math.PI * 1.15, a1: Math.PI * 0.15, rIn: 18, rOut: 30, n: 22, seed: 21, curl: 0.8, jitter: 0.12 }}
           w={0.4}
-          so={0.4}
+          so={0.35}
         />
         <g clipPath={`url(#${uid}-hoodc)`}>
-          <g filter={`url(#${uid}-soft2)`}>
-            <ellipse cx="26" cy="56" rx="11" ry="26" fill="#2a2016" opacity="0.75" />
-            <ellipse cx="50" cy="76" rx="20" ry="5" fill="#2a2016" opacity="0.6" />
-            <ellipse cx="64" cy="30" rx="7" ry="9" fill="#fffaf0" opacity="0.25" />
+          {/* fold planes: the shadowed left wall, the lit right wall, the slumped peak */}
+          <path d="M46.6,26.6C39.6,30.4 34,37.4 30.6,46C26.6,56 25.6,68 27.6,78L34.6,78C31.6,66 32,54 35.4,46C38.6,38 42.4,31.6 46.6,26.6Z" fill="#2a2016" opacity="0.5" />
+          <path d="M58.6,24.2C55,28 52.4,31.4 50,35C55.6,31.8 60,31 64.6,32C64,30.6 63.4,29.6 63,28.6C62,26.6 60.6,25.2 58.6,24.2Z" fill="#fff4d6" opacity="0.18" />
+          <path d="M64.6,33C68,39.6 69.8,46.6 69.4,55C69,63 67.6,70 65.4,76" stroke="#fff4d6" strokeWidth="2.6" fill="none" opacity="0.14" />
+          <ellipse cx="36" cy="58" rx="14" ry="26" fill={`url(#${uid}-hsd)`} />
+          <ellipse cx="64" cy="30" rx="11" ry="12" fill={`url(#${uid}-hlt)`} />
+          {/* creases running down from the peak */}
+          <g fill="none" strokeLinecap="round">
+            <path d="M52,25.6Q44,29 40.6,36M57,25Q50,29 46.4,34.6M33,44Q30,54 31,68M68,42Q70.6,52 68.6,70" stroke="#2a2016" strokeWidth="1.6" opacity="0.22" />
+            <path d="M52,25.6Q44,29 40.6,36M57,25Q50,29 46.4,34.6M33,44Q30,54 31,68M68,42Q70.6,52 68.6,70" stroke="#2a2016" strokeWidth="0.6" opacity="0.4" />
+            <path d="M57.6,25.6Q51,29 47.4,34.8M68.8,43Q71.4,52 69.4,69" stroke="#fff4d6" strokeWidth="0.45" opacity="0.35" transform="translate(0.8 0)" />
           </g>
-          {/* heavy wool folds falling from the crown */}
-          <g fill="none" strokeLinecap="round" filter={`url(#${uid}-soft)`}>
-            <path d="M42,22.6Q33,30 31.6,44Q30.6,56 33.4,70M47,21Q40,26 37.6,34M67.4,40Q70.6,52 67.6,70M58.6,22.4Q64.6,27 67,35" stroke="#2a2016" strokeWidth="1.6" opacity="0.45" />
-            <path d="M69,44Q71.6,56 69.2,68M61,23.4Q66,27 68.4,34" stroke="#fffaf0" strokeWidth="0.9" opacity="0.4" transform="translate(1 0)" />
-          </g>
+          {/* a darned patch and road dirt on the hood */}
+          <path d="M64.6,58.6l5,-0.8l0.8,5.2l-5.2,0.6Z" fill="#4a3826" opacity="0.9" />
+          <path d="M64.6,58.6l5,-0.8l0.8,5.2l-5.2,0.6Z" fill="none" stroke="#e2d7bc" strokeWidth="0.35" strokeDasharray="0.6 0.5" opacity="0.7" />
+          <ellipse cx="31" cy="70" rx="5" ry="3" fill="#3a2a1a" opacity="0.35" />
         </g>
-        {/* hood opening */}
-        <ellipse cx="50" cy="50.5" rx="14.2" ry="15.6" fill={`url(#${uid}-hollow)`} />
-        <clipPath id={`${uid}-holc`}>
-          <ellipse cx="50" cy="50.5" rx="14.2" ry="15.6" />
-        </clipPath>
+        {/* the hood opening: deep, with the face set back inside it */}
+        <path d={opening} fill={`url(#${uid}-hollow)`} />
         <g clipPath={`url(#${uid}-holc)`}>
-          <Neck uid={uid} top={58} bottom={74} w={8} skin={skin} />
+          <Neck uid={uid} top={60} bottom={76} w={8.4} skin={skin} />
         </g>
-        <Face
-          uid={uid}
-          f={f}
-          head={head}
-          skin={skin}
-          x={x}
-          o={{
-            iris: '#4f7392',
-            irisLight: '#d9e2e8',
-            white: '#efe6d8',
-            eyeSep: 5.4,
-            eyeW: 2.9,
-            eyeH: 2.5,
-            eyeDy: 0.6,
-            browGap: 4.4,
-            brow: '#a8834a',
-            browW: 0.95,
-            lip: '#c0604c',
-            lipOp: 0.7,
-            lowerLip: 1.3,
-            mouthW: 2.4,
-            mouthAt: 0.6,
-            hairShadow: 0.45,
-            lashW: 0.95,
-          }}
-        />
-        {/* pale hair under the hood */}
-        <Hair
-          uid={uid}
-          name="h"
-          d="M39.6,46.4C41,40 46.6,38.2 51.6,39C56.4,38.6 60.4,41 60.8,46C58,43.2 54,42.6 50.6,43.6C47,42.8 42.6,43.6 39.6,46.4Z"
-          tones={['#9a7638', '#d9b56a', '#f6e9bd', '#fffaf0']}
-          fan={{ x: 51, y: 50, a0: -Math.PI * 0.95, a1: -Math.PI * 0.05, rIn: 6, rOut: 12, n: 14, seed: 9, curl: 1 }}
-          sheen="M53,40Q58,40.6 60,44"
-        />
-        <path d="M40.2,46.6C39.4,50 39.6,53 40.6,55.6" stroke="#b08d48" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-        {/* knit band around the hood opening */}
-        <ellipse cx="50" cy="50.5" rx="14.4" ry="15.8" fill="none" stroke="#3a100c" strokeWidth="3.6" />
-        <ellipse cx="50" cy="50.5" rx="14.4" ry="15.8" fill="none" stroke={`url(#${uid}-scarf)`} strokeWidth="2.8" />
-        <ellipse cx="50" cy="50.5" rx="14.4" ry="15.8" fill="none" stroke="#3a100c" strokeWidth="2.8" strokeDasharray="0.35 0.85" opacity="0.55" />
-        <ellipse cx="50" cy="50.5" rx="13.2" ry="14.6" fill="none" stroke="#120c08" strokeWidth="0.8" opacity="0.7" />
-        <path d="M56,36A14.4,15.8 0 0 1 64.4,50" stroke="#f9c99a" strokeWidth="0.7" fill="none" opacity="0.65" strokeLinecap="round" />
-        {/* scarf with stripes and a hanging tail */}
+        <g clipPath={`url(#${uid}-holc)`}>
+          <Face
+            uid={uid}
+            f={f}
+            head={head}
+            skin={skin}
+            x={x}
+            o={{
+              eye: 'wide',
+              iris: '#4f7392',
+              irisLight: '#d9e2e8',
+              white: '#efe6d8',
+              eyeSep: 5.3,
+              eyeW: 2.75,
+              eyeH: 2.2,
+              eyeDy: 0.9,
+              look: -0.2,
+              browGap: 4.1,
+              browRaise: [0.5, 0],
+              brow: '#a8834a',
+              browW: 0.95,
+              lip: '#c0604c',
+              lipOp: 0.7,
+              upperLip: 0.9,
+              lowerLip: 1.4,
+              mouthW: 2.3,
+              mouthAt: 0.58,
+              noseAt: 0.32,
+              noseW: 0.9,
+              bridge: 0.7,
+              hollow: 0.2,
+              socket: 0.55,
+              hairShadow: 0.5,
+              lashW: 0.95,
+            }}
+          />
+          {/* road dirt on the shadow-side cheek */}
+          <ellipse cx="42.4" cy="58.8" rx="2.6" ry="1.2" transform="rotate(-14 42.4 58.8)" fill="#6e4c2c" opacity="0.32" />
+          {/* pale hair under the hood, with loose wisps across the brow */}
+          <Hair
+            uid={uid}
+            name="h"
+            d="M36.6,50C37.4,41.6 43.4,37.6 50.6,37.8C57.4,37.6 63.4,41.6 63.8,49.4C61.6,45.6 58,43.6 54.6,44.4L53.2,46L51.6,44.2C48.2,44.6 46.6,45.2 45.2,46.6L44.6,44.8C41.6,45.8 38.6,47.4 36.6,50Z"
+            tones={['#9a7638', '#d9b56a', '#f6e9bd', '#fffaf0']}
+            fan={{ x: 51, y: 52, a0: -Math.PI * 0.95, a1: -Math.PI * 0.05, rIn: 7, rOut: 14, n: 14, seed: 9, curl: 1 }}
+            sheen="M53,39.6Q59,40.4 61.6,44.4"
+          />
+          <path d="M37,49.6C36.2,53.4 36.6,57 37.8,60M63.4,49C64.4,52.6 64.2,56 63,59" stroke="#b08d48" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+          <path d="M47.6,44.8Q46.6,48.4 47.6,50.6M52.4,45.4Q53.8,48 53.2,50.4M57,44.6Q58.8,46.8 59,49.4" stroke="#e8d49a" strokeWidth="0.32" fill="none" strokeLinecap="round" opacity="0.85" />
+          {/* the hood's shadow falling across the forehead */}
+          <path d={opening} fill={`url(#${uid}-brim)`} transform="translate(0 -4) scale(1 0.5) translate(0 36)" />
+        </g>
+        {/* knit trim: thin, frayed and broken where it has worn through */}
+        <path d={opening} fill="none" stroke="#1a0c08" strokeWidth="1.7" opacity="0.8" />
+        <path d={opening} fill="none" stroke={`url(#${uid}-scarf)`} strokeWidth="1.05" strokeDasharray="8 2.2 4 1.8 12 2.6 5 3 9 2" />
+        <path d={opening} fill="none" stroke="#c8b994" strokeWidth="0.5" strokeDasharray="0.4 1.6 0.6 3" opacity="0.6" transform="translate(0.3 -0.3)" />
+        <path d="M57.4,36.6A16,17 0 0 1 65.4,47" stroke="#f9c99a" strokeWidth="0.55" fill="none" opacity="0.6" strokeLinecap="round" />
+        {/* scarf: striped, patched, with a hanging tail */}
         <path d="M35.6,71.5C42,77 58,77 64.4,71.5L65.6,78C58,82.4 42,82.4 34.4,78Z" fill={`url(#${uid}-scarf)`} />
         <path d="M37.6,75.6C44,79.4 56,79.4 62.6,75.6" stroke="#e8dfc8" strokeWidth="0.7" fill="none" opacity="0.8" />
+        <path d="M40.4,74.6l5,0.9l-0.6,4.4l-5,-0.8Z" fill="#4a5a6e" />
+        <path d="M40.4,74.6l5,0.9l-0.6,4.4l-5,-0.8Z" fill="none" stroke="#e8dfc8" strokeWidth="0.3" strokeDasharray="0.5 0.45" opacity="0.8" />
         <path d="M44,77.4Q46,80 45,81.4M52,78Q53,80.4 52.4,82" stroke="#4a1612" strokeWidth="0.6" fill="none" opacity="0.6" />
         <path d="M54.6,78.4L58.4,96L63.6,94L59.6,78Z" fill={`url(#${uid}-scarf)`} />
         <path d="M56.2,84.4L61,83.4M57.4,90L62.4,88.8" stroke="#e8dfc8" strokeWidth="0.7" opacity="0.8" />
         <path d="M58.4,96l0.6,2.6M60.2,95.4l0.6,2.6M62,94.8l0.6,2.6M63.4,94.2l0.5,2.4" stroke="#8a2f25" strokeWidth="0.8" strokeLinecap="round" />
-        <Rim uid={uid} d={head} color="#ffd9b0" op={0.45} w={1} />
-        <Rim uid={uid} d="M55,20.6C69,28 75.4,45 74.4,63C74,70 70.6,75 66,78.4" color="#fff4d6" op={0.4} w={0.9} />
+        <Rim uid={uid} d="M58.6,24.2C61.4,24.6 63,26.4 63,28.6C68.8,34.4 72.4,43.6 72.4,54.4C72.4,64 71,72 68,78" color="#fff4d6" op={0.5} w={0.9} />
       </>
     ),
   };
@@ -375,20 +509,25 @@ export function Mika({ uid, mood }) {
 
 // ----------------------------------------------------------------- Nyra Kell
 export function Nyra({ uid, mood }) {
-  const f = { cx: 50, cy: 42.5, rx: 11.6, ry: 15.2 };
-  const x = exprFor(mood, { bi: 1, mouth: -0.4, open: 0.9 });
-  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.76, 0.7, 0.26);
-  const skin = { deep: '#1e110b', shade: '#4a2c1e', base: '#7d4c33', light: '#ad7250', hi: '#e8b088', blood: '#9a4a30', bounce: '#5d636b' };
+  // the lieutenant: high cheekbones, a broad nose, full lips pressed flat on one side,
+  // straight heavy brows rising at the ends, a level stare. Dark skin sits on a lighter,
+  // cooler backdrop with a strong backlight so the face always separates.
+  const f = { cx: 50, cy: 42.5, rx: 11.4, ry: 15.4 };
+  const x = exprFor(mood, { bi: 0.8, mouth: -0.3, open: 0.92 });
+  const head = headPath(f.cx, f.cy, f.rx, f.ry, 0.74, 0.72, 0.24);
+  const skin = { deep: '#2e1a10', shade: '#5a3626', base: '#8a5638', light: '#b97a54', hi: '#f0bc92', blood: '#a4502f', bounce: '#7a8290' };
   const jkt = shoulders(72);
   const hair = 'M38,41C37.4,30.4 42.4,26.4 50,26C58,25.6 63,30 62.4,41L61.4,37C60,32.4 56,30.8 50,30.8C44,30.8 40,32.4 38.9,41Z';
   return {
-    bg: ['#4a4f57', '#0c0d10'],
-    glow: '#d6b47a',
+    bg: ['#6a7890', '#10151d'],
+    glow: '#f0d49a',
     under: '#e0782b',
+    focus: 45,
+    halo: 0.66,
     art: (
       <>
         <defs>
-          <Lit3 id={`${uid}-jkt`} c={['#141518', '#33373d', '#666d77']} />
+          <Lit3 id={`${uid}-jkt`} c={['#1b1d22', '#3c4148', '#737b86']} />
           <Metal id={`${uid}-brass`} kind="brass" />
           <Metal id={`${uid}-iron`} kind="iron" x1={0.7} y1={0} x2={0.3} y2={1} />
         </defs>
@@ -444,10 +583,38 @@ export function Nyra({ uid, mood }) {
             head={head}
             skin={skin}
             x={x}
-            o={{ brow: '#0d0907', lip: '#5a2a1c', lipDark: '#2e160e', lipOp: 0.7, ink: '#0a0706', white: '#d9cfc0', iris: '#3a2214', irisLight: '#e0782b', eyeW: 2.8, eyeH: 1.6, hairShadow: 0.3 }}
+            o={{
+              brow: '#0d0907',
+              browW: 1.6,
+              browArch: 0.35,
+              browGap: 3.4,
+              browSlope: -0.45,
+              browRaise: [0, -0.25],
+              lip: '#6a3222',
+              lipDark: '#3a1c12',
+              lipOp: 0.8,
+              upperLip: 1.3,
+              lowerLip: 2.3,
+              mouthW: 3.2,
+              smirk: -0.5,
+              noseAt: 0.37,
+              noseW: 1.25,
+              bridge: 1.1,
+              hollow: 0.55,
+              ink: '#0a0706',
+              white: '#d9cfc0',
+              iris: '#3a2214',
+              irisLight: '#e0782b',
+              eyeW: 2.75,
+              eyeH: 1.55,
+              eyeSep: 5.35,
+              hairShadow: 0.3,
+              bounceOp: 0.55,
+            }}
           />
           {/* soot smudge */}
-          <ellipse cx="57.6" cy="50.4" rx="2.8" ry="1" transform="rotate(-18 57.6 50.4)" fill="#141518" opacity="0.45" filter={`url(#${uid}-soft)`} />
+          <ellipse cx="57.6" cy="50.4" rx="3.2" ry="1.3" transform="rotate(-18 57.6 50.4)" fill="#141518" opacity="0.16" />
+          <ellipse cx="57.6" cy="50.4" rx="2.2" ry="0.7" transform="rotate(-18 57.6 50.4)" fill="#141518" opacity="0.25" />
           {/* cropped hair, shaved sides */}
           <path d="M38.2,34L38.9,41L37.9,41C37.6,38 37.7,36 38.2,34ZM61.8,34L61.2,41L62.3,41C62.5,38 62.4,36 61.8,34Z" fill="#2e2622" opacity="0.8" />
           <Hair
@@ -486,6 +653,7 @@ export function Vex({ uid, mood }) {
   return {
     bg: ['#46505e', '#0c0e12'],
     glow: '#d6b47a',
+    focus: 45,
     art: (
       <>
         <defs>
@@ -533,22 +701,31 @@ export function Vex({ uid, mood }) {
             skin={skin}
             x={x}
             o={{
+              // the chancellor: hooded, amused eyes under bushy drooping brows, the left one
+              // raised; a long nose with a broad bridge; a politician's half smile
+              eye: 'hooded',
+              crow: true,
               brow: '#8a8d93',
               browLit: '#fffaf0',
-              browW: 1.45,
+              browW: 1.95,
+              browArch: 0.8,
+              browSlope: 0.55,
+              browRaise: [0.8, 0],
               lip: '#8a5a4a',
               lipOp: 0.45,
               lids: '#7a5444',
               iris: '#5a6a7a',
               irisLight: '#d9e2e8',
               eyeW: 2.7,
-              eyeH: 1.45,
+              eyeH: 1.6,
               mouthAt: 0.66,
+              smirk: 0.6,
+              noseAt: 0.42,
+              noseW: 1.1,
+              bridge: 1.4,
               hairShadow: 0.22,
               lines: (g) =>
                 `M43,33.6Q50,32.6 57,33.6M44.6,35.6Q50,35 55.4,35.6` +
-                `M${g.cx + g.ex + g.ew + 0.6},${g.eyeY - 0.6}l1.6,-0.8M${g.cx + g.ex + g.ew + 0.8},${g.eyeY + 0.6}l1.6,0.2` +
-                `M${g.cx - g.ex - g.ew - 0.6},${g.eyeY - 0.6}l-1.6,-0.8` +
                 `M${g.cx - 3.2},${g.noseY + 1.2}Q${g.cx - 4.6},${g.mouthY - 1} ${g.cx - 4.6},${g.mouthY + 1.2}M${g.cx + 3.2},${g.noseY + 1.2}Q${g.cx + 4.6},${g.mouthY - 1} ${g.cx + 4.6},${g.mouthY + 1.2}`,
             }}
           />

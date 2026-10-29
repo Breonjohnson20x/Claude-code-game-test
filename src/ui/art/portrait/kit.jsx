@@ -1,4 +1,4 @@
-// Shared painting kit for the portraits: gradients, metals, soft-light filter,
+// Shared painting kit for the portraits: gradients, metals, the soft-brush filter,
 // procedural hair strands, rim light and cloth shading. Everything lives in the
 // 100×100 portrait viewBox and is keyed by the portrait's uid so several
 // portraits can share a page.
@@ -69,17 +69,16 @@ export function Metal({ id, kind = 'gold', x1 = 0.85, y1 = 0, x2 = 0.2, y2 = 1 }
   );
 }
 
-/** Soft-brush filters in user space, so the softness scales with the portrait size. */
+/**
+ * The one soft-brush filter, in user space so the softness scales with the portrait size.
+ * Only the skin planes of a human face use it; everything else is feathered with
+ * gradients, so a page of a dozen portraits pays for at most one blur each.
+ */
 export function SoftFilters({ uid }) {
   return (
-    <>
-      <filter id={`${uid}-soft`} x="0" y="0" width="100" height="100" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-        <feGaussianBlur stdDeviation="1.15" />
-      </filter>
-      <filter id={`${uid}-soft2`} x="0" y="0" width="100" height="100" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-        <feGaussianBlur stdDeviation="2.6" />
-      </filter>
-    </>
+    <filter id={`${uid}-soft`} x="0" y="0" width="100" height="100" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+      <feGaussianBlur stdDeviation="1.15" />
+    </filter>
   );
 }
 
@@ -103,7 +102,8 @@ export function Hair({ uid, name, d, tones, fan, sheen, sheenW = 1.8, w = 0.32, 
       <g clipPath={`url(#${cid})`} fill="none" strokeLinecap="round">
         {dk && <path d={dk} stroke={deep} strokeWidth={w * 1.3} opacity={0.42 * so} />}
         {lt && <path d={lt} stroke={light} strokeWidth={w} opacity={0.36 * so} />}
-        {sheen && <path d={sheen} stroke={glint || light} strokeWidth={sheenW} opacity={sheenOp} filter={`url(#${uid}-soft)`} />}
+        {sheen && <path d={sheen} stroke={glint || light} strokeWidth={sheenW * 1.6} opacity={sheenOp * 0.18} />}
+        {sheen && <path d={sheen} stroke={glint || light} strokeWidth={sheenW * 0.8} opacity={sheenOp * 0.32} />}
         {sheen && <path d={sheen} stroke={glint || light} strokeWidth={sheenW * 0.3} opacity={sheenOp * 0.9} />}
       </g>
       {edge && <path d={d} fill="none" stroke={edge} strokeWidth="0.35" opacity="0.5" />}
@@ -111,11 +111,22 @@ export function Hair({ uid, name, d, tones, fan, sheen, sheenW = 1.8, w = 0.32, 
   );
 }
 
+/** Ember bounce from below-left on the shadow edge of a shape: the counterpart of Rim. */
+export function Bounce({ uid, d, color = '#e0782b', op = 0.45, w = 1.4 }) {
+  return (
+    <g mask={`url(#${uid}-rimL)`} fill="none" strokeLinejoin="round">
+      <path d={d} stroke={color} strokeOpacity={op * 0.25} strokeWidth={w * 2.2} />
+      <path d={d} stroke={color} strokeOpacity={op * 0.7} strokeWidth={w * 0.6} />
+    </g>
+  );
+}
+
 /** Rim light on the right edge of a shape: a soft bloom plus a crisp line, faded in across the middle. */
 export function Rim({ uid, d, color = '#fff3d0', op = 0.55, w = 1.2 }) {
   return (
     <g mask={`url(#${uid}-rim)`} fill="none" strokeLinejoin="round">
-      <path d={d} stroke={color} strokeOpacity={op * 0.3} strokeWidth={w * 1.6} filter={`url(#${uid}-soft)`} />
+      <path d={d} stroke={color} strokeOpacity={op * 0.14} strokeWidth={w * 2.4} />
+      <path d={d} stroke={color} strokeOpacity={op * 0.22} strokeWidth={w * 1.3} />
       <path d={d} stroke={color} strokeOpacity={op * 0.9} strokeWidth={w * 0.55} />
     </g>
   );
@@ -124,6 +135,7 @@ export function Rim({ uid, d, color = '#fff3d0', op = 0.55, w = 1.2 }) {
 /**
  * Cloth shading for the bust: clip to the garment and paint soft form shadow on the left,
  * the cast shadow of the head and neck, and a key-light sheen on the right shoulder.
+ * The soft shapes are pre-feathered radial gradients, so no blur filter is needed.
  */
 export function ClothShade({ uid, name, d, deep = '#04070d', light = '#fff4d6', neckY = 72, op = 1, folds }) {
   const cid = `${uid}-cs${name}`;
@@ -133,16 +145,17 @@ export function ClothShade({ uid, name, d, deep = '#04070d', light = '#fff4d6', 
         <clipPath id={cid}>
           <path d={d} />
         </clipPath>
+        <RG id={`${cid}d`} stops={[[0, deep, 0.6 * op], [0.55, deep, 0.4 * op], [1, deep, 0]]} />
+        <RG id={`${cid}l`} stops={[[0, light, 0.3 * op], [0.55, light, 0.16 * op], [1, light, 0]]} />
       </defs>
       <g clipPath={`url(#${cid})`}>
-        <g filter={`url(#${uid}-soft2)`}>
-          <ellipse cx="14" cy="100" rx="30" ry="26" fill={deep} opacity={0.55 * op} />
-          <ellipse cx="47" cy={neckY + 1} rx="13" ry="4.5" fill={deep} opacity={0.5 * op} />
-          <ellipse cx="78" cy={neckY + 6} rx="13" ry="5" fill={light} opacity={0.26 * op} />
-        </g>
+        <ellipse cx="14" cy="100" rx="36" ry="32" fill={`url(#${cid}d)`} />
+        <ellipse cx="47" cy={neckY + 1} rx="17" ry="7" fill={`url(#${cid}d)`} />
+        <ellipse cx="78" cy={neckY + 6} rx="17" ry="8" fill={`url(#${cid}l)`} />
         {folds && (
           <g fill="none" strokeLinecap="round">
-            <path d={folds} stroke={deep} strokeWidth="1.6" opacity={0.35 * op} filter={`url(#${uid}-soft)`} />
+            <path d={folds} stroke={deep} strokeWidth="2.6" opacity={0.12 * op} />
+            <path d={folds} stroke={deep} strokeWidth="1.2" opacity={0.3 * op} />
             <path d={folds} stroke={light} strokeWidth="0.35" opacity={0.18 * op} transform="translate(0.9 -0.3)" />
           </g>
         )}

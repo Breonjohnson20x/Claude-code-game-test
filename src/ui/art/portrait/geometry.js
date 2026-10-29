@@ -21,14 +21,16 @@ export function headPath(cx, cy, rx, ry, jx = 0.74, jy = 0.7, cw = 0.26) {
 export const shoulders = (top = 70, spread = 1, cx = 50) =>
   `M${cx - 46 * spread},104C${cx - 44 * spread},${top + 14} ${cx - 32 * spread},${top + 4} ${cx - 14},${top}L${cx + 14},${top}C${cx + 32 * spread},${top + 4} ${cx + 44 * spread},${top + 14} ${cx + 46 * spread},104Z`;
 
+// Moods are carried by the face first: inner brows (bi, + = knitted down), outer brows (bo),
+// mouth corners, eye opening, plus a frown crease, smiling lower lids or worry lines.
 const EXPR = {
   neutral: { bi: 0, bo: 0, mouth: 0, open: 1, blush: 0 },
-  grim: { bi: 1.3, bo: -0.3, mouth: -1, open: 0.72, blush: 0 },
-  warm: { bi: -0.5, bo: -0.2, mouth: 1, open: 0.88, blush: 0.4 },
-  alarmed: { bi: -1.9, bo: -1.1, mouth: 'open', open: 1.35, blush: 0 },
+  grim: { bi: 2.1, bo: -0.3, mouth: -1.4, open: 0.66, blush: 0, crease: 1 },
+  warm: { bi: -0.7, bo: 0.15, mouth: 1.6, open: 0.8, blush: 0.45, smile: 1 },
+  alarmed: { bi: -2.7, bo: -0.7, mouth: 'open', open: 1.45, blush: 0, worry: 1 },
 };
 
-/** Mood → brow (inner/outer), mouth curve, eye opening and blush, offset by a character's resting face. */
+/** Mood → brow (inner/outer), mouth curve, eye opening, blush and accents, offset by a character's resting face. */
 export function exprFor(mood, base = {}) {
   const e = EXPR[mood] || EXPR.neutral;
   return {
@@ -37,6 +39,9 @@ export function exprFor(mood, base = {}) {
     mouth: e.mouth === 'open' ? 'open' : e.mouth + (base.mouth || 0),
     open: e.open * (base.open || 1),
     blush: Math.max(e.blush, base.blush || 0),
+    crease: e.crease || 0,
+    smile: e.smile || 0,
+    worry: e.worry || 0,
   };
 }
 
@@ -66,4 +71,24 @@ export function strands({ x, y, a0, a1, rIn = 0, rOut = 20, n = 18, seed = 1, cu
     else dark += seg;
   }
   return [dark, lite];
+}
+
+/**
+ * Tapered locks (hair spikes, fur tufts) fanning out between angles a0..a1 around (x, y):
+ * each lock leaves the core at radius rIn with half-width `w` (radians), bends by `bend`
+ * and ends in a fine tip near rOut. Returns one path string; fill it over a core shape.
+ */
+export function locks({ x, y, a0, a1, n = 9, rIn = 8, rOut = 20, w = 0.16, bend = 0.25, seed = 1, jitter = 0.2 }) {
+  const rnd = mulberry32(seed);
+  let d = '';
+  const pt = (a, r) => `${r1(x + Math.cos(a) * r)},${r1(y + Math.sin(a) * r)}`;
+  for (let i = 0; i < n; i += 1) {
+    const a = a0 + (a1 - a0) * ((i + 0.5 + (rnd() - 0.5) * 0.5) / n);
+    const ww = w * (0.75 + rnd() * 0.5);
+    const r = rOut * (1 - jitter + rnd() * jitter * 2);
+    const b = bend * (0.6 + rnd() * 0.8);
+    const mid = rIn + (r - rIn) * 0.55;
+    d += `M${pt(a - ww, rIn)}Q${pt(a - ww * 0.3 + b * 0.3, mid)} ${pt(a + b * 0.5, r)}Q${pt(a + ww * 0.5 + b * 0.25, mid)} ${pt(a + ww, rIn)}Z`;
+  }
+  return d;
 }
