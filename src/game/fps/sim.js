@@ -143,7 +143,7 @@ export function createFps(config = {}) {
   };
   if (config.stage && STAGES.includes(config.stage)) warpToStage(state, config.stage);
   saveCheckpoint(state, true);
-  emit(state, 'radio', { key: 'start' });
+  if (!config.stage) emit(state, 'radio', { key: 'start' });
   emit(state, 'objective', { text: state.objective.text });
   return state;
 }

@@ -180,6 +180,8 @@ void main() {
   p += side * position.y * aWidth;
   vUv = uv;
   vColor = aColor;
+  // a beam that passes right by the eye would fill the screen: let it thin out up close
+  vColor.a *= smoothstep(0.4, 7.0, distance(cameraPosition, p));
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
 const B_FRAG = /* glsl */ `
@@ -566,8 +568,8 @@ export function createFx(scene, level, quality, shared, reducedMotion) {
       const p = state.player;
       const flat = Math.max(8, Math.hypot(p.x - e.x, p.z - e.z));
       const slope = (p.y + 0.95 - sy) / flat;
-      beams.add(sx, sy, sz, sx + fx * 70, sy + slope * 70, sz + fz * 70, 0.55, 1, 0.5, 0.18, 4);
-      beams.add(sx, sy, sz, sx + fx * 70, sy + slope * 70, sz + fz * 70, 2.2, 1, 0.35, 0.1, 0.8);
+      beams.add(sx, sy, sz, sx + fx * 70, sy + slope * 70, sz + fz * 70, 0.4, 1, 0.5, 0.18, 1.5);
+      beams.add(sx, sy, sz, sx + fx * 70, sy + slope * 70, sz + fz * 70, 1.5, 1, 0.35, 0.1, 0.18);
       if (rnd() < 0.6) {
         const d = 6 + rnd() * 50;
         const gx = sx + fx * d;

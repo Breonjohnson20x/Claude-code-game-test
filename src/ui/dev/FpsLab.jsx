@@ -56,6 +56,9 @@ export default function FpsLab() {
         renderer.frame(state, state.events, 1 / 30, { ...view, skipRender: true });
       }
       let frames = 0;
+      const bench = num('bench', 0);
+      let benchSum = 0;
+      let benchN = 0;
       let last = performance.now();
       const loop = (now) => {
         if (dead) return;
@@ -69,10 +72,23 @@ export default function FpsLab() {
         } else {
           p.x += 0; // frozen
         }
+        const t0 = performance.now();
         renderer.frame(state, events, live ? dt : 1 / 60, view);
         frames += 1;
+        // &bench=N: draw N more frames and report the mean cost of one (ms)
+        if (bench > 0 && frames > 4) {
+          benchSum += performance.now() - t0;
+          benchN += 1;
+          if (benchN >= bench) {
+            globalThis.__frameMs = benchSum / benchN;
+            globalThis.__labReady = true;
+            return;
+          }
+          raf = requestAnimationFrame(loop);
+          return;
+        }
         if (frames === 4) {
-          globalThis.__labReady = true;
+          globalThis.__labReady = bench === 0;
           globalThis.__fpsStats = renderer.stats();
         }
         if (live || frames < 6) raf = requestAnimationFrame(loop);

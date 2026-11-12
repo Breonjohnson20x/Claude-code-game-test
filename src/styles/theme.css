@@ -1410,3 +1410,47 @@ html[data-motion="reduced"] *::after {
   scroll-behavior: auto !important;
 }
 html[data-motion="reduced"] .btn-royal::after { animation: none !important; opacity: 0 !important; }
+
+/* ── First-person mode HUD ─────────────────────────────────────────────── */
+.fps-cross i,
+.fps-hit i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  background: var(--color-parchment-100, #f3eee1);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.55);
+  border-radius: 1px;
+}
+.fps-hit i {
+  width: 2px;
+  height: 9px;
+  background: var(--color-parchment-100, #f3eee1);
+}
+.fps-hit[data-kind='head'] i {
+  background: var(--color-gold-300, #f0dc95);
+  height: 11px;
+}
+.fps-hit[data-kind='kill'] i {
+  background: var(--color-ember-300, #f4a35e);
+  height: 12px;
+  width: 3px;
+}
+.fps-line {
+  animation: fps-line-in 0.25s ease-out both;
+}
+@keyframes fps-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.fps-pad {
+  -webkit-tap-highlight-color: transparent;
+  backdrop-filter: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fps-line {
+    animation: none;
+  }
+}

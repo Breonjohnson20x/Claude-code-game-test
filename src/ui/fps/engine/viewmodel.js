@@ -188,12 +188,12 @@ void main() {
   vec2 q = vUv * 2.0 - 1.0;
   float r = length(q);
   if (r > 1.0) discard;
-  float lattice = smoothstep(0.1, 0.0, hex(q * 5.0 + vec2(0.0, uTime * 0.12)));
+  float lattice = 1.0 - smoothstep(0.0, 0.045, hex(q * 6.0 + vec2(0.0, uTime * 0.12)));
   float rim = smoothstep(0.72, 1.0, r);
   float pulse = 0.5 + 0.5 * sin(uTime * 3.0 - r * 9.0);
-  float a = (lattice * (0.2 + 0.25 * pulse) + rim * 0.75 + 0.05) * uPower * (1.0 - smoothstep(0.96, 1.0, r));
+  float a = (lattice * (0.1 + 0.12 * pulse) + rim * rim * 0.3 + 0.015) * uPower * (1.0 - smoothstep(0.9, 1.0, r));
   vec3 col = mix(vec3(1.0, 0.78, 0.36), vec3(1.0, 0.96, 0.8), rim * 0.5 + uHit);
-  gl_FragColor = vec4(col * a * (1.0 + uHit * 3.0), 1.0);
+  gl_FragColor = vec4(col * a * (1.0 + uHit * 2.0), 1.0);
 }`;
 
 export function createViewmodel(tex, env, quality, shared) {
@@ -264,8 +264,8 @@ export function createViewmodel(tex, env, quality, shared) {
 
   // the Shield Ward: a lattice disc on the left hand
   const wardMat = new THREE.ShaderMaterial({ vertexShader: WARD_VERT, fragmentShader: WARD_FRAG, uniforms: { uTime: { value: 0 }, uPower: { value: 0 }, uHit: { value: 0 } }, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-  const ward = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), wardMat);
-  ward.position.set(-0.06, -0.02, -0.72);
+  const ward = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), wardMat);
+  ward.position.set(-0.12, -0.03, -0.8);
   ward.visible = false;
   scene.add(ward);
 
@@ -357,8 +357,8 @@ export function createViewmodel(tex, env, quality, shared) {
     const down = (1 - S.raise) * 0.34 + S.sprint * 0.06 + (p.warding ? 0.07 : 0) + S.reloadK * 0.09 + S.land;
     holder.position.set(
       lerp(hip.x, 0, ads) + S.swayX * (1 - ads * 0.7) + Math.cos(S.bobT * 0.5) * 0.009 * bobK + S.sprint * -0.05,
-      lerp(hip.y, -gun.sightY - (gun.scoped ? 0.0 : 0.0), ads) - down + S.swayY * (1 - ads * 0.7) + Math.abs(Math.sin(S.bobT * 0.5)) * 0.008 * bobK + S.kickY + Math.sin(time * 1.3) * 0.0015,
-      lerp(hip.z, gun.scoped ? -0.2 : -0.3, ads) + S.kickZ,
+      lerp(hip.y, -gun.sightY - 0.004, ads) - down + S.swayY * (1 - ads * 0.7) + Math.abs(Math.sin(S.bobT * 0.5)) * 0.008 * bobK + S.kickY + Math.sin(time * 1.3) * 0.0015,
+      lerp(hip.z, gun.scoped ? -0.44 : -0.5, ads) + S.kickZ,
     );
     holder.rotation.set(
       S.kickR * (1 - ads * 0.5) - (1 - S.raise) * 0.7 + S.reloadK * 0.5 - S.sprint * 0.25 - S.swayY * 0.8,

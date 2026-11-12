@@ -65,6 +65,8 @@ export function GameProvider({ children, storage }) {
   const [slots, setSlots] = useState(() => saves.listSlots());
   const [overlay, setOverlay] = useState(null);
   const [training, setTraining] = useState(false);
+  // the first-person mission: null, or its launch parameters (a link with ?fps opens it directly)
+  const [fps, setFps] = useState(() => (new URLSearchParams(globalThis.location?.search ?? '').has('fps') ? {} : null));
   const [toasts, setToasts] = useState([]);
   const [lastResult, setLastResult] = useState(null);
 
@@ -105,8 +107,9 @@ export function GameProvider({ children, storage }) {
 
   const ambientTheme = state ? PHASE_AMBIENT[state.phase] ?? null : training ? 'war_room' : 'title';
   useEffect(() => {
+    if (fps) return; // the first-person mode scores its own fight
     audio.ambient(ambientTheme);
-  }, [ambientTheme]);
+  }, [ambientTheme, fps]);
 
   const notify = useCallback((text, tone = 'info') => {
     const id = ++toastSeq;
@@ -267,6 +270,12 @@ export function GameProvider({ children, storage }) {
     setTraining(true);
   }, []);
   const closeTraining = useCallback(() => setTraining(false), []);
+  const openFps = useCallback((params = {}) => {
+    audio.unlock();
+    setOverlay(null);
+    setFps(params);
+  }, []);
+  const closeFps = useCallback(() => setFps(null), []);
 
   const view = useMemo(() => (state ? getView(state) : null), [state]);
 
@@ -294,13 +303,16 @@ export function GameProvider({ children, storage }) {
       training,
       openTraining,
       closeTraining,
+      fps,
+      openFps,
+      closeFps,
       toasts,
       notify,
       generators,
       aiStatus,
       aiOn: settings.aiEnabled && Boolean(settings.apiKey),
     }),
-    [state, view, act, lastResult, settings, updateSettings, slots, refreshSlots, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot, quitToTitle, overlay, closeOverlay, training, openTraining, closeTraining, toasts, notify, generators, aiStatus],
+    [state, view, act, lastResult, settings, updateSettings, slots, refreshSlots, startNewGame, loadSlot, saveSlot, removeSlot, exportSlot, importSlot, quitToTitle, overlay, closeOverlay, training, openTraining, closeTraining, fps, openFps, closeFps, toasts, notify, generators, aiStatus],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { GameProvider, useGame } from './ui/game/GameProvider.jsx';
 import { PHASES } from './game/core/state.js';
 import { Toasts } from './ui/kit/kit.jsx';
@@ -18,6 +18,8 @@ import { DossierSheet } from './ui/overlays/DossierSheet.jsx';
 // Dev only: /?lab=duel renders the duel lab (src/ui/dev/DuelLab.jsx); never part of a build.
 const DuelLab = import.meta.env.DEV ? lazy(() => import('./ui/dev/DuelLab.jsx')) : null;
 const FpsLab = import.meta.env.DEV ? lazy(() => import('./ui/dev/FpsLab.jsx')) : null;
+// The first-person mission ships three.js: loaded only when it is opened.
+const FpsScreen = lazy(() => import('./ui/fps/FpsScreen.jsx'));
 const LAB_NAME = import.meta.env.DEV ? new URLSearchParams(globalThis.location?.search ?? '').get('lab') : null;
 const LAB = LAB_NAME === 'duel';
 
@@ -30,12 +32,37 @@ const PHASE_SCREENS = {
 };
 
 function Shell() {
-  const { state, overlay, closeOverlay, toasts, training } = useGame();
+  const { state, overlay, closeOverlay, toasts, training, fps, openFps, closeFps } = useGame();
+  const [fpsRun, setFpsRun] = useState(0);
   const Screen = state ? PHASE_SCREENS[state.phase] ?? WarRoomScreen : training ? TrainingScreen : TitleScreen;
   const screenKey = state ? `${state.cycle.number}-${state.turn}-${state.phase}` : training ? 'training' : 'title';
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [screenKey]);
+  if (fps && !state) {
+    const q = new URLSearchParams(globalThis.location?.search ?? '');
+    const params = { ...fps };
+    // dev and test hooks: /?fps&stage=depot&autostart=1&quality=low
+    for (const k of ['stage', 'quality', 'difficulty']) if (q.get(k) && params[k] == null) params[k] = q.get(k);
+    if (q.get('autostart') === '1') params.autostart = true;
+    if (q.get('showfps') === '1') params.showFps = true;
+    if (import.meta.env.DEV && q.get('god') === '1') params.god = true;
+    return (
+      <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center bg-navy-950 font-display tracking-widest text-gold-300">Loading the Greywater Front…</div>}>
+        <FpsScreen
+          key={fpsRun}
+          params={params}
+          onExit={(why) => {
+            if (why === 'restart') {
+              setFpsRun((n) => n + 1);
+              openFps(fps);
+            } else closeFps();
+          }}
+        />
+        <Toasts toasts={toasts} />
+      </Suspense>
+    );
+  }
   return (
     <>
       <Screen key={screenKey} />

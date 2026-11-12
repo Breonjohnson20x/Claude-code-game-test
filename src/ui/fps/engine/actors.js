@@ -375,7 +375,7 @@ function buildWalker(M, scene) {
   const coneGeo = new THREE.CylinderGeometry(0.4, 5.2, 60, 28, 1, true);
   coneGeo.translate(0, -30, 0);
   coneGeo.rotateX(Math.PI / 2);
-  const coneMat = new THREE.ShaderMaterial({ vertexShader: CONE_VERT, fragmentShader: CONE_FRAG, uniforms: { uColor: { value: new THREE.Color(1, 0.9, 0.7) }, uPower: { value: 0.16 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const coneMat = new THREE.ShaderMaterial({ vertexShader: CONE_VERT, fragmentShader: CONE_FRAG, uniforms: { uColor: { value: new THREE.Color(1, 0.9, 0.7) }, uPower: { value: 0.09 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
   const cone = new THREE.Mesh(coneGeo, coneMat);
   cone.position.z = -0.7;
   cone.frustumCulled = false;
@@ -457,7 +457,7 @@ function poseWalker(w, e, state, events, time, dt) {
   w.flare.material.opacity = 0.6 * on;
   w.flare.material.color.setRGB(1, lerp(0.94, 0.5, charging), lerp(0.8, 0.2, charging));
   w.flare.scale.setScalar(lerp(2.2, 5, charging));
-  w.coneMat.uniforms.uPower.value = 0.15 * on * (e.state === 'lance' ? 0 : 1);
+  w.coneMat.uniforms.uPower.value = 0.09 * on * (e.state === 'lance' ? 0 : 1);
   w.coneMat.uniforms.uColor.value.setRGB(1, lerp(0.9, 0.55, charging), lerp(0.7, 0.25, charging));
   const ly = e.lampYaw ?? e.yaw;
   const lx = e.x - Math.sin(ly) * 2.4;
@@ -576,6 +576,7 @@ export function createActors(scene, level, tex, quality, shared) {
   scene.add(pilot.root);
   const lights = [];
   const noShadowBeyond = quality.id === 'low' ? 22 : 60;
+  const drawDistance = quality.id === 'low' ? 85 : 150; // the fog has taken them by then
 
   function update(state, events, time, dt, camera) {
     for (const ev of events) {
@@ -592,7 +593,7 @@ export function createActors(scene, level, tex, quality, shared) {
         continue;
       }
       const dist = Math.hypot(e.x - camera.position.x, e.z - camera.position.z);
-      const show = !e.dormant && dist < 150;
+      const show = !e.dormant && dist < drawDistance;
       r.root.visible = show;
       if (!show) continue;
       poseSoldier(r, e, state, time, dt);
