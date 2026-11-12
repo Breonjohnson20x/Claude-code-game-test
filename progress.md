@@ -1,0 +1,5 @@
+Original prompt: implement the Greywater polish, mobile and PC playability, and lore integration plan.
+
+Added a first-person Greywater option to the turn-four skirmish and a validated result transition that records the pilot choice and Mara's memory. Three targeted tests and all 196 unit tests passed; build and lint passed (existing warnings). Inspected the turn-four screen. Still needed: complete campaign browser playthrough, real-device testing, visual/audio polish, deeper faction reactions, save compatibility testing, and art upgrades. The game client has no FPS text-state hook yet.
+
+Fixed premature dynasty completion: mission completion now autosaves without marking the reign complete. Four focused tests pass, including autosave/reload. The FPS browser suite was interrupted after its desktop screenshot timed out under software rendering. Old manual saves loaded before the mission can still rewind its outcome until the dynasty is committed; durable per-mission history is outstanding.

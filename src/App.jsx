@@ -32,14 +32,14 @@ const PHASE_SCREENS = {
 };
 
 function Shell() {
-  const { state, overlay, closeOverlay, toasts, training, fps, openFps, closeFps } = useGame();
+  const { state, overlay, closeOverlay, toasts, training, fps, openFps, closeFps, act } = useGame();
   const [fpsRun, setFpsRun] = useState(0);
   const Screen = state ? PHASE_SCREENS[state.phase] ?? WarRoomScreen : training ? TrainingScreen : TitleScreen;
   const screenKey = state ? `${state.cycle.number}-${state.turn}-${state.phase}` : training ? 'training' : 'title';
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [screenKey]);
-  if (fps && !state) {
+  if (fps && (!state || fps.campaign)) {
     const q = new URLSearchParams(globalThis.location?.search ?? '');
     const params = { ...fps };
     // dev and test hooks: /?fps&stage=depot&autostart=1&quality=low
@@ -52,6 +52,7 @@ function Shell() {
         <FpsScreen
           key={fpsRun}
           params={params}
+          onComplete={fps.campaign ? (result) => act({ type: 'GREYWATER_COMPLETE', result }) : undefined}
           onExit={(why) => {
             if (why === 'restart') {
               setFpsRun((n) => n + 1);

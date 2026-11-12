@@ -22,12 +22,14 @@ import { fallenList } from './content/names.js';
 import { res, rel, mem, counter, flag, chron, region } from './content/effectHelpers.js';
 import { beginPassing, advancePassing, chooseLegacies, beginNextCycle, passingFarewells, chronicleReadback, passingLegacyOptions } from './cycle/passing.js';
 import { YARD_FOES } from './duel/drills.js';
+import { chronicleLine } from './fps/lore.js';
 
 export const ACTION_TYPES = [
   'ISSUE_ORDER',
   'ISSUE_CUSTOM_ORDER',
   'CONTINUE',
   'BEGIN_DEPLOYMENT',
+  'GREYWATER_COMPLETE',
   'EXPEDITION_CHOICE',
   'EXPEDITION_DUEL_COMPLETE',
   'EXPEDITION_RETREAT',
@@ -301,6 +303,21 @@ function beginDeployment(state, { kind }) {
   return ok({ ...state, phase: PHASES.EXPEDITION, expedition: { ...exp, title: offer.title } }, { io: { autosave: 'expedition' } });
 }
 
+function greywaterComplete(state, { result }) {
+  const blocked = requirePhase(state, PHASES.RESOLUTION);
+  if (blocked) return fail(state, blocked);
+  if (!deploymentOffers(state).some((offer) => offer.kind === 'skirmish')) return fail(state, 'Greywater is not available.');
+  if (!result?.won || !['released', 'held'].includes(result.outcome) || !Number.isSafeInteger(result.deaths) || result.deaths < 0 || !Array.isArray(result.dispatches) || result.dispatches.length > 5) return fail(state, 'Invalid mission result.');
+  const spared = result.outcome === 'released';
+  const s = commit(state, [
+    flag(`skirmish_done_${state.cycle.number}`, true),
+    flag(`greywater_pilot_released_${state.cycle.number}`, spared),
+    chron('The Greywater Front', chronicleLine({ spared, deaths: result.deaths, dispatches: result.dispatches.length }), 'battle'),
+    mem('mara', `GREYWATER_${state.cycle.number}`, spared ? 'The Sovereign accepted the walker pilot’s surrender at Greywater.' : 'The walker pilot was taken into custody at Greywater.', 5, spared ? 1 : 0),
+  ]);
+  return ok(s, { io: { autosave: 'expedition' } });
+}
+
 function finishExpedition(state) {
   const exp = state.expedition;
   const c = state.cycle.number;
@@ -465,6 +482,7 @@ const HANDLERS = {
   ISSUE_CUSTOM_ORDER: issueCustomOrder,
   CONTINUE: continueTurn,
   BEGIN_DEPLOYMENT: beginDeployment,
+  GREYWATER_COMPLETE: greywaterComplete,
   EXPEDITION_CHOICE: expeditionChoice,
   EXPEDITION_DUEL_COMPLETE: expeditionDuelComplete,
   EXPEDITION_RETREAT: expeditionRetreat,
