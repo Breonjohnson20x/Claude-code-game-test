@@ -451,7 +451,8 @@ function stepPlayer(state, inp, dt, rng, edge) {
     mz /= ml;
   }
   const depth = Math.max(0, WATER_Y - p.y);
-  p.sprinting = !!inp.sprint && mz > 0.3 && !wantCrouch && !inp.ads && !p.warding && p.grounded && depth < 0.5;
+  // pulling the trigger always wins over sprinting: you slow to a walk and the shot goes
+  p.sprinting = !!inp.sprint && mz > 0.3 && !wantCrouch && !inp.ads && !inp.fire && !p.warding && p.grounded && depth < 0.5;
   let speed = p.sprinting ? PLAYER.SPRINT : PLAYER.WALK;
   if (p.crouch > 0.5) speed = PLAYER.CROUCH;
   if (p.ads > 0.5) speed *= 0.62;

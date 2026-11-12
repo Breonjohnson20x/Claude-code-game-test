@@ -215,6 +215,27 @@ export default function FpsScreen({ onExit, params }) {
         events = events.concat(state.events);
         for (const ev of state.events) handle(ev);
       }
+      // touch and gamepad: the view slows as the crosshair nears an enemy, so thumbs can settle on it
+      if (input.usesAssist && settingsRef.current.aimAssist !== false && m === 'playing') {
+        const p = state.player;
+        const cp = Math.cos(p.pitch);
+        const fx = -Math.sin(p.yaw) * cp;
+        const fy = Math.sin(p.pitch);
+        const fz = -Math.cos(p.yaw) * cp;
+        let best = 1;
+        for (const e of state.enemies) {
+          if (e.hp <= 0 || e.dormant) continue;
+          const dx = e.x - p.x;
+          const dy = e.y + (e.type === 'walker' ? 4 : 1.0) - (p.y + 1.6);
+          const dz = e.z - p.z;
+          const d = Math.hypot(dx, dy, dz);
+          if (d > 70 || d < 0.5) continue;
+          const off = Math.acos(Math.min(1, (dx * fx + dy * fy + dz * fz) / d));
+          const reach = e.type === 'walker' ? 0.16 : 0.09;
+          if (off < reach) best = Math.min(best, 0.42 + 0.58 * (off / reach));
+        }
+        input.setAssist(best);
+      } else input.setAssist(1);
       const v = g.view;
       v.recoilPitch *= Math.exp(-dt * 11);
       v.hurt *= Math.exp(-dt * 3);
@@ -335,6 +356,14 @@ export default function FpsScreen({ onExit, params }) {
     }
     Object.assign(g, { begin, pause, resume, rise, closePaper, choose, flashToast });
 
+    // a game surface: no magnifier, no pinch zoom, no double-tap zoom while the fight is on
+    const blockGesture = (e) => {
+      if (modeRef.current === 'playing' && !e.target.closest?.('[role="dialog"]')) e.preventDefault();
+    };
+    const wrapEl = wrapRef.current;
+    wrapEl.addEventListener('touchstart', blockGesture, { passive: false });
+    wrapEl.addEventListener('touchmove', blockGesture, { passive: false });
+    wrapEl.addEventListener('gesturestart', blockGesture, { passive: false });
     const onResize = () => renderer.resize();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
     ro?.observe(canvas);
@@ -351,6 +380,9 @@ export default function FpsScreen({ onExit, params }) {
       ro?.disconnect();
       globalThis.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVis);
+      wrapEl.removeEventListener('touchstart', blockGesture);
+      wrapEl.removeEventListener('touchmove', blockGesture);
+      wrapEl.removeEventListener('gesturestart', blockGesture);
       input.dispose();
       sfx.dispose();
       renderer.dispose();
@@ -476,6 +508,10 @@ export default function FpsScreen({ onExit, params }) {
             <label className="mt-1 flex min-h-11 items-center gap-3 text-[15px]">
               <input type="checkbox" checked={settings.invertY} onChange={(e) => update({ invertY: e.target.checked })} className="h-5 w-5 accent-[#c9a227]" />
               Invert vertical look
+            </label>
+            <label className="flex min-h-11 items-center gap-3 text-[15px]">
+              <input type="checkbox" checked={settings.aimAssist !== false} onChange={(e) => update({ aimAssist: e.target.checked })} className="h-5 w-5 accent-[#c9a227]" />
+              Aim slowdown near enemies (touch and gamepad)
             </label>
             {dispatchesFound.length ? (
               <div className="mt-3">

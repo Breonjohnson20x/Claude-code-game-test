@@ -39,6 +39,8 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
   let enabled = false;
   let usedTouch = false;
   let padPrev = {};
+  let padActive = false;
+  let assist = 1; // 1 = free; lower = aim friction (set each frame by the screen for touch and pad)
 
   const sens = () => getSettings().sensitivity ?? 1;
   const inv = () => (getSettings().invertY ? -1 : 1);
@@ -116,6 +118,8 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
   const onPointerDown = (e) => {
     if (e.pointerType === 'mouse' || !enabled) return;
     usedTouch = true;
+    // a press on a button belongs to that button alone: it must not start the stick or the look
+    if (e.target?.closest?.('button')) return;
     const rect = element.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width * 0.42 && touch.stickId == null) {
@@ -141,13 +145,22 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
         dx /= l;
         dy /= l;
       }
-      touch.mx = dx;
-      touch.my = dy;
+      // a small dead zone so a resting thumb does not creep
+      const m = Math.hypot(dx, dy);
+      const k = m < 0.12 ? 0 : (m - 0.12) / 0.88 / (m || 1);
+      touch.mx = dx * k;
+      touch.my = dy * k;
     } else if (e.pointerId === touch.lookId || touch.buttons.has(e.pointerId)) {
       const b = touch.buttons.get(e.pointerId);
       const lx = b ? b.lx : touch.lx;
       const ly = b ? b.ly : touch.ly;
-      if (enabled) applyLook(e.clientX - lx, e.clientY - ly, 0.0052 * sens() * (held.ads || adsToggle ? 0.55 : 1));
+      if (enabled) {
+        const dx = e.clientX - lx;
+        const dy = e.clientY - ly;
+        // slow drags are precise, fast flicks turn further; friction near a target steadies the aim
+        const accel = 0.75 + Math.min(1, Math.hypot(dx, dy) / 14) * 0.75;
+        applyLook(dx, dy, 0.0046 * sens() * accel * assist * (held.ads || adsToggle ? 0.55 : 1));
+      }
       if (b) {
         b.lx = e.clientX;
         b.ly = e.clientY;
@@ -218,15 +231,16 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
     if (touch.stickId != null) {
       moveX = touch.mx;
       moveZ = -touch.my;
-      sprint = sprint || touch.my < -0.92;
+      sprint = sprint || (touch.my < -0.9 && !fire && !ads);
     }
     const pad = enabled ? readPad() : null;
     if (pad) {
+      if (Math.abs(pad.lx) + Math.abs(pad.ly) + Math.abs(pad.mx) + Math.abs(pad.my) > 0) padActive = true;
       if (Math.abs(pad.mx) + Math.abs(pad.my) > 0) {
         moveX = pad.mx;
         moveZ = -pad.my;
       }
-      applyLook(pad.lx * Math.abs(pad.lx), pad.ly * Math.abs(pad.ly), 2.6 * sens() * dt * (pad.ads ? 0.5 : 1));
+      applyLook(pad.lx * Math.abs(pad.lx), pad.ly * Math.abs(pad.ly), 2.6 * sens() * dt * assist * (pad.ads ? 0.5 : 1));
       fire = fire || pad.fire;
       ads = ads || pad.ads;
       ward = ward || pad.ward;
@@ -286,6 +300,13 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
     setLook(yaw, pitch) {
       look.yaw = yaw;
       look.pitch = pitch;
+    },
+    /** Aim friction for touch and gamepad: 1 = none. */
+    setAssist(v) {
+      assist = v;
+    },
+    get usesAssist() {
+      return usedTouch || padActive;
     },
     setEnabled(v) {
       enabled = v;

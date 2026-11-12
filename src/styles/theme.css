@@ -1449,6 +1449,19 @@ html[data-motion="reduced"] .btn-royal::after { animation: none !important; opac
   -webkit-tap-highlight-color: transparent;
   backdrop-filter: none;
 }
+/* a game surface, not a page: no text selection, long-press menu, zoom or rubber-band scroll */
+[data-fps-mode] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+[data-fps-mode] canvas,
+[data-fps-touch],
+[data-fps-hud] {
+  touch-action: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .fps-line {
     animation: none;

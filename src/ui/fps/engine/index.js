@@ -15,7 +15,7 @@ import { createViewmodel } from './viewmodel.js';
 import { createPost } from './post.js';
 
 export const QUALITY = Object.freeze({
-  low: { id: 'low', label: 'Low', maxPixelRatio: 1.5, scale: 0.7, shadows: 1024, shadowRange: 34, grass: 0.22, trees: 0.5, scans: 1, lights: 3, bloom: 1, msaa: 0, texDetail: 0.5, particles: 0.5, aniso: 2 },
+  low: { id: 'low', label: 'Low', maxPixelRatio: 1.5, scale: 0.7, shadows: 0, shadowRange: 34, grass: 0.22, trees: 0.5, scans: 1, lights: 3, bloom: 1, msaa: 0, texDetail: 0.5, particles: 0.5, aniso: 2 },
   medium: { id: 'medium', label: 'Medium', maxPixelRatio: 1.25, scale: 0.85, shadows: 2048, shadowRange: 44, grass: 0.55, trees: 1, scans: 2, lights: 5, bloom: 1, msaa: 2, texDetail: 1, particles: 0.8, aniso: 4 },
   high: { id: 'high', label: 'High', maxPixelRatio: 1.5, scale: 1, shadows: 2048, shadowRange: 52, grass: 1, trees: 1, scans: 2, lights: 7, bloom: 1, msaa: 4, texDetail: 1, particles: 1, aniso: 8 },
 });

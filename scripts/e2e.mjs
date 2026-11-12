@@ -430,6 +430,14 @@ async function fps(browser, baseUrl) {
       await page.getByRole('button', { name: 'Fire' }).dispatchEvent('pointerup', { pointerId: 7, pointerType: 'touch', clientX: 700, clientY: 330 });
       const b = await fpsState(page);
       if (!(b.shots > a.shots)) fail(where, 'holding the Fire button did not fire');
+      // pressing a button must not be read as the movement stick or a look drag
+      const c = await fpsState(page);
+      await page.getByRole('button', { name: 'Crouch' }).dispatchEvent('pointerdown', { pointerId: 8, pointerType: 'touch', clientX: 40, clientY: 210 });
+      await page.getByRole('button', { name: 'Crouch' }).dispatchEvent('pointermove', { pointerId: 8, pointerType: 'touch', clientX: 90, clientY: 180 });
+      await page.waitForTimeout(1200);
+      await page.getByRole('button', { name: 'Crouch' }).dispatchEvent('pointerup', { pointerId: 8, pointerType: 'touch', clientX: 90, clientY: 180 });
+      const d = await fpsState(page);
+      if (Math.hypot(d.x - c.x, d.z - c.z) > 0.25) fail(where, 'pressing Duck moved the player: the button was read as the stick');
       await page.screenshot({ path: join(OUT, 'fps', '06-phone.png') });
       const pauseBox = await page.getByRole('button', { name: 'Pause' }).boundingBox();
       await page.touchscreen.tap(pauseBox.x + pauseBox.width / 2, pauseBox.y + pauseBox.height / 2);

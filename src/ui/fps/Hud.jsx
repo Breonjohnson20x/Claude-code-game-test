@@ -182,12 +182,12 @@ export function Hud({ hud, lines, toast, fxRef, mode, touch, showFps }) {
   );
 }
 
-function Pad({ name, input, label, children, className, big }) {
+function Pad({ name, input, label, children, className, big, wide }) {
   return (
     <button
       type="button"
       aria-label={label}
-      className={cx('fps-pad pointer-events-auto absolute flex items-center justify-center rounded-full border border-parchment-100/35 bg-navy-950/45 font-display text-[12px] uppercase tracking-wider text-parchment-100 active:bg-gold-500/40', big ? 'h-[76px] w-[76px]' : 'h-[54px] w-[54px]', className)}
+      className={cx('fps-pad pointer-events-auto absolute flex items-center justify-center rounded-full border border-parchment-100/35 bg-navy-950/45 font-display text-[12px] uppercase tracking-wider text-parchment-100 active:bg-gold-500/40', wide ? 'h-[52px] w-[120px] rounded-lg' : big ? 'h-[84px] w-[84px]' : 'h-[58px] w-[58px]', className)}
       style={{ touchAction: 'none' }}
       onPointerDown={(e) => {
         e.preventDefault();
@@ -220,29 +220,29 @@ export function TouchControls({ input, hud, onPause, fxRef }) {
       <div ref={(el) => (fxRef.current.stick = el)} className="absolute left-0 top-0 h-28 w-28 rounded-full border border-parchment-100/30 bg-navy-950/30" style={{ opacity: 0 }} aria-hidden="true">
         <div ref={(el) => (fxRef.current.knob = el)} className="absolute left-1/2 top-1/2 -ml-6 -mt-6 h-12 w-12 rounded-full border border-gold-300/70 bg-gold-500/35" />
       </div>
-      <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] h-[236px] w-[236px]">
-        <Pad name="fire" input={input} label="Fire" big className="bottom-[10px] right-[66px] border-gold-400/70 bg-ember-600/35">
+      <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] h-[250px] w-[250px]">
+        <Pad name="fire" input={input} label="Fire" big className="bottom-[8px] right-[70px] border-gold-400/70 bg-ember-600/35">
           Fire
         </Pad>
-        <Pad name="ads" input={input} label="Aim" className={cx('bottom-[104px] right-[90px]', st.ads && 'border-gold-300 bg-gold-500/40')}>
+        <Pad name="ads" input={input} label="Aim" className={cx('bottom-[112px] right-[96px]', st.ads && 'border-gold-300 bg-gold-500/40')}>
           Aim
         </Pad>
-        <Pad name="jump" input={input} label="Jump" className="bottom-[20px] right-0">
+        <Pad name="jump" input={input} label="Jump" className="bottom-[18px] right-0">
           Jump
         </Pad>
-        <Pad name="ward" input={input} label="Shield Ward (hold)" className="bottom-[10px] right-[152px]">
+        <Pad name="ward" input={input} label="Shield Ward (hold)" className="bottom-[8px] right-[166px]">
           Ward
         </Pad>
-        <Pad name="reload" input={input} label="Reload" className="bottom-[88px] right-[22px]">
+        <Pad name="reload" input={input} label="Reload" className="bottom-[92px] right-[20px]">
           Load
         </Pad>
-        <Pad name="pulse" input={input} label="Arc Pulse" className={cx('bottom-[170px] right-[58px]', hud.pulse >= 1 && 'border-gold-300')}>
+        <Pad name="pulse" input={input} label="Arc Pulse" className={cx('bottom-[184px] right-[62px]', hud.pulse >= 1 && 'border-gold-300')}>
           Pulse
         </Pad>
-        <Pad name="melee" input={input} label="Blade" className="bottom-[84px] right-[158px]">
+        <Pad name="melee" input={input} label="Blade" className="bottom-[84px] right-[170px]">
           Blade
         </Pad>
-        <Pad name="swap" input={input} label="Swap weapon" className="bottom-[156px] right-0">
+        <Pad name="swap" input={input} label="Swap weapon" className="bottom-[166px] right-0">
           Swap
         </Pad>
       </div>
@@ -250,11 +250,11 @@ export function TouchControls({ input, hud, onPause, fxRef }) {
         Duck
       </Pad>
       {hud.prompt ? (
-        <Pad name="interact" input={input} label={hud.prompt.text} className="left-1/2 top-[66%] h-[52px] w-[120px] -translate-x-1/2 rounded-lg border-gold-400/80 bg-gold-500/30">
+        <Pad name="interact" input={input} label={hud.prompt.text} wide className="left-1/2 top-[66%] -translate-x-1/2 border-gold-400/80 bg-gold-500/30">
           Use
         </Pad>
       ) : null}
-      <button type="button" aria-label="Pause" onClick={onPause} className="pointer-events-auto absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[max(0.5rem,env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full border border-parchment-100/35 bg-navy-950/45 text-parchment-100">
+      <button type="button" aria-label="Pause" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onPause(); }} onClick={(e) => { if (e.detail === 0) onPause(); }} style={{ touchAction: 'none' }} className="pointer-events-auto absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[max(0.5rem,env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full border border-parchment-100/35 bg-navy-950/45 text-parchment-100">
         <svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true">
           <rect x="1" y="1" width="4" height="14" fill="currentColor" />
           <rect x="9" y="1" width="4" height="14" fill="currentColor" />

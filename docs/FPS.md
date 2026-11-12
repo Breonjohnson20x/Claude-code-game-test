@@ -59,7 +59,13 @@ Difficulty (`story`, `soldier`, `veteran`) scales enemy damage and aim, never th
 | Use | E | Use (appears when needed) | B |
 | Pause | Esc or P | pause button | Start |
 
-Sensitivity and inverted look are in the pause menu; difficulty and graphics quality on the
+On touch: a press on a button belongs to that button alone (it never starts the stick or a look
+drag); a held button also drags the view, so one thumb can fire and aim; slow drags are precise
+and fast flicks turn further; the view slows as the crosshair nears an enemy (also on gamepad;
+it can be turned off in the pause menu); pulling the trigger always wins over sprinting. The Low
+graphics tier (the default on phones) draws no shadow pass.
+
+Sensitivity, inverted look and aim slowdown are in the pause menu; difficulty and graphics quality on the
 briefing. Settings and the best time are kept in `localStorage` under `elvia.fps.v1`.
 
 ## Simulation (`src/game/fps/`)
@@ -151,7 +157,7 @@ first), `bot`, `warm` (seconds of effects before the still), `live=1`, `quality`
 
 ## Tests
 
-- `src/game/fps/fps.test.js` (25 tests): level sanity, movement and collision, weapons, ward,
+- `src/game/fps/fps.test.js` (26 tests): level sanity, movement and collision, weapons, ward,
   pulse, fuel, pickups, checkpoints, determinism, every attack announced, a jump clears the
   stomp, idle loses, and bots finish the mission on Story, Soldier and Veteran.
 - `npm run e2e -- --fps`: the real screen in headless Chromium with software WebGL: opened from

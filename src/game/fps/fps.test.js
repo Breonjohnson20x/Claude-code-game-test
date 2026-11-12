@@ -148,6 +148,13 @@ describe('the Greywater Front: rules', () => {
     expect(s.stats.shots).toBe(shots.length);
   });
 
+  it('the trigger wins over sprinting: a thumb pushed fully forward can still shoot', () => {
+    const s = createFps({ seed: 1 });
+    const ev = run(s, 1, { moveZ: 1, sprint: true, fire: true, yaw: 0, pitch: 0.3 });
+    expect(ev.filter((e) => e.type === 'shot').length).toBeGreaterThan(5);
+    expect(s.player.sprinting).toBe(false);
+  });
+
   it('the Sunlance fires once per pull', () => {
     const s = createFps({ seed: 1 });
     run(s, 0.6, (st, i) => ({ weapon: i === 0 ? 'lance' : undefined, yaw: 0, pitch: 0.4 }));
