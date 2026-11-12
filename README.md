@@ -38,6 +38,13 @@ Edge (Android, desktop) and press **Install on this device** on the title screen
 iPad, tap Share → **Add to Home Screen**. After the first visit it plays fully offline (the
 optional Claude narrator still needs a connection).
 
+### The Greywater Front (first person)
+
+From the title screen, **The Greywater Front** opens a first-person mission in the same world:
+walk the frontier road, take back the checkpoint, cross the ford and bring down a Syndicate
+walker. Mouse and keyboard, touch (turn your phone sideways) or a gamepad. Controls, tuning and
+how it is built: [docs/FPS.md](docs/FPS.md). Add `?fps` to the address to open it directly.
+
 ### Controls
 
 - **War Room, march, campfire, Passing:** tap or click; everything also works with the keyboard

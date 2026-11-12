@@ -30,6 +30,7 @@ src/
     content/            crises.js · expedition.js · campfire.js · legacies.js · names.js · effectHelpers.js
     cycle/              passing.js (the Passing and the Return)
     duel/               engine.js · archetypes.js · analysis.js · lines.js · bots.js
+    fps/                level.js · physics.js · combat.js · ai.js · sim.js · lore.js · bots.js (first-person mission)
     save/               saveSystem.js · storage.js · migrate.js · dynasty.js
     ai/                 client.js · generators.js · prompts.js · schemas.js · cache.js · status.js
     dev/                scenarios.js (dev-only states built through the controller)
@@ -41,7 +42,8 @@ src/
     screens/            Title · WarRoom · Resolution · Expedition · Campfire · Passing (+ helper folders)
     overlays/           Settings · Saves · Chronicle · Dossier (+ helper folders)
     duel/               DuelScreen.jsx · hud.jsx · render/ (stages, foes, telegraph, player, fx, post)
-    dev/                DuelLab.jsx (dev-only duel lab, /?lab=duel)
+    fps/                FpsScreen.jsx · Hud.jsx · input.js · sfx.js · engine/ (three.js: textures, sky, world, actors, viewmodel, fx, post)
+    dev/                DuelLab.jsx (/?lab=duel) · FpsLab.jsx (/?lab=fps), dev only
     art/                RegionScene · WarRoomBackdrop · CampfireScene · Portrait · FactionCrest · ArchitectSymbol · Ornaments · Atmosphere · scene/ · portrait/
     audio/              audio.js (Web Audio engine + haptics)
     pwa.js              service worker registration and the install prompt (useInstallState)

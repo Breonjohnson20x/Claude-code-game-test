@@ -23,6 +23,7 @@ npm run e2e                           # Playwright sweep + playthrough, phone an
 npm run e2e -- --sweep                # only the scenario sweep
 npm run e2e -- --play                 # only the UI playthrough
 npm run e2e -- --pwa                  # only the installable/offline build check
+npm run e2e -- --fps                  # only the first-person mission check (software WebGL)
 ```
 
 A change is done when all of these pass and you have looked at the e2e screenshots. In Claude
@@ -33,7 +34,7 @@ Code, the project skill `verify-elvia` (`.claude/skills/verify-elvia/SKILL.md`) 
 Tests sit next to the code (`*.test.js`). They are pure Node: no DOM, no network. AI tests use a
 fake `fetch`, and save tests use an in-memory storage. Agent worktrees under `.claude/` hold whole
 copies of the repo, so vitest (`vite.config.js` `test.exclude`) and eslint (with `e2e-artifacts/`)
-skip them. 167 tests across 12 files:
+skip them. 192 tests across 13 files (the thirteenth is `src/game/fps/fps.test.js`, 25 tests: see [FPS.md](FPS.md#tests)):
 
 | File | Tests | What it proves |
 |---|---:|---|

@@ -41,7 +41,7 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 
 | Area | State |
 |---|---|
-| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic; 167 vitest tests in all (12 files) incl. a full-cycle playthrough |
+| Game logic (`src/game/**`): 5-turn arc, resolver, custom orders, march, campfire, Passing, Legacies, reign II | **Done**: deterministic; 192 vitest tests in all (13 files) incl. a full-cycle playthrough |
 | Duel engine (`src/game/duel/**`): 3 archetypes, telegraphs, misread analysis, bots | **Done**: tested, including a fairness sweep |
 | Saves (3 slots + autosave, export/import, dynasty meta), optional Claude narrator | **Done**: tested |
 | UI: Title, War Room, Resolution, March, Campfire, the Passing, Chronicle, Council, Settings, Saves | **Done** |
@@ -50,6 +50,7 @@ Snapshot of branch `claude/build-strategy-game-OnF1b`. Check `git log` for anyth
 | Procedural art (matte-painted scenes in 3 region states, painted portraits, crests, war table and room, campfire canvas, title and Resolution heroes, a brass-and-lacquer material language across the kit and overlays) and Web Audio | **Done**: every non-duel screen 55–60 fps on a 4×-throttled phone (see [ART_AND_AUDIO.md](ART_AND_AUDIO.md#performance-and-accessibility)) |
 | `npm run e2e` (every screen at phone + desktop, overlays, a full UI playthrough into reign II, the installable build played offline) | **Passing** |
 | Installable PWA (manifest, procedural icons, offline service worker) and GitHub Pages deploy | **Done**: Pages needs a one-time switch in repository settings |
+| First-person mission, **The Greywater Front** (`src/game/fps/**`, `src/ui/fps/**`): a deterministic shooter simulation and a three.js renderer; two weapons, Shield Ward, Arc Pulse, four enemy types, a walker boss, a surrender choice; mouse, touch and gamepad | **Done as a first version**: opened from the title screen or `?fps`; bots finish it on every difficulty; graphics are generated in code and are not photorealistic; frame rate not yet measured on real phones (see [FPS.md](FPS.md)) |
 | Playtesting with real first-time players | **Not yet**, and it is the next milestone |
 
 **Recent work: the graphics pass** (`fc08d10..5a03462`, presentation only; no game logic, saves or
@@ -190,6 +191,7 @@ DuelScreen: runs duel/engine.js stepDuel in requestAnimationFrame, returns getDu
 | [`docs/CONTENT.md`](CONTENT.md) | are writing or reviewing story content: every crisis, order, beat, scene, Legacy |
 | [`docs/API.md`](API.md) | change game logic: state, effects, actions, views, module exports |
 | [`docs/DUEL.md`](DUEL.md) | touch combat: engine, tuning, archetypes, answer rules, misreads |
+| [`docs/FPS.md`](FPS.md) | touch the first-person mission: simulation, level, renderer, controls, dev lab |
 | [`docs/SAVES_AND_AI.md`](SAVES_AND_AI.md) | touch persistence or the Claude narrator |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | want the non-negotiable rules and module contracts |
 | [`docs/UI.md`](UI.md) | build or change screens: `useGame()`, view shapes, kit, presentation rules |
