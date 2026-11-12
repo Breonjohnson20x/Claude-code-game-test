@@ -44,10 +44,13 @@ npm run bundle -- docs # pack docs (or game/ui/duel/all) into one file for anoth
    motion (`prefers-reduced-motion` and `html[data-motion="reduced"]`).
 7. **Look: regal magitech.** Stone, brass, deep navy, warm gold light, ember. No neon, no cyan
    glow, no scanlines. Use the kit (`src/ui/kit/kit.jsx`) and theme tokens; don't invent new colors.
-8. **Procedural, original assets only.** Art is SVG/canvas (and, in the first-person mission, three.js
-   geometry and textures generated in code), audio is Web Audio. Never add images,
-   sounds, fonts, names or likenesses from other games or copyrighted works. The two Google Fonts
-   (Cinzel, Cormorant Garamond) are loaded at runtime.
+8. **Original or CC0 assets only.** The strategy game's art is SVG/canvas and all audio is Web
+   Audio, generated in code. The first-person mission also uses photo-scanned CC0 textures, models
+   and an HDRI from Poly Haven (`public/fps/`, credited in `public/fps/CREDITS.md`); anything new
+   must be CC0 (or the owner's own work), listed in that file, and optional at run time (the
+   procedural version must still load when a file is missing). Never add images, sounds, fonts,
+   names or likenesses from other games or copyrighted works. The two Google Fonts (Cinzel,
+   Cormorant Garamond) are loaded at runtime.
 9. **Secrets.** The player's Anthropic API key lives only in their browser's localStorage and is
    sent only to Anthropic. Never log it, commit it or send it anywhere else.
 

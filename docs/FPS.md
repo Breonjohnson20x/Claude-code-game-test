@@ -13,8 +13,11 @@ unchanged and nothing in the mission writes to a reign's `GameState` yet.
   (`src/ui/fps/`). The simulation knows nothing about three.js; the renderer changes nothing in
   the game.
 - **Dependency:** [three.js](https://threejs.org) (MIT), loaded only when the mission is opened
-  (its own lazy chunk, about 780 kB, 217 kB gzipped). Every texture, model and sound is still
-  generated in code; no image, model or audio file is shipped.
+  (its own lazy chunk).
+- **Assets:** photo-scanned CC0 textures, three models and a night-sky HDRI from Poly Haven live
+  in `public/fps/` (about 11 MB, fetched when the mission loads; credits in
+  `public/fps/CREDITS.md`). They are optional: every surface also has a procedural version baked
+  in code, which is what you see if a file fails to load. Sound is all synthesised.
 
 ## How it plays
 
@@ -109,6 +112,7 @@ Events the UI consumes include `shot`, `enemy_hit`, `enemy_down`, `enemy_aim`, `
 
 | File | What it draws |
 |---|---|
+| `assets.js` | `loadScans(quality, renderer, onProgress)`: the Poly Haven textures (`ground`, `road`, `stone`, `ashlar`, `wood`, `bark`, `plate`, `slate`, `rock`), models (fuel drum, boulders, ferns) and HDRI. Low quality loads 512 px textures only; medium and high load 1024 px textures, the models and the HDRI. Anything missing is skipped. |
 | `textures.js` | Tileable noise baked at load into albedo, normal and roughness/metalness maps: stone, ashlar, road, ground, wood, bark, canvas, plate, brass, gunmetal, slate, rock, needles, cloth, char, water. `pbr(set, opts)` makes a material. |
 | `sky.js` | Shader sky dome (moon, stars, cloud, the depot's glow), the moon as key light with a shadow that follows the camera, a prefiltered environment map, fog. |
 | `world.js` | Terrain mesh from `groundY` with painted vertex colours, the river shader, every solid merged per material, instanced pines and grass, lamps, banners, pickups, the gate, winch and fuel casks. |
@@ -156,10 +160,9 @@ first), `bot`, `warm` (seconds of effects before the still), `live=1`, `quality`
 
 ## Known limits
 
-- Graphics are generated in code. They are a large step past the 2D game but they are not
-  photorealistic and do not match a current console shooter, which relies on scanned and
-  hand-made assets. Real texture and model assets (with licences that allow it) would be the
-  next step up; see "Where to take it" below.
+- Surfaces, rocks and fuel drums are photo-scanned; soldiers, the walker, the weapons, buildings
+  and pines are still built in code. It looks far better than the first version but it is not a
+  current console shooter.
 - Frame rate was only measured with a software renderer here. On real hardware, use
   `?fps&showfps=1` and the quality setting.
 - The mission's result is not written into a reign yet.
@@ -168,9 +171,9 @@ first), `bot`, `warm` (seconds of effects before the still), `live=1`, `quality`
 
 ## Where to take it
 
-- **Real assets:** CC0 PBR textures and HDRIs (Poly Haven, ambientCG) and CC0 models (Quaternius,
-  Kenney) would raise the look more than any shader change. This needs a decision, because
-  `AGENTS.md` currently says procedural and original assets only.
+- **More real assets:** scanned trees are 500 MB to 1 GB each on Poly Haven, so pines need
+  low-poly models from elsewhere (Quaternius, Kenney: CC0). Rigged, animated soldiers (for
+  example from Mixamo, whose licence allows use in games) would be the largest remaining gain.
 - **Engine pieces:** `three-mesh-bvh` (fast ray casts), `@dimforge/rapier3d-compat` (physics),
   `postprocessing` or `realism-effects` (ambient occlusion, reflections), `three-nebula`
   (particles), `troika-three-text` (in-world text).

@@ -71,7 +71,7 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-export function createSky(scene, renderer, quality) {
+export function createSky(scene, renderer, quality, scannedEnv = null) {
   const uniforms = { uMoon: { value: MOON_DIR.clone() }, uTime: { value: 0 }, uFire: { value: 1 } };
   const dome = new THREE.Mesh(
     new THREE.SphereGeometry(1, 32, 16),
@@ -108,13 +108,15 @@ export function createSky(scene, renderer, quality) {
   envScene.add(envDome);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const env = pmrem.fromScene(envScene, 0.04, 0.1, 100);
-  scene.environment = env.texture;
-  scene.environmentIntensity = 0.55;
   pmrem.dispose();
+  // a real night sky, when it loaded, gives metal and wet stone something true to reflect
+  const envMap = scannedEnv ?? env.texture;
+  scene.environment = envMap;
+  scene.environmentIntensity = scannedEnv ? 0.38 : 0.55;
 
   const tmp = new THREE.Vector3();
   return {
-    env: env.texture,
+    env: envMap,
     moon,
     hemi,
     uniforms,

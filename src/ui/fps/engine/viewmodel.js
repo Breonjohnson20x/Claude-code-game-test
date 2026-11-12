@@ -199,7 +199,7 @@ void main() {
 export function createViewmodel(tex, env, quality, shared) {
   const scene = new THREE.Scene();
   scene.environment = env;
-  scene.environmentIntensity = 1.7;
+  scene.environmentIntensity = 1.2;
   const camera = new THREE.PerspectiveCamera(52, 1, 0.01, 6);
   const hemi = new THREE.HemisphereLight(0x9aa8c4, 0x3a2c1e, 1.9);
   const moon = new THREE.DirectionalLight(0xc4d6ff, 2.4);

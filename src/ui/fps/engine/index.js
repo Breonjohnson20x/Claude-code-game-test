@@ -7,6 +7,7 @@ import { buildLevel } from '../../../game/fps/level.js';
 import { PLAYER } from '../../../game/fps/combat.js';
 import { bakeTextures, makeParticleAtlas } from './textures.js';
 import { createSky } from './sky.js';
+import { loadScans } from './assets.js';
 import { buildWorld } from './world.js';
 import { createActors } from './actors.js';
 import { createFx } from './fx.js';
@@ -14,9 +15,9 @@ import { createViewmodel } from './viewmodel.js';
 import { createPost } from './post.js';
 
 export const QUALITY = Object.freeze({
-  low: { id: 'low', label: 'Low', maxPixelRatio: 1.5, scale: 0.7, shadows: 1024, shadowRange: 34, grass: 0.22, trees: 0.5, lights: 3, bloom: 1, msaa: 0, texDetail: 0.5, particles: 0.5, aniso: 2 },
-  medium: { id: 'medium', label: 'Medium', maxPixelRatio: 1.25, scale: 0.85, shadows: 2048, shadowRange: 44, grass: 0.55, trees: 1, lights: 5, bloom: 1, msaa: 2, texDetail: 1, particles: 0.8, aniso: 4 },
-  high: { id: 'high', label: 'High', maxPixelRatio: 1.5, scale: 1, shadows: 2048, shadowRange: 52, grass: 1, trees: 1, lights: 7, bloom: 1, msaa: 4, texDetail: 1, particles: 1, aniso: 8 },
+  low: { id: 'low', label: 'Low', maxPixelRatio: 1.5, scale: 0.7, shadows: 1024, shadowRange: 34, grass: 0.22, trees: 0.5, scans: 1, lights: 3, bloom: 1, msaa: 0, texDetail: 0.5, particles: 0.5, aniso: 2 },
+  medium: { id: 'medium', label: 'Medium', maxPixelRatio: 1.25, scale: 0.85, shadows: 2048, shadowRange: 44, grass: 0.55, trees: 1, scans: 2, lights: 5, bloom: 1, msaa: 2, texDetail: 1, particles: 0.8, aniso: 4 },
+  high: { id: 'high', label: 'High', maxPixelRatio: 1.5, scale: 1, shadows: 2048, shadowRange: 52, grass: 1, trees: 1, scans: 2, lights: 7, bloom: 1, msaa: 4, texDetail: 1, particles: 1, aniso: 8 },
 });
 
 /** A sensible default: phones and weak GPUs start low, everything else medium or high. */
@@ -81,15 +82,19 @@ export function createFpsRenderer({ canvas, quality: qualityId = guessQuality(),
   }
 
   async function load(onProgress) {
-    const tex = await bakeTextures({ detail: quality.texDetail, anisotropy: quality.aniso, onProgress: (d, t) => onProgress?.((d / t) * 0.7, 'Baking stone, timber and steel') });
+    const tex = await bakeTextures({ detail: quality.texDetail, anisotropy: quality.aniso, onProgress: (d, t) => onProgress?.((d / t) * 0.45, 'Baking stone, timber and steel') });
     if (disposed) return;
+    // photo-scanned surfaces and props replace the baked ones where they load
+    const scans = await loadScans(quality, gl, (k) => onProgress?.(0.45 + k * 0.27, 'Unpacking scanned stone and timber'));
+    if (disposed) return;
+    Object.assign(tex, scans.tex);
     shared.atlas = makeParticleAtlas();
     shared.glowTex = makeGlowTexture();
     onProgress?.(0.74, 'Raising the night sky');
-    sky = createSky(scene, gl, quality);
+    sky = createSky(scene, gl, quality, scans.env);
     await tickFrame();
     onProgress?.(0.8, 'Building the Greywater road');
-    world = buildWorld(scene, level, tex, quality, shared);
+    world = buildWorld(scene, level, tex, quality, shared, scans.models);
     await tickFrame();
     onProgress?.(0.9, 'Mustering the Fourth Walker Lance');
     actors = createActors(scene, level, tex, quality, shared);

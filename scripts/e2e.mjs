@@ -451,8 +451,7 @@ mkdirSync(join(OUT, 'play'), { recursive: true });
 
 const { chromium } = await loadPlaywright();
 const { server, url } = await startServer();
-// software WebGL for the first-person mission; harmless for everything else
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch();
 try {
   if (runs('--sweep')) await sweep(browser, url);
   if (runs('--play')) {
@@ -461,7 +460,16 @@ try {
       await play(browser, url, vp);
     }
   }
-  if (runs('--fps')) await fps(browser, url);
+  if (runs('--fps')) {
+    // the first-person mission needs WebGL: its own browser with software GL, so the 2D
+    // screens above keep the plain renderer they have always been checked with
+    const gl = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    try {
+      await fps(gl, url);
+    } finally {
+      await gl.close();
+    }
+  }
   if (runs('--pwa')) await pwa(browser);
 } finally {
   await browser.close();

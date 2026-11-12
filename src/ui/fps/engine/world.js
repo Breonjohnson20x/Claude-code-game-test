@@ -202,6 +202,48 @@ function buildTerrain(tex) {
   const mat = pbr(tex.ground, { vertexColors: true, metalness: 0 });
   mat.metalnessMap = null;
   mat.normalScale = new THREE.Vector2(0.55, 0.55);
+  if (tex.ground.scan) {
+    // scanned forest floor everywhere, scanned stony track where the road and the yards are;
+    // the vertex colours only shade it (river bed, hillsides, variation)
+    mat.normalScale.set(1, 1);
+    const road = new Float32Array(nx * nz);
+    for (let j = 0; j < nz; j += 1) {
+      for (let i = 0; i < nx; i += 1) {
+        const x = x0 + i * step;
+        const z = z0 + j * step;
+        const k = j * nx + i;
+        let r = roadMask(x, z);
+        for (const pad of PADS) r = Math.max(r, padMask(x, z, pad, 2.5) * 0.95);
+        r = Math.max(r, riverMask(x, z) * 0.8);
+        road[k] = r;
+        const n = fbm(x * 0.09, z * 0.09, 3, 4);
+        const shade = (0.5 + n * 0.3) * (1 - riverMask(x, z) * 0.45) * (1 - THREE.MathUtils.smoothstep(Math.abs(x), 33, 44) * 0.25);
+        col[k * 3] = shade * 1.02;
+        col[k * 3 + 1] = shade;
+        col[k * 3 + 2] = shade * 0.96;
+      }
+    }
+    g.setAttribute('aRoad', new THREE.BufferAttribute(road, 1));
+    g.attributes.color.needsUpdate = true;
+    if (tex.road?.scan) {
+      mat.onBeforeCompile = (shader) => {
+        shader.uniforms.uRoadMap = { value: tex.road.map };
+        shader.uniforms.uRoadNormal = { value: tex.road.normalMap };
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute float aRoad;\nvarying float vRoad;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvRoad = aRoad;');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', '#include <common>\nuniform sampler2D uRoadMap;\nuniform sampler2D uRoadNormal;\nvarying float vRoad;')
+          .replace(
+            '#include <map_fragment>',
+            `vec4 texG = texture2D(map, vMapUv);
+             vec4 texR = texture2D(uRoadMap, vMapUv * 0.62);
+             // let the forest floor's own light and dark break the edge of the track
+             float roadK = smoothstep(0.3, 0.7, vRoad + (texG.g - 0.25) * 0.9);
+             diffuseColor *= mix(texG, texR, roadK);`,
+          )
+          .replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps.replace('texture2D( normalMap, vNormalMapUv ).xyz', 'mix(texture2D( normalMap, vNormalMapUv ).xyz, texture2D( uRoadNormal, vNormalMapUv * 0.62 ).xyz, roadK)'));
+      };
+    }
+  }
   const mesh = new THREE.Mesh(g, mat);
   mesh.receiveShadow = true;
   mesh.name = 'terrain';
@@ -258,11 +300,11 @@ void main() {
     vec3 L = uFirePos[i] - vWorld;
     float dist = length(L);
     float s = pow(clamp(dot(R, L / max(dist, 0.01)), 1e-4, 1.0), 90.0);
-    spec += vec3(1.0, 0.5, 0.16) * s * uFireOn * 7.0 / (1.0 + dist * 0.035);
+    spec += vec3(1.0, 0.5, 0.16) * s * uFireOn * 4.0 / (1.0 + dist * 0.035);
   }
   vec3 Ll = uLampPos - vWorld;
   float dl = length(Ll);
-  spec += uLampCol * pow(clamp(dot(R, Ll / max(dl, 0.01)), 1e-4, 1.0), 160.0) * 2.2 / (1.0 + dl * 0.03);
+  spec += uLampCol * pow(clamp(dot(R, Ll / max(dl, 0.01)), 1e-4, 1.0), 160.0) * 1.0 / (1.0 + dl * 0.03);
   vec3 shallow = vec3(0.045, 0.07, 0.07);
   vec3 deep = vec3(0.008, 0.02, 0.035);
   vec3 body = mix(shallow, deep, smoothstep(0.0, 1.1, vDepth));
@@ -474,7 +516,8 @@ function addSolid(B, s, dyn) {
       break;
     }
     case 'rock':
-      B.add('rock', place(rockGeo(w * 1.15, h * 1.2, d * 1.15, seed), x, y - 0.1, z, jit(1, 3)));
+      if (dyn.scanRocks) dyn.rocks.push(s);
+      else B.add('rock', place(rockGeo(w * 1.15, h * 1.2, d * 1.15, seed), x, y - 0.1, z, jit(1, 3)));
       break;
     case 'log':
       B.add('bark', place(cyl(h * 0.48, h * 0.52, w, 9, 1.2), x, y + h * 0.48, z, jit(1, 0.06), 0, Math.PI / 2));
@@ -539,8 +582,22 @@ function buildGate(s, mats) {
   return g;
 }
 
-function buildCask(s, mats) {
+function buildCask(s, mats, barrel) {
   const g = new THREE.Group();
+  if (barrel) {
+    // a scanned steel drum, with the Syndicate's ember band so it still reads as "this one burns"
+    const drum = new THREE.Mesh(barrel.geometry, barrel.material);
+    drum.scale.set((s.w * 1.04) / barrel.size.x, s.h / barrel.size.y, (s.w * 1.04) / barrel.size.z);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(s.w / 2 + 0.03, s.w / 2 + 0.03, 0.12, 16, 1, true), mats.warn);
+    band.position.y = s.h * 0.86;
+    for (const m of [drum, band]) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+      g.add(m);
+    }
+    g.position.set(s.x, s.y, s.z);
+    return g;
+  }
   const body = new THREE.Mesh(cyl(s.w / 2, s.w / 2, s.h, 14, 1.5), mats.plate);
   body.position.y = s.h / 2;
   const band = new THREE.Mesh(new THREE.CylinderGeometry(s.w / 2 + 0.012, s.w / 2 + 0.012, 0.2, 14, 1, true), mats.warn);
@@ -554,6 +611,67 @@ function buildCask(s, mats) {
   }
   g.position.set(s.x, s.y, s.z);
   return g;
+}
+
+/** Scanned boulders, squeezed to the box each rock occupies in the level. */
+function buildScanRocks(rocks, models) {
+  const kinds = models.filter((m) => /rock0[36]/.test(m.name)); // the two lightest of the set
+  const out = [];
+  kinds.forEach((kind, ki) => {
+    const mine = rocks.filter((_, i) => i % kinds.length === ki);
+    if (!mine.length) return;
+    const mesh = new THREE.InstancedMesh(kind.geometry, kind.material, mine.length);
+    mine.forEach((s, i) => {
+      const turn = Math.round(hash2(Math.round(s.x * 7), Math.round(s.z * 7), 3) * 3) * (Math.PI / 2);
+      const swap = Math.round(turn / (Math.PI / 2)) % 2 === 1;
+      const sx = ((swap ? s.d : s.w) * 1.22) / kind.size.x;
+      const sz = ((swap ? s.w : s.d) * 1.22) / kind.size.z;
+      E.set(0, turn, 0);
+      Q.setFromEuler(E);
+      M.compose(V.set(s.x, s.y - s.h * 0.16, s.z), Q, S.set(sx, (s.h * 1.3) / kind.size.y, sz));
+      mesh.setMatrixAt(i, M);
+    });
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = 'static:scanrock';
+    out.push(mesh);
+  });
+  return out;
+}
+
+/** Ferns under the pines: a little real undergrowth where the wood meets the road. */
+function buildFerns(models, quality) {
+  const kinds = models.filter((m) => /fern_02_[ad]/.test(m.name));
+  if (!kinds.length) return [];
+  const spots = [];
+  for (let z = BOUNDS.maxZ + 6; z > BOUNDS.minZ; z -= 2.3) {
+    for (let x = -40; x <= 40; x += 2.3) {
+      const h = hash2(Math.round(x * 17), Math.round(z * 17), 41);
+      if (h > 0.045 * quality.grass + 0.01 || Math.abs(x) > 36) continue;
+      const jx = x + (hash2(Math.round(x * 17), Math.round(z * 17), 42) - 0.5) * 2;
+      const jz = z + (hash2(Math.round(x * 17), Math.round(z * 17), 43) - 0.5) * 2;
+      if (roadMask(jx, jz) > 0.02 || riverMask(jx, jz) > 0.02 || PADS.some((p) => padMask(jx, jz, p, 2) > 0.1)) continue;
+      spots.push([jx, groundY(jx, jz), jz, h]);
+    }
+  }
+  return kinds.map((kind, ki) => {
+    const mine = spots.filter((_, i) => i % kinds.length === ki);
+    kind.material.side = THREE.DoubleSide;
+    kind.material.alphaTest = 0.4;
+    kind.material.transparent = false;
+    const mesh = new THREE.InstancedMesh(kind.geometry, kind.material, mine.length);
+    mine.forEach(([x, y, z, h], i) => {
+      E.set(0, h * 90, 0);
+      Q.setFromEuler(E);
+      const sc = 1.1 + h * 5;
+      M.compose(V.set(x, y - 0.03, z), Q, S.set(sc, sc, sc));
+      mesh.setMatrixAt(i, M);
+    });
+    mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    mesh.name = 'grass:ferns';
+    return mesh;
+  });
 }
 
 // ───────────────────────────────────────────────────────────── trees and grass
@@ -862,15 +980,15 @@ function buildPickups(level, mats, group, glowTex) {
 
 // ───────────────────────────────────────────────────────────── entry
 
-export function buildWorld(scene, level, tex, quality, shared) {
+export function buildWorld(scene, level, tex, quality, shared, models = {}) {
   const group = new THREE.Group();
   group.name = 'world';
   scene.add(group);
 
   const glow = (hex, k) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k) });
   const mats = {
-    stone: pbr(tex.stone),
-    ashlar: pbr(tex.ashlar),
+    stone: pbr(tex.stone, tex.stone.scan ? { color: 0xb8b2ac } : {}),
+    ashlar: pbr(tex.ashlar, tex.ashlar.scan ? { color: 0x9a9690 } : {}),
     wood: pbr(tex.wood),
     woodDark: pbr(tex.wood, { color: 0x6a5a4a }),
     woodEnd: pbr(tex.wood, { color: 0xd8c4a0 }),
@@ -905,7 +1023,7 @@ export function buildWorld(scene, level, tex, quality, shared) {
   group.add(water);
 
   const B = new Buckets();
-  const dyn = { solids: [], winch: null };
+  const dyn = { solids: [], winch: null, rocks: [], scanRocks: !!models.rocks?.length };
   const lights = [];
   for (const s of level.solids) if (!s.hidden) addSolid(B, s, dyn);
   buildLamps(level, B, lights);
@@ -935,7 +1053,7 @@ export function buildWorld(scene, level, tex, quality, shared) {
   const casks = new Map();
   for (const s of dyn.solids) {
     if (s.kind !== 'fuel') continue;
-    const m = buildCask(s, mats);
+    const m = buildCask(s, mats, models.barrel?.[0]);
     group.add(m);
     casks.set(s.id, m);
   }
@@ -957,6 +1075,8 @@ export function buildWorld(scene, level, tex, quality, shared) {
     group.add(crank);
   }
 
+  if (dyn.rocks.length) for (const m of buildScanRocks(dyn.rocks, models.rocks)) group.add(m);
+  if (models.fern) for (const m of buildFerns(models.fern, quality)) group.add(m);
   for (const t of buildTrees(level, mats, quality)) group.add(t);
   const grass = buildGrass(quality, shared.time);
   if (grass) group.add(grass);

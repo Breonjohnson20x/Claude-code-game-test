@@ -385,12 +385,27 @@ export async function bakeTextures({ detail = 1, anisotropy = 4, onProgress } = 
   return sets;
 }
 
-/** A PBR material from one texture set. `repeat` tiles it; extra parameters pass through. */
+/**
+ * A PBR material from one texture set, baked or scanned. `repeat` tiles it; extra parameters
+ * pass through. A scanned set's packed map is either roughness only, or AO / roughness / metal.
+ */
 export function pbr(set, opts = {}) {
   const { repeat, ...rest } = opts;
-  const mat = new THREE.MeshStandardMaterial({ map: set.map, normalMap: set.normalMap, roughnessMap: set.ormMap, metalnessMap: set.ormMap, roughness: 1, metalness: 1, ...rest });
+  const params = { map: set.map, normalMap: set.normalMap, roughnessMap: set.ormMap, roughness: 1 };
+  if (!set.scan) {
+    params.metalnessMap = set.ormMap;
+    params.metalness = 1;
+  } else if (set.orm === 'arm') {
+    params.metalnessMap = set.ormMap;
+    params.metalness = 1;
+    params.aoMap = set.ormMap;
+  } else {
+    params.metalness = set.metalness ?? 0;
+  }
+  const mat = new THREE.MeshStandardMaterial({ ...params, ...rest });
   if (repeat) {
-    for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap']) {
+    for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap']) {
+      if (!mat[key]) continue;
       // clones share the image data; only the transform differs
       const t = mat[key].clone();
       t.repeat.set(repeat, repeat);
