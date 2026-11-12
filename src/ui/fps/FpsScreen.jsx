@@ -47,7 +47,7 @@ const KEY_HELP = [
   ['Pause', 'Esc'],
 ];
 
-export default function FpsScreen({ onExit, params }) {
+export default function FpsScreen({ onExit, onComplete, params }) {
   const canvasRef = useRef(null);
   const wrapRef = useRef(null);
   const game = useRef(null); // { state, renderer, input, sfx, view, mode }
@@ -348,6 +348,7 @@ export default function FpsScreen({ onExit, params }) {
     function finish() {
       const r = getResult(state);
       r.line = chronicleLine({ spared: r.outcome === 'released', deaths: r.deaths, dispatches: r.dispatches.length });
+      onComplete?.(r);
       setResult(r);
       setMode('result');
       input.unlock();
@@ -596,7 +597,7 @@ export default function FpsScreen({ onExit, params }) {
       {mode === 'result' && result ? (
         <div className="absolute inset-0 flex items-center justify-center overflow-y-auto bg-navy-950/85 p-4">
           <div className="w-full max-w-xl rounded-lg border border-gold-600/40 bg-navy-900/92 p-5 text-center shadow-2xl sm:p-7">
-            <Eyebrow>{MISSION.season} · written in the Chronicle</Eyebrow>
+            <Eyebrow>{MISSION.season} · {params?.campaign ? 'recorded in your reign' : 'mission report'}</Eyebrow>
             <h2 className="mt-1 font-display text-3xl text-gold-200 sm:text-4xl">Greywater is Elvian ground</h2>
             <p className="mx-auto mt-3 max-w-md font-serif text-[1.15rem] italic leading-snug text-parchment-100">{result.line}</p>
             <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
@@ -618,11 +619,11 @@ export default function FpsScreen({ onExit, params }) {
               {DIFFICULTY[result.difficulty]?.label} · {result.outcome === 'released' ? 'The pilot went home.' : 'The pilot is with Director Rey.'}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Button onClick={() => onExit?.('restart')} icon="sword">
+              {!params?.campaign ? <Button onClick={() => onExit?.('restart')} icon="sword">
                 Walk it again
-              </Button>
+              </Button> : null}
               <Button variant="ghost" onClick={leave}>
-                Back to the title
+                {params?.campaign ? 'Return to the War Room' : 'Back to the title'}
               </Button>
             </div>
           </div>

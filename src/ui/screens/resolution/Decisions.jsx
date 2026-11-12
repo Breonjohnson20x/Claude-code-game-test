@@ -7,6 +7,7 @@ import { Icon } from '../../kit/icons.jsx';
 import { Button, Sheet, cx } from '../../kit/kit.jsx';
 import { SEASONS } from '../../../game/core/state.js';
 import { SectionHeading } from '../warroom/shared.jsx';
+import { useGame } from '../../game/GameProvider.jsx';
 
 function nextSeason(state) {
   const season = SEASONS[state.turn % SEASONS.length];
@@ -62,6 +63,7 @@ function DeploymentCard({ d, characters, onChoose }) {
 }
 
 export function Decisions({ view, state, act }) {
+  const { openFps } = useGame();
   const [confirmDeploy, setConfirmDeploy] = useState(null);
   const [confirmEra, setConfirmEra] = useState(false);
   const deployments = view.deployments ?? [];
@@ -83,6 +85,11 @@ export function Decisions({ view, state, act }) {
             <DeploymentCard key={d.kind} d={d} characters={state.characters} onChoose={choose} />
           ))}
         </ul>
+      ) : null}
+      {deployments.some((d) => d.kind === 'skirmish') ? (
+        <Button variant="ghost" icon="sword" className="mb-4" onClick={() => openFps({ campaign: true })}>
+          Ride to Greywater in first person
+        </Button>
       ) : null}
 
       {view.campfire ? (

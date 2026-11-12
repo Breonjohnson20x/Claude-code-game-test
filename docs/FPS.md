@@ -5,8 +5,9 @@ the frontier road in person, breaks a Syndicate picket, takes back the Greywater
 wades the ford under a walker's searchlight, and brings the walker "Patience" down in the burning
 depot. It ends with the pilot's surrender and a choice.
 
-It is a separate mode. The strategy game (War Room, march, duels, campfires, the Passing) is
-unchanged and nothing in the mission writes to a reign's `GameState` yet.
+From the turn-four Greywater deployment, the mission can also be played in a reign. A completed
+mission records the surrender choice in the Chronicle and Mara's memory once, and consumes the
+skirmish deployment. The title-screen mission remains standalone and does not modify a reign.
 
 - **Open it:** the title screen's "The Greywater Front" button, or any URL with `?fps`.
 - **Split:** like the duel, a pure simulation (`src/game/fps/`) and a renderer plus screen
