@@ -19,7 +19,7 @@ npm run dev            # http://localhost:5173 ; /?scenario=<name> jumps to any 
 npm test               # vitest — must stay green
 npm run build          # must succeed
 npm run lint           # must have no errors
-npm run e2e            # Playwright sweep + full playthrough (phone + desktop), screenshots in e2e-artifacts/
+npm run e2e            # Playwright sweep + full playthrough (phone + desktop) + first-person check, screenshots in e2e-artifacts/
 npm run bundle -- docs # pack docs (or game/ui/duel/all) into one file for another LLM
 ```
 
@@ -44,9 +44,13 @@ npm run bundle -- docs # pack docs (or game/ui/duel/all) into one file for anoth
    motion (`prefers-reduced-motion` and `html[data-motion="reduced"]`).
 7. **Look: regal magitech.** Stone, brass, deep navy, warm gold light, ember. No neon, no cyan
    glow, no scanlines. Use the kit (`src/ui/kit/kit.jsx`) and theme tokens; don't invent new colors.
-8. **Procedural, original assets only.** Art is SVG/canvas, audio is Web Audio. Never add images,
-   sounds, fonts, names or likenesses from other games or copyrighted works. The two Google Fonts
-   (Cinzel, Cormorant Garamond) are loaded at runtime.
+8. **Original or CC0 assets only.** The strategy game's art is SVG/canvas and all audio is Web
+   Audio, generated in code. The first-person mission also uses photo-scanned CC0 textures, models
+   and an HDRI from Poly Haven (`public/fps/`, credited in `public/fps/CREDITS.md`); anything new
+   must be CC0 (or the owner's own work), listed in that file, and optional at run time (the
+   procedural version must still load when a file is missing). Never add images, sounds, fonts,
+   names or likenesses from other games or copyrighted works. The two Google Fonts (Cinzel,
+   Cormorant Garamond) are loaded at runtime.
 9. **Secrets.** The player's Anthropic API key lives only in their browser's localStorage and is
    sent only to Anthropic. Never log it, commit it or send it anywhere else.
 
@@ -59,6 +63,7 @@ src/game/            pure game logic (see docs/API.md)
   content/           the five-turn arc (crises), the march, campfire, Legacies, names
   cycle/passing.js   the Passing and the Return (next incarnation)
   duel/              real-time duel engine (fixed timestep), archetypes, misread analysis, bots
+  fps/               first-person mission: level data, physics, combat, AI, simulation, bots (docs/FPS.md)
   save/              save slots, autosave, migration, dynasty meta
   ai/                optional Claude narrator (client, generators, prompts, schemas, cache, status)
   dev/scenarios.js   dev-only states built through the real controller (UI previews, e2e)
@@ -69,11 +74,12 @@ src/ui/              React UI
   screens/           Title, WarRoom, Resolution, Expedition, Campfire, Passing
   overlays/          Settings, Saves, Chronicle, Dossier (council/factions/world)
   duel/              DuelScreen (canvas, real-time input)
+  fps/               the first-person mission: FpsScreen, HUD, input, sound, and engine/ (three.js renderer)
   art/               procedural SVG/canvas art (region scenes in scene/, portraits in portrait/, crests, backdrops)
   audio/audio.js     procedural Web Audio engine + haptics
 scripts/             e2e.mjs (Playwright gate), context-bundle.mjs, pwa/ (manifest, icons, service worker)
 .github/workflows/   ci.yml (test, lint, build), pages.yml (deploy main to GitHub Pages)
-docs/                HANDOFF, DESIGN_DIGEST, GAME_GUIDE, CONTENT, API, DUEL, SAVES_AND_AI,
+docs/                HANDOFF, DESIGN_DIGEST, GAME_GUIDE, CONTENT, API, DUEL, FPS, SAVES_AND_AI,
                      ARCHITECTURE, UI, ART_AND_AUDIO, TESTING
 ```
 

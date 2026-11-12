@@ -39,7 +39,7 @@ function TitleFlourish({ className }) {
 }
 
 export function TitleScreen() {
-  const { hasAnySave, slots, loadSlot, startNewGame, openOverlay, openTraining, notify } = useGame();
+  const { hasAnySave, slots, loadSlot, startNewGame, openOverlay, openTraining, openFps, notify } = useGame();
   const install = useInstallState();
   const reduced = useReducedMotion();
   const [naming, setNaming] = useState(false);
@@ -139,6 +139,10 @@ export function TitleScreen() {
               Load a save
             </Button>
           ) : null}
+          <Button variant="ghost" icon="sword" onClick={() => openFps()}>
+            The Greywater Front
+            <span className="ml-2 rounded border border-gold-500/50 px-1.5 text-[11px] uppercase tracking-[0.14em] text-gold-300">first person</span>
+          </Button>
           <Button variant="ghost" icon="sword" onClick={openTraining}>
             Training yard
           </Button>

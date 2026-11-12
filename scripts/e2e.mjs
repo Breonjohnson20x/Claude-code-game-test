@@ -5,6 +5,7 @@
 //   npm run e2e -- --sweep      # only the scenario sweep
 //   npm run e2e -- --play       # only the playthrough
 //   npm run e2e -- --pwa        # only the installable/offline build check
+//   npm run e2e -- --fps        # only the first-person mission check
 //
 // Starts a Vite dev server, then:
 //   1. Sweep: opens every dev scenario (/?scenario=<name>) at 390x844 (touch) and 1280x800,
@@ -16,6 +17,9 @@
 //   3. PWA: a production build under a sub-path (like GitHub Pages), served by `vite preview`:
 //      the manifest and icons load, the service worker takes control, then the server is shut
 //      down and the game must still load and start a reign offline.
+//   4. First person: the Greywater Front opened from the title screen (software WebGL), driven
+//      with real key and mouse events: it must load, move, fire, pause, and at the end of the
+//      mission take the pilot's surrender and show the result. Phone layout is audited too.
 // Screenshots and report.json go to e2e-artifacts/. Exits non-zero on any failure.
 //
 // Needs Playwright with Chromium: `npm i -D playwright && npx playwright install chromium`
@@ -30,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'e2e-artifacts');
 const args = new Set(process.argv.slice(2));
-const ONLY = ['--sweep', '--play', '--pwa'].filter((f) => args.has(f));
+const ONLY = ['--sweep', '--play', '--pwa', '--fps'].filter((f) => args.has(f));
 const runs = (flag) => ONLY.length === 0 || ONLY.includes(flag);
 
 const VIEWPORTS = {
@@ -315,6 +319,140 @@ async function pwa(browser) {
 
 // ─── Main ────────────────────────────────────────────────────────────────────────────────
 
+// ───────────────────────────────────────────────────────────── first person
+
+const fpsState = (page) =>
+  page.evaluate(() => {
+    const g = globalThis.__elviaFps;
+    if (!g) return null;
+    const s = g.state;
+    return { t: s.t, x: s.player.x, z: s.player.z, yaw: s.player.yaw, shots: s.stats.shots, mag: s.player.ammo.carbine.mag, weapon: s.player.weapon, stage: s.stage, status: s.status };
+  });
+const fpsMode = (page) => page.evaluate(() => document.querySelector('[data-fps-mode]')?.dataset.fpsMode ?? null);
+
+async function fps(browser, baseUrl) {
+  console.log('\nFirst person (the Greywater Front)');
+  mkdirSync(join(OUT, 'fps'), { recursive: true });
+  // 1. from the title screen, with keyboard and mouse
+  {
+    const where = 'fps desktop';
+    const ctx = await browser.newContext({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    const done = watchConsole(page, where);
+    try {
+      await page.goto(`${baseUrl}/?quality=low`);
+      await page.getByRole('button', { name: /The Greywater Front/ }).click();
+      const start = page.getByRole('button', { name: 'Walk the road' });
+      await start.waitFor({ timeout: 180000 });
+      if ((await page.locator('h1').count()) !== 1) fail(where, 'the briefing should have exactly one <h1>');
+      await page.screenshot({ path: join(OUT, 'fps', '01-briefing.png') });
+      await start.click();
+      await page.waitForFunction(() => document.querySelector('[data-fps-mode="playing"]'), null, { timeout: 20000 });
+      const a = await fpsState(page);
+      await page.keyboard.down('KeyW');
+      await page.waitForTimeout(3000);
+      await page.keyboard.up('KeyW');
+      const b = await fpsState(page);
+      if (!(b.t > a.t)) fail(where, 'the simulation clock did not advance');
+      if (!(b.z < a.z - 0.3)) fail(where, `holding W did not walk forward (z ${a.z.toFixed(2)} → ${b.z.toFixed(2)})`);
+      await page.mouse.move(480, 270);
+      await page.mouse.down();
+      await page.waitForTimeout(1500);
+      await page.mouse.up();
+      const c = await fpsState(page);
+      if (!(c.shots > 0 && c.mag < 30)) fail(where, 'holding the mouse button did not fire the carbine');
+      await page.keyboard.press('Digit2');
+      await page.waitForFunction(() => globalThis.__elviaFps.state.player.weapon === 'lance', null, { timeout: 20000 }).catch(() => fail(where, 'pressing 2 did not draw the Sunlance'));
+      await page.screenshot({ path: join(OUT, 'fps', '02-playing.png') });
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      await page.screenshot({ path: join(OUT, 'fps', '03-paused.png') });
+      await page.getByRole('button', { name: 'Leave' }).click();
+      await page.getByRole('button', { name: 'Begin a new reign' }).waitFor({ timeout: 10000 });
+      console.log('  ✓ loads from the title, walks, fires, swaps, pauses and leaves');
+    } catch (err) {
+      fail(where, `aborted: ${err.message.split('\n')[0]}`);
+      await page.screenshot({ path: join(OUT, 'fps', 'desktop-failure.png') }).catch(() => {});
+    }
+    done();
+    await ctx.close();
+  }
+  // 2. the end of the mission: the surrender and the result
+  {
+    const where = 'fps ending';
+    const ctx = await browser.newContext({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    const done = watchConsole(page, where);
+    try {
+      await page.goto(`${baseUrl}/?fps&stage=surrender&autostart=1&quality=low`);
+      await page.waitForFunction(() => document.querySelector('[data-fps-mode="playing"]'), null, { timeout: 180000 });
+      await page.keyboard.down('KeyW');
+      await page.waitForFunction(() => globalThis.__elviaFps?.state.prompt?.id === 'surrender', null, { timeout: 60000 });
+      await page.keyboard.up('KeyW');
+      await page.screenshot({ path: join(OUT, 'fps', '04-pilot.png') });
+      await page.keyboard.press('KeyE');
+      await page.getByRole('button', { name: 'Send her home with her name' }).click({ timeout: 15000 });
+      await page.getByRole('heading', { name: 'Greywater is Elvian ground' }).waitFor({ timeout: 15000 });
+      const line = await page.locator('p.italic').first().textContent();
+      if (!/sent her home with her name/.test(line ?? '')) fail(where, 'the Chronicle line does not record the mercy');
+      await page.screenshot({ path: join(OUT, 'fps', '05-result.png') });
+      console.log('  ✓ the pilot surrenders, the choice is recorded, the result is shown');
+    } catch (err) {
+      fail(where, `aborted: ${err.message.split('\n')[0]}`);
+      await page.screenshot({ path: join(OUT, 'fps', 'ending-failure.png') }).catch(() => {});
+    }
+    done();
+    await ctx.close();
+  }
+  // 3. a phone held sideways: touch controls, no clipped or tiny buttons
+  {
+    const where = 'fps phone';
+    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    const done = watchConsole(page, where);
+    try {
+      await page.goto(`${baseUrl}/?fps&quality=low`);
+      const start = page.getByRole('button', { name: 'Walk the road' });
+      await start.waitFor({ timeout: 180000 });
+      await start.tap();
+      await page.waitForFunction(() => document.querySelector('[data-fps-mode="playing"]'), null, { timeout: 20000 });
+      await page.locator('[data-fps-touch]').waitFor({ timeout: 10000 });
+      const pads = await page.evaluate(() => [...document.querySelectorAll('[data-fps-touch] button')].map((b) => ({ label: b.getAttribute('aria-label'), r: b.getBoundingClientRect().toJSON() })));
+      for (const p of pads) {
+        if (!p.label) fail(where, 'a touch control has no accessible name');
+        if (p.r.width < 44 || p.r.height < 44) fail(where, `touch control "${p.label}" is under 44px`);
+        if (p.r.left < 0 || p.r.top < 0 || p.r.right > 844 || p.r.bottom > 390) fail(where, `touch control "${p.label}" is off screen`);
+      }
+      if (pads.length < 9) fail(where, `expected the full set of touch controls, found ${pads.length}`);
+      const a = await fpsState(page);
+      await page.getByRole('button', { name: 'Fire' }).dispatchEvent('pointerdown', { pointerId: 7, pointerType: 'touch', clientX: 700, clientY: 330 });
+      await page.waitForFunction((n) => globalThis.__elviaFps.state.stats.shots > n, a.shots, { timeout: 20000 }).catch(() => {});
+      await page.getByRole('button', { name: 'Fire' }).dispatchEvent('pointerup', { pointerId: 7, pointerType: 'touch', clientX: 700, clientY: 330 });
+      const b = await fpsState(page);
+      if (!(b.shots > a.shots)) fail(where, 'holding the Fire button did not fire');
+      // pressing a button must not be read as the movement stick or a look drag
+      const c = await fpsState(page);
+      await page.getByRole('button', { name: 'Crouch' }).dispatchEvent('pointerdown', { pointerId: 8, pointerType: 'touch', clientX: 40, clientY: 210 });
+      await page.getByRole('button', { name: 'Crouch' }).dispatchEvent('pointermove', { pointerId: 8, pointerType: 'touch', clientX: 90, clientY: 180 });
+      await page.waitForTimeout(1200);
+      await page.getByRole('button', { name: 'Crouch' }).dispatchEvent('pointerup', { pointerId: 8, pointerType: 'touch', clientX: 90, clientY: 180 });
+      const d = await fpsState(page);
+      if (Math.hypot(d.x - c.x, d.z - c.z) > 0.25) fail(where, 'pressing Duck moved the player: the button was read as the stick');
+      await page.screenshot({ path: join(OUT, 'fps', '06-phone.png') });
+      const pauseBox = await page.getByRole('button', { name: 'Pause' }).boundingBox();
+      await page.touchscreen.tap(pauseBox.x + pauseBox.width / 2, pauseBox.y + pauseBox.height / 2);
+      await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      if ((await fpsMode(page)) !== 'paused') fail(where, 'the pause button did not pause');
+      console.log('  ✓ touch controls are all there, big enough, on screen, and fire');
+    } catch (err) {
+      fail(where, `aborted: ${err.message.split('\n')[0]}`);
+      await page.screenshot({ path: join(OUT, 'fps', 'phone-failure.png') }).catch(() => {});
+    }
+    done();
+    await ctx.close();
+  }
+}
+
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(join(OUT, 'sweep'), { recursive: true });
 mkdirSync(join(OUT, 'play'), { recursive: true });
@@ -328,6 +466,16 @@ try {
     for (const vp of Object.keys(VIEWPORTS)) {
       console.log(`\nPlaythrough (${vp})`);
       await play(browser, url, vp);
+    }
+  }
+  if (runs('--fps')) {
+    // the first-person mission needs WebGL: its own browser with software GL, so the 2D
+    // screens above keep the plain renderer they have always been checked with
+    const gl = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    try {
+      await fps(gl, url);
+    } finally {
+      await gl.close();
     }
   }
   if (runs('--pwa')) await pwa(browser);
