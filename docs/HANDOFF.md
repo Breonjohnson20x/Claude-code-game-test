@@ -191,6 +191,7 @@ DuelScreen: runs duel/engine.js stepDuel in requestAnimationFrame, returns getDu
 | [`docs/CONTENT.md`](CONTENT.md) | are writing or reviewing story content: every crisis, order, beat, scene, Legacy |
 | [`docs/API.md`](API.md) | change game logic: state, effects, actions, views, module exports |
 | [`docs/DUEL.md`](DUEL.md) | touch combat: engine, tuning, archetypes, answer rules, misreads |
+| [`docs/CODEX_HANDOFF.md`](CODEX_HANDOFF.md) | are another coding agent continuing the first-person mission: state, commands, the next task (character models) |
 | [`docs/FPS.md`](FPS.md) | touch the first-person mission: simulation, level, renderer, controls, dev lab |
 | [`docs/SAVES_AND_AI.md`](SAVES_AND_AI.md) | touch persistence or the Claude narrator |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | want the non-negotiable rules and module contracts |
