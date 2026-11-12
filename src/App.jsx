@@ -17,7 +17,9 @@ import { DossierSheet } from './ui/overlays/DossierSheet.jsx';
 
 // Dev only: /?lab=duel renders the duel lab (src/ui/dev/DuelLab.jsx); never part of a build.
 const DuelLab = import.meta.env.DEV ? lazy(() => import('./ui/dev/DuelLab.jsx')) : null;
-const LAB = import.meta.env.DEV && new URLSearchParams(globalThis.location?.search ?? '').get('lab') === 'duel';
+const FpsLab = import.meta.env.DEV ? lazy(() => import('./ui/dev/FpsLab.jsx')) : null;
+const LAB_NAME = import.meta.env.DEV ? new URLSearchParams(globalThis.location?.search ?? '').get('lab') : null;
+const LAB = LAB_NAME === 'duel';
 
 const PHASE_SCREENS = {
   [PHASES.WAR_ROOM]: WarRoomScreen,
@@ -51,6 +53,13 @@ export default function App() {
   useEffect(() => {
     ensureFonts();
   }, []);
+  if (LAB_NAME === 'fps' && FpsLab) {
+    return (
+      <Suspense fallback={null}>
+        <FpsLab />
+      </Suspense>
+    );
+  }
   if (LAB && DuelLab) {
     return (
       <Suspense fallback={null}>

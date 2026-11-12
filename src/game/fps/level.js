@@ -29,7 +29,7 @@ export const PADS = Object.freeze([
   { id: 'depot', minX: -33, maxX: 33, minZ: -213, maxZ: -157, y: 0.6 },
 ]);
 
-function padMask(x, z, pad, margin = 6) {
+export function padMask(x, z, pad, margin = 6) {
   const mx = Math.min(smooth(pad.minX - margin, pad.minX, x), 1 - smooth(pad.maxX, pad.maxX + margin, x));
   const mz = Math.min(smooth(pad.minZ - margin, pad.minZ, z), 1 - smooth(pad.maxZ, pad.maxZ + margin, z));
   return Math.min(mx, mz);
