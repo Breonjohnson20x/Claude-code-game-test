@@ -63,7 +63,7 @@ export default function FpsScreen({ onExit, onComplete, params }) {
   const [result, setResult] = useState(null);
   const [toast, setToast] = useState(null);
   const [isTouch, setIsTouch] = useState(() => (globalThis.navigator?.maxTouchPoints ?? 0) > 0 && globalThis.matchMedia?.('(pointer: coarse)').matches);
-  const fx = useRef({ hit: null, hurt: null, cross: null, stick: null, knob: null });
+  const fx = useRef({ hit: null, hurt: null, cross: null, stick: null, knob: null, scope: null });
 
   const setMode = useCallback((m) => {
     modeRef.current = m;
@@ -241,6 +241,10 @@ export default function FpsScreen({ onExit, onComplete, params }) {
       v.hurt *= Math.exp(-dt * 3);
       v.flash *= Math.exp(-dt * 12);
       v.zoom = WEAPONS[state.player.weapon].zoom;
+      // looking through the Sunlance's glass: the scope overlay replaces the weapon model
+      const scoped = !!WEAPONS[state.player.weapon].scoped && state.player.ads > 0.6;
+      v.showWeapon = !scoped;
+      input.setAimScale(1 - state.player.ads * (1 - 0.7 / v.zoom));
       v.fade = Math.min(1, v.fade + dt * (m === 'brief' ? 0.6 : 1.6));
       if (state.status === 'dead') v.deadFor += dt;
       v.paused = !running;
@@ -259,25 +263,31 @@ export default function FpsScreen({ onExit, onComplete, params }) {
       }
 
       // crosshair, hit marker and stick are moved directly: no React in the hot path
-      const { hit, cross, stick, knob } = fx.current;
+      const { hit, cross, stick, knob, scope } = fx.current;
       if (cross) {
         const p = state.player;
         const gap = 5 + (p.bloom * 900 + Math.hypot(p.vx, p.vz) * 1.6 + (p.grounded ? 0 : 10)) * (1 - p.ads * 0.7);
         cross.style.setProperty('--gap', `${gap.toFixed(1)}px`);
-        cross.style.opacity = p.ads > 0.6 && p.weapon === 'lance' ? '0' : m === 'playing' ? '1' : '0';
+        cross.style.opacity = scoped ? '0' : m === 'playing' ? '1' : '0';
+        cross.dataset.ads = p.ads > 0.6 ? '1' : '0'; // iron sights do the aiming: only the centre dot stays
       }
       if (hit) {
         const age = performance.now() - g.hitT;
         hit.style.opacity = age < 160 ? String(1 - age / 160) : '0';
         hit.dataset.kind = g.hitKind;
       }
+      if (scope) scope.style.opacity = scoped && m === 'playing' ? String(Math.min(1, (state.player.ads - 0.6) / 0.25)) : '0';
       if (stick && knob) {
+        // the stick rests bottom-left and jumps to wherever the left thumb lands
         const s = input.stick();
-        stick.style.opacity = s ? '1' : '0';
+        const r = wrapRef.current.getBoundingClientRect();
+        stick.style.opacity = s ? '1' : '0.55';
         if (s) {
-          const r = wrapRef.current.getBoundingClientRect();
-          stick.style.transform = `translate(${s.x - r.left - 56}px, ${s.y - r.top - 56}px)`;
-          knob.style.transform = `translate(${s.dx * 34}px, ${s.dy * 34}px)`;
+          stick.style.transform = `translate(${s.x - r.left - 64}px, ${s.y - r.top - 64}px)`;
+          knob.style.transform = `translate(${s.dx * 38}px, ${s.dy * 38}px)`;
+        } else {
+          stick.style.transform = `translate(${Math.min(r.width * 0.2, 150) - 64 + 24}px, ${r.height - 64 - Math.min(r.height * 0.3, 118)}px)`;
+          knob.style.transform = 'translate(0px, 0px)';
         }
       }
       g.frames = (g.frames ?? 0) + 1;

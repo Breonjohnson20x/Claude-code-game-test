@@ -25,7 +25,7 @@ skirmish deployment. The title-screen mission remains standalone and does not mo
 | Thing | What it is |
 |---|---|
 | **Lattice Carbine** | Automatic coil-rifle. 30-round cell, damage falls off past 30 m. With no reserve left it slowly draws one magazine back from the Lattice, so you are never stuck without a weapon. |
-| **Sunlance** | One bright line per trigger pull. High damage, pierces two enemies, long zoom. |
+| **Sunlance** | One bright line per trigger pull. High damage, pierces two enemies. Aiming looks through its scope (3.4× zoom, a reticle, the weapon model hidden). |
 | **Shield Ward** (hold) | Soaks what comes from the front while it is up. It drains while raised and returns when lowered. You cannot fire through it. |
 | **Arc Pulse** | Staggers and hurts everyone within about 9 m, damages the walker's knees, and unmakes bolts in the air. 11 s cooldown. |
 | **Blade** | A quick cut for anything within arm's reach. |
@@ -50,7 +50,7 @@ Difficulty (`story`, `soldier`, `veteran`) scales enemy damage and aim, never th
 
 | | Keyboard and mouse | Touch | Gamepad |
 |---|---|---|---|
-| Move | W A S D | left thumb: floating stick | left stick |
+| Move | W A S D | left thumb: stick (rests bottom-left, floats to the thumb) | left stick |
 | Look | mouse | drag anywhere on the right | right stick |
 | Fire / aim | left / right button | Fire (hold and drag to aim) / Aim | RT / LT |
 | Sprint / crouch / jump | Shift / C (or hold Ctrl) / Space | push the stick fully forward / Duck / Jump | L3 / d-pad down / A |
@@ -65,6 +65,19 @@ drag); a held button also drags the view, so one thumb can fire and aim; slow dr
 and fast flicks turn further; the view slows as the crosshair nears an enemy (also on gamepad;
 it can be turned off in the pause menu); pulling the trigger always wins over sprinting. The Low
 graphics tier (the default on phones) draws no shadow pass.
+
+**Aiming down sights.** The carbine raises its iron sights to the centre of the view and the
+crosshair shrinks to a dot. The Sunlance (`scoped: true` in `combat.js`) swaps the weapon model
+for a scope overlay (`.fps-scope` in `Hud.jsx`, shown by the game loop). Look speed while aiming
+scales with the weapon's zoom (`input.setAimScale`), on mouse, touch and gamepad alike.
+
+**Touch layout** (`TouchControls` in `Hud.jsx`). An action-game layout: the stick rests
+bottom-left, jumps to wherever the left thumb lands and follows a thumb that runs past its rim;
+a large Fire button sits bottom-right with the other actions on two arcs around it (inner: Jump,
+Aim, Swap, Load; outer: Pulse, Blade, Ward, Duck), placed by angle with `arc()`. Health and ward
+sit top-left beside Pause, ammunition bottom-centre. Phones never ask for pointer lock: on
+Android Chrome a locked page reports every touch at (0, 0), which once pinned the stick in a
+corner (`touchPrimary` in `input.js`).
 
 Sensitivity, inverted look and aim slowdown are in the pause menu; difficulty and graphics quality on the
 briefing. Settings and the best time are kept in `localStorage` under `elvia.fps.v1`.
@@ -173,7 +186,7 @@ first), `bot`, `warm` (seconds of effects before the still), `live=1`, `quality`
 - Frame rate was only measured with a software renderer here. On real hardware, use
   `?fps&showfps=1` and the quality setting.
 - The mission's result is not written into a reign yet.
-- One mission, two weapons, four enemy types. No aim assist on touch or gamepad.
+- One mission, two weapons, four enemy types.
 - Soldiers are built from primitives and posed in code: readable, not lifelike.
 
 ## Where to take it

@@ -148,6 +148,14 @@ Recorded because it has not been confirmed on a device.
   in `FpsScreen.jsx`), blocked browser gestures, Pause on press, larger buttons, and no shadow
   pass on the `low` tier.
 
+Second report from the owner (Android Chrome, landscape): the stick was pinned in the top-left
+corner and movement did not work. Cause: the first Start tap asked for pointer lock (the "is this
+touch?" flag was still false), and a locked page on Android reports every touch at (0, 0). Fixed
+in `input.js`: touch-primary devices are detected up front (`pointer: coarse`), `lock()` does
+nothing there, and any touch releases a lock. `npm run e2e -- --fps` checks it. The layout was
+rebuilt at the same time (see `docs/FPS.md`, "Touch layout") and the Sunlance got a scope view.
+Still unconfirmed on a device.
+
 ## Map of the mission's code
 
 ```

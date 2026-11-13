@@ -75,7 +75,8 @@ export const WEAPONS = Object.freeze({
     recoil: 0.042,
     range: 220,
     pierce: 2,
-    zoom: 2.6,
+    zoom: 3.4,
+    scoped: true,
   },
 });
 export const WEAPON_ORDER = Object.freeze(['carbine', 'lance']);
