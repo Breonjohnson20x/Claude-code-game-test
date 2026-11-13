@@ -37,7 +37,12 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
   let locked = false;
   let everLocked = false;
   let enabled = false;
-  let usedTouch = false;
+  // a phone or tablet: thumbs are the pointer. Pointer lock must never be asked for there: on
+  // Android Chrome a locked page reports every touch at (0, 0), which pinned the stick in a corner.
+  const win0 = element.ownerDocument.defaultView;
+  const touchPrimary = (win0.navigator?.maxTouchPoints ?? 0) > 0 && !!win0.matchMedia?.('(pointer: coarse)').matches;
+  let usedTouch = touchPrimary;
+  let aimScale = 1; // how much aiming down sights slows the view (set each frame from the weapon's zoom)
   let padPrev = {};
   let padActive = false;
   let assist = 1; // 1 = free; lower = aim friction (set each frame by the screen for touch and pad)
@@ -71,7 +76,7 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
   };
   const onMouseMove = (e) => {
     if (!enabled || !locked) return;
-    applyLook(e.movementX, e.movementY, 0.0022 * sens() * (held.ads ? 0.6 : 1));
+    applyLook(e.movementX, e.movementY, 0.0022 * sens() * aimScale);
   };
   const onMouseDown = (e) => {
     if (!enabled) return;
@@ -99,6 +104,7 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
   };
 
   function lock() {
+    if (usedTouch) return;
     try {
       const r = element.requestPointerLock?.();
       if (r && typeof r.catch === 'function') r.catch(() => {});
@@ -116,8 +122,10 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
 
   // ── touch: left half is a floating stick, the rest drags the view ─────────
   const onPointerDown = (e) => {
-    if (e.pointerType === 'mouse' || !enabled) return;
+    if (e.pointerType === 'mouse') return;
     usedTouch = true;
+    if (locked || element.ownerDocument.pointerLockElement) unlock();
+    if (!enabled) return;
     // a press on a button belongs to that button alone: it must not start the stick or the look
     if (e.target?.closest?.('button')) return;
     const rect = element.getBoundingClientRect();
@@ -142,6 +150,9 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
       let dy = (e.clientY - touch.sy) / R;
       const l = Math.hypot(dx, dy);
       if (l > 1) {
+        // the base follows a thumb that has run past the rim, so reversing direction is instant
+        touch.sx += (dx - dx / l) * R;
+        touch.sy += (dy - dy / l) * R;
         dx /= l;
         dy /= l;
       }
@@ -159,7 +170,7 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
         const dy = e.clientY - ly;
         // slow drags are precise, fast flicks turn further; friction near a target steadies the aim
         const accel = 0.75 + Math.min(1, Math.hypot(dx, dy) / 14) * 0.75;
-        applyLook(dx, dy, 0.0046 * sens() * accel * assist * (held.ads || adsToggle ? 0.55 : 1));
+        applyLook(dx, dy, 0.0046 * sens() * accel * assist * aimScale);
       }
       if (b) {
         b.lx = e.clientX;
@@ -240,7 +251,7 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
         moveX = pad.mx;
         moveZ = -pad.my;
       }
-      applyLook(pad.lx * Math.abs(pad.lx), pad.ly * Math.abs(pad.ly), 2.6 * sens() * dt * assist * (pad.ads ? 0.5 : 1));
+      applyLook(pad.lx * Math.abs(pad.lx), pad.ly * Math.abs(pad.ly), 2.6 * sens() * dt * assist * aimScale);
       fire = fire || pad.fire;
       ads = ads || pad.ads;
       ward = ward || pad.ward;
@@ -304,6 +315,10 @@ export function createInput({ element, getSettings, onPause, onLockLost, onAnyKe
     /** Aim friction for touch and gamepad: 1 = none. */
     setAssist(v) {
       assist = v;
+    },
+    /** How much the view slows while aiming: 1 = hip speed. */
+    setAimScale(v) {
+      aimScale = v;
     },
     get usesAssist() {
       return usedTouch || padActive;

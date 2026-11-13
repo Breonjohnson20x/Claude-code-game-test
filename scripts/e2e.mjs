@@ -417,6 +417,8 @@ async function fps(browser, baseUrl) {
       await start.tap();
       await page.waitForFunction(() => document.querySelector('[data-fps-mode="playing"]'), null, { timeout: 20000 });
       await page.locator('[data-fps-touch]').waitFor({ timeout: 10000 });
+      // a phone must never take pointer lock: on Android a locked page reports every touch at (0, 0)
+      if (await page.evaluate(() => !!document.pointerLockElement)) fail(where, 'pointer lock was taken on a touch device');
       const pads = await page.evaluate(() => [...document.querySelectorAll('[data-fps-touch] button')].map((b) => ({ label: b.getAttribute('aria-label'), r: b.getBoundingClientRect().toJSON() })));
       for (const p of pads) {
         if (!p.label) fail(where, 'a touch control has no accessible name');

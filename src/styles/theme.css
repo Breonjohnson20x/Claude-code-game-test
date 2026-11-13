@@ -1436,6 +1436,14 @@ html[data-motion="reduced"] .btn-royal::after { animation: none !important; opac
   height: 12px;
   width: 3px;
 }
+.fps-cross[data-ads='1'] i:not(:last-child) {
+  opacity: 0;
+}
+/* the scope: black outside a round glass a little taller than the screen */
+.fps-scope {
+  background: radial-gradient(circle at 50% 50%, transparent 0, transparent 56.5vmin, rgb(0 0 0 / 0.55) 58vmin, #000 59vmin);
+  transition: opacity 60ms linear;
+}
 .fps-line {
   animation: fps-line-in 0.25s ease-out both;
 }
