@@ -67,6 +67,21 @@ export function createFpsRenderer({ canvas, quality: qualityId = guessQuality(),
   const cam = { x: 0, y: 0, z: 0, bob: 0, bobT: 0, landDip: 0, roll: 0, shake: 0, fov: 74, eyeY: null };
   const size = { w: 1, h: 1 };
 
+  let gpu = null;
+  /** The graphics chip's name, when the browser will say (for performance reports). */
+  function gpuName() {
+    if (gpu == null) {
+      try {
+        const ctx = gl.getContext();
+        const ext = ctx.getExtension('WEBGL_debug_renderer_info');
+        gpu = String(ext ? ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ctx.getParameter(ctx.RENDERER)).slice(0, 80);
+      } catch {
+        gpu = 'unknown';
+      }
+    }
+    return gpu;
+  }
+
   function resize() {
     const rect = canvas.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return; // collapsed while screens swap: keep the last size
@@ -224,7 +239,7 @@ export function createFpsRenderer({ canvas, quality: qualityId = guessQuality(),
     camera,
     scene,
     /** Renderer statistics for the dev overlay and the performance probe. */
-    stats: () => ({ calls: gl.info.render.calls, triangles: gl.info.render.triangles, scale, geometries: gl.info.memory.geometries, textures: gl.info.memory.textures }),
+    stats: () => ({ calls: gl.info.render.calls, triangles: gl.info.render.triangles, scale, geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, gpu: gpuName() }),
     get ready() {
       return loaded;
     },

@@ -111,7 +111,7 @@ export default function FpsScreen({ onExit, onComplete, params }) {
     });
     input.setLook(state.player.yaw, 0);
     const sfx = createFpsSfx();
-    const g = { state, renderer, input, sfx, view: { recoilPitch: 0, recoilYaw: 0, zoom: 1.25, hurt: 0, flash: 0, fade: 0, deadFor: 0 }, queue: [], lineT: 0, hudT: 0, hitT: 0, hitKind: '', pendingEvents: state.events.slice(), disposed: false, fpsAcc: 0, fpsN: 0, fps: 60 };
+    const g = { state, renderer, input, sfx, view: { recoilPitch: 0, recoilYaw: 0, zoom: 1.25, hurt: 0, flash: 0, fade: 0, deadFor: 0 }, queue: [], lineT: 0, hudT: 0, hitT: 0, hitKind: '', pendingEvents: state.events.slice(), disposed: false, fpsAcc: 0, fpsN: 0, fps: 60, frameMs: new Float32Array(600), frameI: 0, frameN: 0 };
     game.current = g;
     if (import.meta.env.DEV) globalThis.__elviaFps = g;
     let raf = 0;
@@ -292,6 +292,12 @@ export default function FpsScreen({ onExit, onComplete, params }) {
       }
       g.frames = (g.frames ?? 0) + 1;
       if (import.meta.env.DEV && g.frames === 5) globalThis.__labReady = true; // screenshot tools wait for this
+      // the last ~10 s of frame times, for the performance panel in the pause menu
+      if (running) {
+        g.frameMs[g.frameI] = dt * 1000;
+        g.frameI = (g.frameI + 1) % g.frameMs.length;
+        g.frameN = Math.min(g.frameN + 1, g.frameMs.length);
+      }
       g.fpsAcc += dt;
       g.fpsN += 1;
       g.hudT -= dt;
@@ -504,8 +510,9 @@ export default function FpsScreen({ onExit, onComplete, params }) {
       ) : null}
 
       {mode === 'paused' ? (
-        <div className="absolute inset-0 flex items-center justify-center overflow-y-auto bg-navy-950/80 p-4">
-          <div className="w-full max-w-lg rounded-lg border border-gold-600/40 bg-navy-900/90 p-5 shadow-2xl sm:p-6">
+        <div className="absolute inset-0 flex overflow-y-auto bg-navy-950/80 p-4">
+          {/* m-auto, not items-center: a menu taller than a sideways phone must scroll, not lose its top */}
+          <div className="m-auto w-full max-w-lg rounded-lg border border-gold-600/40 bg-navy-900/90 p-5 shadow-2xl sm:p-6">
             <Eyebrow>Paused</Eyebrow>
             <h2 className="font-display text-2xl tracking-wide text-gold-200">{MISSION.title}</h2>
             <p className="mt-1 text-[15px] text-parchment-200">{hud?.objective}</p>
@@ -524,6 +531,7 @@ export default function FpsScreen({ onExit, onComplete, params }) {
               <input type="checkbox" checked={settings.aimAssist !== false} onChange={(e) => update({ aimAssist: e.target.checked })} className="h-5 w-5 accent-[#c9a227]" />
               Aim slowdown near enemies (touch and gamepad)
             </label>
+            <PerfPanel g={g} />
             {dispatchesFound.length ? (
               <div className="mt-3">
                 <p className="font-display text-xs uppercase tracking-[0.2em] text-gold-400">Dispatches found</p>
@@ -640,5 +648,53 @@ export default function FpsScreen({ onExit, onComplete, params }) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Frame times and renderer numbers, so a screenshot of the pause menu is a performance report. */
+function perfReport(g) {
+  if (!g?.renderer) return null;
+  const n = g.frameN;
+  const times = Array.from(g.frameMs.subarray(0, n)).sort((a, b) => a - b);
+  const avgMs = n ? times.reduce((a, b) => a + b, 0) / n : 0;
+  const worst = n ? times[Math.min(n - 1, Math.floor(n * 0.99))] : 0;
+  const st = g.renderer.stats();
+  const scr = globalThis.screen;
+  return {
+    fps: avgMs ? Math.round(1000 / avgMs) : 0,
+    worstMs: Math.round(worst),
+    seconds: Math.round((avgMs * n) / 1000),
+    quality: g.renderer.quality.label,
+    scale: Math.round(st.scale * 100),
+    calls: st.calls,
+    tris: Math.round(st.triangles / 1000),
+    gpu: st.gpu,
+    screen: `${scr?.width ?? '?'}×${scr?.height ?? '?'} @${(globalThis.devicePixelRatio || 1).toFixed(2)}x`,
+  };
+}
+
+function PerfPanel({ g }) {
+  const r = perfReport(g);
+  if (!r) return null;
+  const rows = [
+    ['Frame rate', `${r.fps} fps average over ${r.seconds} s`],
+    ['Slowest frames', `${r.worstMs} ms (worst 1%)`],
+    ['Graphics', `${r.quality}, ${r.scale}% resolution`],
+    ['Scene', `${r.calls} draw calls, ${r.tris}k triangles`],
+    ['Chip', r.gpu],
+    ['Screen', r.screen],
+  ];
+  return (
+    <section className="mt-3 rounded border border-navy-600 bg-navy-850/70 px-3 py-2" aria-label="Performance" data-fps-perf>
+      <p className="font-display text-xs uppercase tracking-[0.2em] text-gold-400">Performance</p>
+      <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[15px]">
+        {rows.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-parchment-300">{k}</dt>
+            <dd className="break-words text-parchment-100">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }

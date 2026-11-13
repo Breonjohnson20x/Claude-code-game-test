@@ -366,6 +366,7 @@ async function fps(browser, baseUrl) {
       await page.screenshot({ path: join(OUT, 'fps', '02-playing.png') });
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      if (!/\d+ fps average/.test((await page.locator('[data-fps-perf]').textContent({ timeout: 5000 }).catch(() => '')) ?? '')) fail(where, 'the pause menu has no performance panel');
       await page.screenshot({ path: join(OUT, 'fps', '03-paused.png') });
       await page.getByRole('button', { name: 'Leave' }).click();
       await page.getByRole('button', { name: 'Begin a new reign' }).waitFor({ timeout: 10000 });
@@ -444,6 +445,7 @@ async function fps(browser, baseUrl) {
       const pauseBox = await page.getByRole('button', { name: 'Pause' }).boundingBox();
       await page.touchscreen.tap(pauseBox.x + pauseBox.width / 2, pauseBox.y + pauseBox.height / 2);
       await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      if (!/\d+ fps average/.test((await page.locator('[data-fps-perf]').textContent({ timeout: 5000 }).catch(() => '')) ?? '')) fail(where, 'the pause menu has no performance panel');
       if ((await fpsMode(page)) !== 'paused') fail(where, 'the pause button did not pause');
       console.log('  ✓ touch controls are all there, big enough, on screen, and fire');
     } catch (err) {
