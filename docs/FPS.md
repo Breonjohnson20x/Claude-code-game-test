@@ -71,6 +71,11 @@ crosshair shrinks to a dot. The Sunlance (`scoped: true` in `combat.js`) swaps t
 for a scope overlay (`.fps-scope` in `Hud.jsx`, shown by the game loop). Look speed while aiming
 scales with the weapon's zoom (`input.setAimScale`), on mouse, touch and gamepad alike.
 
+**Performance panel.** The pause menu shows the average frame rate and the slowest 1% of
+frames over the last ~10 s of play, the graphics tier and adaptive resolution, draw calls and
+triangles, the graphics chip's name (when the browser reports it) and the screen. A screenshot of it
+is a performance report from a real device (`PerfPanel` in `FpsScreen.jsx`).
+
 **Touch layout** (`TouchControls` in `Hud.jsx`). An action-game layout: the stick rests
 bottom-left, jumps to wherever the left thumb lands and follows a thumb that runs past its rim;
 a large Fire button sits bottom-right with the other actions on two arcs around it (inner: Jump,

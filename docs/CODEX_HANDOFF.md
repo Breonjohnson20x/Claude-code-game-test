@@ -124,7 +124,8 @@ will not line up with what the player sees.
 
 ## Other work, in rough order of value
 
-1. **Measure on a real phone and a real GPU** (`?fps&showfps=1`). Software rendering here says
+1. **Measure on a real phone and a real GPU**: pause the mission and read the Performance panel
+   (or `?fps&showfps=1` for a live counter). Software rendering here says
    nothing. If the phone is slow: fewer soldiers drawn at once, smaller draw distance, cheaper
    bloom (`post.js`), fewer triangles in `world.js` (pines are the bulk).
 2. **Touch feel**, once the owner has tried the fixed build: sensitivity default, button
