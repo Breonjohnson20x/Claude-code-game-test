@@ -510,8 +510,9 @@ export default function FpsScreen({ onExit, onComplete, params }) {
       ) : null}
 
       {mode === 'paused' ? (
-        <div className="absolute inset-0 flex items-center justify-center overflow-y-auto bg-navy-950/80 p-4">
-          <div className="w-full max-w-lg rounded-lg border border-gold-600/40 bg-navy-900/90 p-5 shadow-2xl sm:p-6">
+        <div className="absolute inset-0 flex overflow-y-auto bg-navy-950/80 p-4">
+          {/* m-auto, not items-center: a menu taller than a sideways phone must scroll, not lose its top */}
+          <div className="m-auto w-full max-w-lg rounded-lg border border-gold-600/40 bg-navy-900/90 p-5 shadow-2xl sm:p-6">
             <Eyebrow>Paused</Eyebrow>
             <h2 className="font-display text-2xl tracking-wide text-gold-200">{MISSION.title}</h2>
             <p className="mt-1 text-[15px] text-parchment-200">{hud?.objective}</p>
